@@ -81,6 +81,7 @@ def main():
     ap.add_argument("--alarm", type=float, default=70.0, help="load percent that triggers the alarm")
     ap.add_argument("--hold", type=float, default=20.0, help="s above --alarm before it fires")
     ap.add_argument("--smooth", type=float, default=8.0, help="s of smoothing on the gauge")
+    ap.add_argument("--strict", action="store_true", help="contact gate + settle check before the baseline, and freeze on contact loss (off: the plain behaviour)")
     ap.add_argument("--quality-uv", type=float, default=300.0, help="a channel counts as clean when its 1 to 40 Hz RMS is under this (uV); fatigue needs 3 clean")
     ap.add_argument("--log")
     ap.add_argument("--no-ui", action="store_true")
@@ -172,7 +173,7 @@ def main():
             sig = [[int(v) for v in row] for row in Xs]
         except Exception:
             pass
-        body = json.dumps(dict(t=round(t_now, 1), state=state, load=round(load_pct, 1), fatigue=round(fatigue_pct, 1), clean=int(clean_n), fatigue_held=bool(clean_n < 3 and not a.fake), contact=bool(contact), alarm=bool(alarmed), channels=chans, sig=sig,
+        body = json.dumps(dict(t=round(t_now, 1), state=state, load=round(load_pct, 1), fatigue=round(fatigue_pct, 1), clean=int(clean_n), fatigue_held=bool(clean_n < 3 and not a.fake), contact=bool(contact or not a.strict), alarm=bool(alarmed), channels=chans, sig=sig,
                                baseline_done=base is not None, baseline_s=a.baseline,
                                baseline_progress=min(1.0, len(base_feats) / a.baseline) if base is None else 1.0,
                                hist=list(hist))).encode()
@@ -257,7 +258,7 @@ def main():
             if base is None:
                 # do not start the baseline until the electrodes are really on the head: a channel pinned at the
                 # +/-200 mV rail (open input) or perfectly flat is dead. Need at least 6 of the model's channels live.
-                if not contact:
+                if not contact and a.strict:
                     amp_hist.clear()
                     base_feats.clear(); base_chan.clear(); base_fat.clear()
                     names = [MONTAGE[i] for i in IDX if dead[i] or rail[i]]
@@ -268,7 +269,7 @@ def main():
                     continue
                 # settle check: the median amplitude over the last 10 s must be within 25 percent of the 10 s before,
                 # else the baseline would capture the drift and everything after reads as "load"
-                if not a.fake and not base_feats:
+                if a.strict and not a.fake and not base_feats:
                     if len(amp_hist) < 20 or amp_hist[-1] <= 0 or abs(np.median(list(amp_hist)[-10:]) / (np.median(list(amp_hist)[-20:-10]) + 1e-9) - 1) > 0.25:
                         state = f"SETTLING: {live_n}/8 live, signal still drifting ({amp_hist[-1]:.0f} uV); hold still"
                         if int(t) % 5 == 0:
@@ -299,7 +300,7 @@ def main():
                     speak("Baseline done")
                 load_pct = 0.0
                 post_state(t)
-            elif not contact:
+            elif not contact and a.strict:
                 # contact lost after the baseline: hold the last numbers, say so, do not feed rail data to the model
                 names = [MONTAGE[i] for i in IDX if dead[i]]
                 state = f"CONTACT LOST: {live_n}/8 live, dead {' '.join(names)}"
