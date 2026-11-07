@@ -39,6 +39,7 @@ import pygame
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from phrase_tree import PhraseTree  # noqa: E402
+from speller import Speller  # noqa: E402
 
 TILES = [  # label, period in frames at 60 Hz, colour
     ("WATER", 8, (70, 130, 255)),
@@ -56,6 +57,7 @@ def main():
     ap.add_argument("--off", type=float, default=3.0, help="rest seconds between cues")
     ap.add_argument("--banner", default="", help='big text at the top, e.g. "REPLAY" when no headset is live')
     ap.add_argument("--tree", action="store_true", help="phrase mode: two looks per phrase (phrase_tree.py)")
+    ap.add_argument("--spell", action="store_true", help="speller mode: A to Z in three looks per letter, tile 4 = predicted word (speller.py); keys 1-4 fake a look")
     ap.add_argument("--tree-timeout", type=float, default=10.0, help="s to make the second look before going back to groups")
     ap.add_argument("--settle", type=float, default=3.0, help="phrase mode: ignore picks this soon after a group opens")
     ap.add_argument("--phrase-log", help="CSV of phrase-mode events, for looks-per-message and errors")
@@ -69,6 +71,8 @@ def main():
                  "or there is no time left to make the second look")
 
     tree = PhraseTree(timeout_s=a.tree_timeout) if a.tree else None
+    speller = Speller(timeout_s=a.tree_timeout) if a.spell else None
+    fake_pick = None
     said, said_t, history = None, -1e9, []   # last phrase, when, and the last few for the carer bar
     plog = None
     t_start = time.monotonic()
@@ -122,17 +126,36 @@ def main():
             elif e.type == pygame.KEYDOWN:
                 if e.key == pygame.K_ESCAPE:
                     running = False
+                elif speller is not None and e.key in (pygame.K_1, pygame.K_2, pygame.K_3, pygame.K_4):
+                    fake_pick = e.key - pygame.K_1
                 elif e.key == pygame.K_f:
                     full = not full
                     screen = pygame.display.set_mode((0, 0) if full else (1280, 800),
                                                      (pygame.FULLSCREEN if full else pygame.RESIZABLE), vsync=1)
         try:
             while True:
-                msg, _ = rx.recvfrom(64)
-                parts = msg.decode().split()
+                if fake_pick is not None:
+                    parts, fake_pick = ["pick", str(fake_pick)], None
+                else:
+                    msg, _ = rx.recvfrom(64)
+                    parts = msg.decode().split()
                 if parts[0] == "pick":
                     pick = None if parts[1] == "none" else int(parts[1])
                     pick_t = time.monotonic()
+                    if speller is not None and pick is not None:
+                        if pick_t - speller.last_t < a.settle:
+                            log_event("ignored", pick, "settle")
+                            pick = None
+                        else:
+                            word = speller.select(pick, pick_t)
+                            log_event("look", pick, speller.prompt())
+                            if word:
+                                said, said_t = word, pick_t
+                                history = ([word] + history)[:3]
+                                log_event("say", pick, word)
+                                print(f"SAID: {word}", flush=True)
+                                if a.speak:
+                                    subprocess.Popen(["say", word])
                     if tree is not None and pick is not None:
                         if tree.group is not None and pick_t - tree.opened_t < a.settle:
                             # too soon after the first look: the decoder window still holds it
@@ -157,6 +180,8 @@ def main():
         now = time.monotonic()
         if tree is not None and tree.tick(now):
             log_event("timeout", None)
+        if speller is not None and speller.tick(now):
+            log_event("timeout", None)
         if a.trials and done < a.trials and now >= next_change:
             if cued is None:
                 cued = order[done]
@@ -170,6 +195,8 @@ def main():
 
         w, h = screen.get_size()
         screen.fill((0, 0, 0))
+        if speller is not None:
+            tree = speller   # same drawing path: labels(), prompt(now)
         bar = 130 if tree is not None else 0     # carer bar at the bottom in phrase mode
         tw, th = w // 2 - 60, (h - bar) // 2 - 60
         labels = tree.labels() if tree is not None else [t[0] for t in TILES]
@@ -194,7 +221,8 @@ def main():
                 screen.blit(hz, hz.get_rect(midtop=(rect.centerx, rect.centery + 34)))
         if tree is not None:
             top = h - bar - 10
-            screen.blit(small.render(tree.prompt(now), True, (160, 160, 160)), (40, top))
+            ptxt = tree.prompt(now) if not isinstance(tree, Speller) else tree.prompt()
+            screen.blit((mid if isinstance(tree, Speller) else small).render(ptxt, True, (200, 200, 200)), (40, top))
             if now - said_t < 15:
                 msg = big.render(said, True, (255, 230, 0))
                 screen.blit(msg, (40, top + 30))
@@ -206,6 +234,8 @@ def main():
         if a.banner:
             b = font.render(a.banner, True, (255, 60, 60))
             screen.blit(b, b.get_rect(midtop=(w // 2, 4)))
+        if speller is not None:
+            tree = None
         pygame.display.flip()
         frame += 1
         clock.tick(60)
