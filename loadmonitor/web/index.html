@@ -11,10 +11,10 @@
   * { box-sizing:border-box; margin:0; padding:0; }
   html, body { height:100%; background:var(--bg); color:var(--fg); font-family:"Archivo", system-ui, sans-serif; }
   body { display:grid; grid-template-rows:auto 1fr; gap:12px; padding:14px 20px; overflow:hidden; }
-  body { transition:background .8s; }
-  body.calm { }
-  body.work { }
-  body.alarm { }
+  body { transition:background 1.2s, color 1.2s; }
+  body.calm  { --bg:#07172b; --fg:#e8eef8; --dim:#7f93b3; --mid:#b7c5dc; --line:color-mix(in oklch, #e8eef8 14%, transparent); --accent:#8ab4ff; }   /* calm: deep blue */
+  body.work  { --bg:#121314; --fg:#eeebe4; --dim:#8f8c84; --mid:#bbb7af; --line:color-mix(in oklch, #eeebe4 13%, transparent); --accent:#e9ae57; }   /* working: graphite, ochre */
+  body.alarm { --bg:#2a0d07; --fg:#fbe9df; --dim:#b98a78; --mid:#e0b8a6; --line:color-mix(in oklch, #fbe9df 14%, transparent); --accent:#ff7a45; }   /* high load: ember */
   body.alarm::before { content:""; position:fixed; left:0; right:0; top:0; height:3px; background:var(--accent); }
   body.alarm .loadcard { border-top-color:var(--accent); }
   @keyframes pulse { 0%,100% { opacity:1 } 50% { opacity:.55 } }
@@ -158,6 +158,7 @@ function heat(db){ // -6..+6 dB -> dark .. grey .. ochre
   const k = 0x55 + (0x22-0x55)*(-x); return `rgb(${k|0},${k|0},${k|0})`;
 }
 const ALARM = 70;
+const CSSV = n => getComputedStyle(document.body).getPropertyValue(n).trim();
 let chal = { on:false, cur:4000, answers:0, errors:0, t0:0, errT:[] };
 let lastT = 0;
 const curEl = document.getElementById('cur'), ans = document.getElementById('ans'), go = document.getElementById('go');
@@ -191,14 +192,14 @@ const canvas = document.getElementById('trace'), ctx = canvas.getContext('2d');
 function draw(hist){
   const w = canvas.width = canvas.clientWidth*devicePixelRatio, h = canvas.height = canvas.clientHeight*devicePixelRatio;
   ctx.clearRect(0,0,w,h);
-  ctx.strokeStyle='#e9ae5766'; ctx.setLineDash([4,6]); ctx.lineWidth=1;
+  ctx.strokeStyle=CSSV('--accent')+'88'; ctx.setLineDash([4,6]); ctx.lineWidth=1;
   ctx.beginPath(); ctx.moveTo(0,h-ALARM/100*h); ctx.lineTo(w,h-ALARM/100*h); ctx.stroke(); ctx.setLineDash([]);
   if (hist.length<2) return;
   const n = Math.max(hist.length, 120);
   // error ticks: an error at time te sits at hist index (len-1) - (lastT - te)
-  ctx.strokeStyle='#e9ae57'; ctx.lineWidth=2*devicePixelRatio;
+  ctx.strokeStyle=CSSV('--accent'); ctx.lineWidth=2*devicePixelRatio;
   for (const te of chal.errT) { const i = hist.length-1 - Math.round(lastT - te); if (i<0) continue; const x=i/(n-1)*w; ctx.beginPath(); ctx.moveTo(x,h*0.1); ctx.lineTo(x,h*0.3); ctx.stroke(); }
-  ctx.strokeStyle='#eeebe4'; ctx.lineWidth=2*devicePixelRatio; ctx.beginPath();
+  ctx.strokeStyle=CSSV('--fg'); ctx.lineWidth=2*devicePixelRatio; ctx.beginPath();
   hist.forEach((v,i)=>{ const x=i/(n-1)*w, y=h-v/100*h; i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
   ctx.stroke();
 }
@@ -220,7 +221,7 @@ function drawSig(sig){
     const rms = Math.sqrt(row.reduce((a,v)=>a+v*v,0)/Math.max(1,row.length));
     const lim = Math.max(5, mx*1.1);
     l.innerHTML = `${SIGN[i]}<br><span style="font-size:10px;color:${rms<40?'#bbb7af':rms<100?'#e9ae57':'#e9ae57'}">${rms.toFixed(0)} uV</span>`;
-    g.strokeStyle = rms<40?'#bbb7af':rms<100?'#e9ae57':'#e9ae57'; g.lineWidth = 1.2*devicePixelRatio; g.beginPath();
+    g.strokeStyle = rms<40 ? CSSV('--fg') : CSSV('--accent'); g.lineWidth = 1.2*devicePixelRatio; g.beginPath();
     row.forEach((v,j)=>{ const x=j/(row.length-1)*w, y=h/2 - v/lim*(h/2-2); j?g.lineTo(x,y):g.moveTo(x,y); });
     g.stroke();
   });
@@ -243,7 +244,7 @@ async function tick(){
     const val = document.getElementById('val'), label = document.getElementById('label'), sub = document.getElementById('sub');
     if (s.baseline_done) {
       const v = Math.max(0, Math.min(100, s.load));
-      val.textContent = Math.round(v); val.style.color = v>=ALARM?'#e9ae57':'#eeebe4';
+      val.textContent = Math.round(v); val.style.color = v>=ALARM-20 ? 'var(--accent)' : 'var(--fg)';
       label.textContent = s.alarm?'High load':v>=ALARM?'Load rising':v>=ALARM-20?'Working':'Calm';
       sub.textContent = 'alarm after 20 s above 70'; document.getElementById('basebar').style.display='none';
     } else {
