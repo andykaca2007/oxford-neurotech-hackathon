@@ -16,6 +16,7 @@ this brain looks like the public "doing arithmetic" recordings versus its own re
 not risk. Needs the model's channels alive (layout A: all 8).
 """
 import argparse
+import json
 import os
 import subprocess
 import sys
@@ -115,6 +116,11 @@ def main():
     ema, above_since, alarmed = None, None, False
     base_fat, fat_base, fat_ema, fatigue_pct, contact = [], 0.0, None, 0.0, False
     amp_hist = deque(maxlen=40)
+    fat_start = 0.0
+    try:
+        FAT_REF = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "fatigue_ref.json")))["values"]
+    except Exception:
+        FAT_REF = []
     log = open(a.log, "w") if a.log else None
     if log:
         header_written = [False]
@@ -139,7 +145,7 @@ def main():
 
     state = "BASELINE: sit still, eyes open, 30 s"
     hist = deque(maxlen=600)
-    import json, urllib.request
+    import urllib.request
 
     def post_state(t_now):
         if not a.web:
@@ -270,6 +276,9 @@ def main():
                         riem.set_baseline(base_covs)
                     chan_base = {k: np.mean([c[k] for c in base_chan], axis=0) for k in ("tot", "th", "al")}
                     fat_base = float(np.mean(base_fat))
+                    # fatigue starting point: where this baseline ratio sits among 36 rested people (percentile)
+                    fat_start = 100.0 * float(np.mean(np.array(FAT_REF) < fat_base)) if FAT_REF else 0.0
+                    print(f"# fatigue start {fat_start:.0f}: baseline ratio {fat_base:.2f} vs rested reference mean {np.mean(FAT_REF):.2f}" if FAT_REF else "# no fatigue reference", flush=True)
                     state = "monitoring"
                     print("# baseline done", flush=True)
                     speak("Baseline done")
@@ -296,7 +305,8 @@ def main():
                 load_pct = 100 * ema
                 # fatigue: slow EMA (about 2 min) of the ratio drift, starting AT the baseline; +0.5 log10 (ratio x3) reads as 100
                 fat_ema = fat_base if fat_ema is None else fat_ema + (fat_now - fat_ema) / 120.0
-                fatigue_pct = float(np.clip((fat_ema - fat_base) / 0.5 * 100, 0, 100))
+                # percentile start, then drift: a doubling of the ratio (+0.301 log10) adds 50 points
+                fatigue_pct = float(np.clip(fat_start + (fat_ema - fat_base) / 0.301 * 50, 0, 100))
                 if load_pct >= a.alarm:
                     above_since = above_since or t
                     if not alarmed and t - above_since >= a.hold:

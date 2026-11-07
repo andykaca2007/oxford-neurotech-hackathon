@@ -145,7 +145,7 @@
       <div class="bar" id="basebar"><i id="basefill"></i></div>
       <div class="fat">
         <div class="n dim" id="fval">—</div>
-        <div><b id="flabel">Baseline</b><span>fatigue · (θ+α)/β drift · published ratio, not a trained model</span></div>
+        <div><b id="flabel">Baseline</b><span>fatigue · (θ+α)/β vs 36 rested people, then drift · published ratio, not a trained model</span></div>
       </div>
     </div>
   </section>
@@ -316,7 +316,7 @@ async function tick(){
     const fv = document.getElementById('fval'), fl = document.getElementById('flabel');
     if (s.baseline_done && s.fatigue !== undefined) {
       const f = Math.round(s.fatigue); fv.textContent = f; fv.className = 'n' + (f >= 60 ? ' hot' : '');
-      fl.textContent = f >= 60 ? 'Tiring' : f >= 30 ? 'Drifting' : 'Fresh';
+      fl.textContent = f >= 65 ? 'Tired' : f >= 35 ? 'Average' : 'Rested';
     } else { fv.textContent='—'; fv.className='n dim'; fl.textContent='Baseline'; }
     let top=null, dead=[];
     const present = new Set((s.channels||[]).map(c => c.name));
