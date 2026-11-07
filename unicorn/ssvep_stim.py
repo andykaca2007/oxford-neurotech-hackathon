@@ -31,6 +31,7 @@ import argparse
 import os
 import random
 import socket
+import subprocess
 import sys
 import time
 
@@ -58,6 +59,8 @@ def main():
     ap.add_argument("--tree-timeout", type=float, default=10.0, help="s to make the second look before going back to groups")
     ap.add_argument("--settle", type=float, default=3.0, help="phrase mode: ignore picks this soon after a group opens")
     ap.add_argument("--phrase-log", help="CSV of phrase-mode events, for looks-per-message and errors")
+    ap.add_argument("--speak", action="store_true",
+                    help="phrase mode: the Mac says each finished phrase aloud (macOS `say`); the output when there is no wristband")
     a = ap.parse_args()
     if a.tree and a.trials:
         sys.exit("--tree and --trials do not mix: calibrate and test with fixed tiles, then use --tree")
@@ -146,6 +149,8 @@ def main():
                                 send(f"phrase {g} {p}")
                                 log_event("say", pick, phrase)
                                 print(f"SAID: {phrase}", flush=True)
+                                if a.speak:
+                                    subprocess.Popen(["say", phrase])
         except BlockingIOError:
             pass
 

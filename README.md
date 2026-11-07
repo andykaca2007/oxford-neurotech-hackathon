@@ -31,7 +31,7 @@ Public dataset: Nakanishi et al. 2015, from github.com/mnakanishi/12JFPM_SSVEP, 
 ## Phrase mode (two looks per phrase)
 Two terminals, run from the repo root:
 ```bash
-python unicorn/ssvep_stim.py --tree --phrase-log recordings/NAME_phrases.csv
+python unicorn/ssvep_stim.py --tree --speak --phrase-log recordings/NAME_phrases.csv   # --speak: the Mac says the phrase (no wristband at the event)
 python unicorn/ssvep_decode.py --lsl --model models/NAME.npz --refractory 4 --buzz-on phrase [--cue-port PORT]
 ```
 - Look 1 opens a group (NEED, BODY, PEOPLE, ANSWER); the tiles then show that group's phrases.
