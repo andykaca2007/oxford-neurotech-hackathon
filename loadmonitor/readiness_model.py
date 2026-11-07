@@ -4,8 +4,7 @@ Dataset: Zyma et al. 2019, "EEG during mental arithmetic tasks", PhysioNet eegma
 36 subjects, 23 channels (10-20), 500 Hz. Subject_1 = 3 min rest (eyes closed is NOT it: it is
 quiet rest), Subject_2 = 1 min of serial subtraction. Credited; data in data/eegmat.
 
-We use only channels our headset has alive: Fz, C3, Cz, C4, Pz (the Core-8 montage minus the
-dead occipital ones). Features per 4 s epoch: log band power theta 4-8, alpha 8-13, beta 13-30
+Channels = the cap's layout A (headset/montage.py): Fz C3 Cz C4 Pz P3 P4 O1, all present in eegmat. Features per 4 s epoch: log band power theta 4-8, alpha 8-13, beta 13-30
 per channel, plus Fz theta/alpha and Pz alpha/beta ratios. Classifier: logistic regression.
 Evaluation: leave-one-subject-out, epoch-level balanced accuracy and AUC. Rest epochs are
 subsampled to 1 min per subject so the classes are balanced.
@@ -25,7 +24,7 @@ from sklearn.metrics import balanced_accuracy_score, roc_auc_score
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
-CH = ["Fz", "C3", "Cz", "C4", "Pz"]
+CH = ["Fz", "C3", "Cz", "C4", "Pz", "P3", "P4", "O1"]   # layout A: all 8 cap electrodes (see headset/montage.py)
 BANDS = {"theta": (4, 8), "alpha": (8, 13), "beta": (13, 30)}
 EPOCH_S = 4.0
 BASELINE = "--raw" not in sys.argv   # default: features relative to the person's own 28 s rest baseline

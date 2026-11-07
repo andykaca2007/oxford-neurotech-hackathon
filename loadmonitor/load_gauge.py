@@ -13,7 +13,7 @@ seconds the screen goes red and the Mac speaks. Keys: B redo the baseline, Esc q
 
 Output rows: t, load_pct, alarm, then the 17 features. Honest reading of the number: how much
 this brain looks like the public "doing arithmetic" recordings versus its own rest; not sleepiness,
-not risk. Needs Fz, C3, Cz, C4, Pz alive.
+not risk. Needs the model's channels alive (layout A: all 8).
 """
 import argparse
 import os
@@ -32,7 +32,9 @@ from model_search import feats as features_rich  # noqa: E402
 FS = 250
 from scipy.signal import butter as _butter, sosfiltfilt
 SIG_SOS = _butter(4, [1, 40], btype="band", fs=FS, output="sos")
-IDX = [0, 1, 2, 3, 4]   # Fz C3 Cz C4 Pz in the Core-8 stream
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'headset'))
+from montage import MONTAGE  # noqa: E402
+IDX = [MONTAGE.index(c) for c in CH]   # model channels -> stream slots, from headset/montage.py
 
 
 def src_fake(seed=0):
@@ -88,17 +90,29 @@ def main():
     m = joblib.load(a.model)
     clf = m["model"]
     rich = bool(m.get("rich", False))
+    # the model's own channel list wins: works for the old 5-channel and the new 8-channel model
+    import readiness_model as _rm, model_search as _ms
+    model_ch = list(m.get("channels", CH))
+    _rm.CH[:] = model_ch
+    _ms.CH[:] = model_ch
+    global IDX
+    IDX = [MONTAGE.index(c) for c in model_ch]
+    print(f"# model channels {model_ch} -> stream slots {IDX}", flush=True)
     features = (lambda x, fs: features_rich(x, fs, True)) if rich else features_basic
     print(f"# model: {m.get('config', {}).get('model', 'logreg')}, {'rich' if rich else 'basic'} features, held-out AUC {m.get('loso_auc', 0):.2f}", flush=True)
     win = int(m["epoch_s"] * FS)
     buf = deque(maxlen=win)
     base_feats, base = [], None
     base_chan, chan_base, chan_now = [], None, None
-    CH8 = ["Fz", "C3", "Cz", "C4", "Pz", "PO7", "POz", "PO8"]
+    CH8 = MONTAGE
     ema, above_since, alarmed = None, None, False
     log = open(a.log, "w") if a.log else None
     if log:
-        log.write("t,load_pct,alarm," + ",".join(f"f{i}" for i in range(17)) + "\n")
+        header_written = [False]
+    markers = open(a.log.replace(".csv", "") + "_markers.csv", "w") if a.log else None
+    if markers:
+        markers.write("t,condition\n")
+    cond = {"now": "none"}
 
     ui = None
     if not a.no_ui:
@@ -145,8 +159,14 @@ def main():
                                baseline_progress=min(1.0, len(base_feats) / a.baseline) if base is None else 1.0,
                                hist=list(hist))).encode()
         try:
-            urllib.request.urlopen(urllib.request.Request(f"http://127.0.0.1:{a.web_port}/state", data=body,
-                                                          headers={"Content-Type": "application/json"}), timeout=0.3)
+            r = urllib.request.urlopen(urllib.request.Request(f"http://127.0.0.1:{a.web_port}/state", data=body,
+                                                              headers={"Content-Type": "application/json"}), timeout=0.3)
+            new = json.loads(r.read() or b"{}").get("condition", cond["now"])
+            if new != cond["now"]:
+                cond["now"] = new
+                print(f"t={t_now:6.1f} CONDITION {new}", flush=True)
+                if markers:
+                    markers.write(f"{t_now:.1f},{new}\n"); markers.flush()
         except Exception:
             pass
     next_eval = 0.0
@@ -209,7 +229,10 @@ def main():
                 else:
                     above_since, alarmed = None, False
                 if log:
-                    log.write(f"{t:.1f},{load_pct:.1f},{int(alarmed)}," + ",".join(f"{v:.3f}" for v in f) + "\n")
+                    if not header_written[0]:
+                        log.write("t,load_pct,alarm,condition," + ",".join(f"f{i}" for i in range(len(f))) + "\n")
+                        header_written[0] = True
+                    log.write(f"{t:.1f},{load_pct:.1f},{int(alarmed)},{cond['now']}," + ",".join(f"{v:.3f}" for v in f) + "\n")
                     log.flush()
                 hist.append(round(load_pct, 1))
                 post_state(t)
@@ -249,6 +272,8 @@ def main():
     finally:
         if log:
             log.close()
+        if markers:
+            markers.close()
         if ui is not None:
             ui["pygame"].quit()
         print(f"# stopped at t={t:.0f} s, last load {load_pct:.0f}")

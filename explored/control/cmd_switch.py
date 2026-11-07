@@ -25,7 +25,7 @@ import numpy as np
 from scipy.signal import butter, sosfilt, sosfilt_zi
 
 FS = 250
-CH = ["Fz", "C3", "Cz", "C4", "Pz", "PO7", "POz", "PO8"]
+CH = ["Fz", "C3", "Cz", "C4", "Pz", "P3", "O1", "P4"]  # layout A
 
 
 def src_fake():

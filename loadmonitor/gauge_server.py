@@ -18,7 +18,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 STATE = {"t": 0, "state": "waiting for the gauge", "load": 0, "alarm": False, "baseline_done": False,
-         "baseline_s": 30, "baseline_progress": 0, "hist": [], "channels": []}
+         "baseline_s": 30, "baseline_progress": 0, "hist": [], "channels": [], "condition": "none"}
 EVENTS = []           # {"t", "kind", ...} from the page
 LOADLOG = []          # (t, load) every second, kept for the debrief
 LOCK = threading.Lock()
@@ -109,14 +109,18 @@ class H(BaseHTTPRequestHandler):
         data = json.loads(self.rfile.read(n) or b"{}")
         if self.path.startswith("/state"):
             with LOCK:
+                cond = STATE.get("condition", "none")
+                data.pop("condition", None)          # the page owns the condition, not the gauge
                 STATE.update(data)
                 if data.get("baseline_done"):
                     LOADLOG.append((float(data.get("t", 0)), float(data.get("load", 0))))
-            self._send(200, b"ok", "text/plain")
+            self._send(200, json.dumps({"condition": cond}).encode(), "application/json")
         elif self.path.startswith("/event"):
             with LOCK:
                 data.setdefault("t", STATE.get("t", 0))
                 EVENTS.append(data)
+                if data.get("kind") == "condition":
+                    STATE["condition"] = str(data.get("value", "none"))
                 if data.get("kind") == "reset":
                     EVENTS.clear()
                     LOADLOG.clear()

@@ -21,7 +21,9 @@ from pylsl import StreamInlet, resolve_byprop
 from scipy.signal import butter, sosfilt, sosfilt_zi
 
 FS = 250
-CH = ["Fz", "C3", "Cz", "C4", "Pz", "PO7", "POz", "PO8"]
+import os as _os, sys as _sys
+_sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
+from montage import MONTAGE as CH  # noqa: E402
 MAX_S = 30
 
 

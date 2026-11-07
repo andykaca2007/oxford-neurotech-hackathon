@@ -3,7 +3,7 @@
     .venv/bin/python headset/alpha_check.py
 
 10 s eyes open, 10 s eyes closed. Reports per channel: RMS (uV), 50 Hz mains share,
-alpha (8 to 12 Hz) power closed / open. Good occipital contact: Oz, PO7, PO8 ratio
+alpha (8 to 12 Hz) power closed / open. Good occipital contact: O1, P3, P4 ratio
 of 2 or more. Ratio near 1 everywhere: the back electrodes are not on the scalp.
 """
 import subprocess
@@ -15,7 +15,9 @@ from scipy.signal import butter, sosfiltfilt, welch
 
 FS = 250
 SOS = butter(4, [1, 40], btype="band", fs=FS, output="sos")
-CH = ["Fz", "C3", "Cz", "C4", "Pz", "PO7", "Oz", "PO8"]
+import os as _os, sys as _sys
+_sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
+from montage import MONTAGE as CH  # noqa: E402
 
 
 def say(text):

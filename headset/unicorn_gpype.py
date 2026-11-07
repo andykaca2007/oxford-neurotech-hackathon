@@ -1,7 +1,7 @@
 """Unicorn BCI Core-8 (default) or Hybrid Black (--hybrid) -> LSL stream "Unicorn" (+ CSV), via g.Pype.
 
 Paing's unit is a BCI Core-8, serial U8-2025.10.14 (BLE, 8 ch, 250 Hz, montage
-Fz C3 Cz C4 Pz PO7 POz PO8). Run:  .venv/bin/python headset/unicorn_gpype.py --serial U8-2025.10.14
+stream slots, see headset/montage.py for what sits where now). Run:  .venv/bin/python headset/unicorn_gpype.py --serial U8-2025.10.14
 
 Route C from GTEC_TRACK_RESEARCH.md. Official, macOS supported, no dongle:
 "macOS and Linux open a discoverable Unicorn paired or not" (g.Pype S3E2).
@@ -48,7 +48,7 @@ def main():
     elif a.hybrid:
         source = gp.HybridBlack(serial=a.serial)  # 8 EEG channels, aux off
     else:
-        # BCI Core-8 over BLE: Fz C3 Cz C4 Pz PO7 POz PO8 at 250 Hz. No discovery
+        # BCI Core-8 over BLE: 8 slots at 250 Hz (headset/montage.py names them). No discovery
         # call exists; serial=None opens the first Core found.
         source = gp.BCICore(serial=a.serial)
     sender = gp.LSLSender(stream_name=a.stream)

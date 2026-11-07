@@ -71,13 +71,23 @@
 </style>
 </head>
 <body>
+<style>
+  .condbar { display:flex; gap:8px; align-items:center; font-size:12px; color:var(--dim); }
+  .condbar .btn { padding:6px 10px; font-size:12px; }
+  .condbar .btn.on { background:var(--accent); color:#000; border-color:transparent; }
+</style>
 <header>
   <div class="t">Mental load <span>Unicorn BCI Core-8</span></div>
   <div style="display:flex; gap:10px; align-items:center">
+    <div class="pill" id="cond" title="current condition">none</div>
     <div class="pill" id="state">waiting</div>
     <div class="pill" id="clock">0:00</div>
   </div>
 </header>
+<div class="condbar">condition:
+  <button class="btn" data-c="baseline">baseline</button><button class="btn" data-c="mental">mental</button>
+  <button class="btn" data-c="physical">physical</button><button class="btn" data-c="recovery">recovery</button>
+  <button class="btn" data-c="none">none</button></div>
 <div class="grid">
   <section class="card">
     <h2>Electrode activity · change from baseline</h2>
@@ -131,7 +141,7 @@
   </section>
 </div>
 <script>
-const POS = { Fz:[100,52], C3:[55,110], Cz:[100,110], C4:[145,110], Pz:[100,158], PO7:[52,172], POz:[100,188], PO8:[148,172] };
+const POS = { Fz:[100,52], F3:[62,64], F4:[138,64], C3:[55,110], Cz:[100,110], C4:[145,110], Pz:[100,158], P3:[62,152], P4:[138,152], O1:[80,196], O2:[120,196], PO7:[52,172], POz:[100,188], PO8:[148,172] };
 const svg = document.getElementById('headsvg');
 const NS = 'http://www.w3.org/2000/svg';
 const els = {};
@@ -192,7 +202,7 @@ function draw(hist){
   hist.forEach((v,i)=>{ const x=i/(n-1)*w, y=h-v/100*h; i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
   ctx.stroke();
 }
-const SIGN = ['Fz','C3','Cz','C4','Pz','PO7','POz','PO8'];
+const SIGN = ['Fz','C3','Cz','C4','Pz','P3','O1','P4'];   // layout A, see headset/montage.py
 const sigrows = document.getElementById('sigrows'), sigc = [];
 for (const n of SIGN) {
   const d = document.createElement('div'); d.style.cssText='display:flex;align-items:center;gap:8px;min-height:0;min-width:0;height:100%';
@@ -219,6 +229,8 @@ async function tick(){
   try {
     const s = await (await fetch('/state')).json();
     lastT = s.t;
+    document.getElementById('cond').textContent = s.condition || 'none';
+    document.querySelectorAll('.condbar .btn').forEach(b => b.classList.toggle('on', b.dataset.c === (s.condition || 'none')));
     if (chal.on) document.getElementById('n_time').textContent = Math.max(0, Math.round(s.t - chal.t0)) + ' s';
     const m=Math.floor(s.t/60), sec=Math.floor(s.t%60);
     document.getElementById('clock').textContent = `${m}:${sec.toString().padStart(2,'0')}`;
@@ -258,6 +270,9 @@ async function tick(){
     drawSig(s.sig);
   } catch(e) { document.getElementById('state').textContent='waiting'; }
 }
+document.querySelectorAll('.condbar .btn').forEach(b => b.onclick = () => {
+  fetch('/event', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({kind:'condition', value:b.dataset.c, t:lastT})});
+});
 setInterval(tick, 500); tick();
 </script>
 </body>
