@@ -28,7 +28,10 @@ replicated live on team members with a g.tec Unicorn BCI Core-8 (pending the nex
 | unicorn/ssvep_calibrate.py | records cued epochs while the stim runs `--trials`, fits TRCA, leave-one-out CCA vs TRCA, saves models/*.npz | works on fake |
 | unicorn/trca.py | CCA and ensemble TRCA (Nakanishi 2018), ITR | works |
 | unicorn/calibration_curve.py, speed_accuracy_plot.py | public-data evaluation, Nakanishi 2015 in data/nakanishi2015 | DONE, plots in data/ |
-| unicorn/replay_demo.py | held-out public trials -> tiles + wristband, for a no-headset demo | works |
+| unicorn/replay_demo.py | held-out public trials -> tiles + wristband, for a no-headset demo; `--say "Yes;Call the nurse"` composes phrases from held-out trials | works; `--say` tested on synthetic data only |
+| unicorn/phrase_tree.py | the fixed 16-phrase tree (4 groups x 4, two looks per phrase, 10 s timeout back to groups) | DONE (Andy, ~14:00), tests in tests/ |
+| ssvep_stim.py `--tree` | phrase mode: tiles show groups then phrases, carer bar shows the phrase, `--phrase-log`, ignores picks within `--settle` 3 s of a group opening | works with scripted picks |
+| ssvep_decode.py `--buzz-on phrase` | buzz only on a finished phrase (group+1 pulses); use `--refractory 4` in phrase mode | runs on fake; not tested with the ESP32 |
 | RESULTS.md | the numbers and the limitations | current |
 | EXPERT_PANEL_2026-11-07.md | three expert reviews, gates, evaluation protocol | reference |
 | GTEC_TRACK_RESEARCH.md | headset facts, Mac routes, judge questions | reference |

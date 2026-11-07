@@ -13,6 +13,8 @@ Outputs:
     prints one line per hop: t, the 4 CCA scores, the pick
     UDP "pick i" to ssvep_stim.py (localhost 5005) so the tile lights up
     --cue-port /dev/cu.usbserial-XXXX: buzzes the ESP32 wristband, i+1 pulses for tile i
+        add --buzz-on phrase with ssvep_stim.py --tree: buzz only when a phrase is finished
+        (group+1 pulses), and use --refractory 4 so the second look is decoded from fresh EEG
     --log run.csv: t, cued, scores, pick (cued comes from the stim's trial mode)
 At the end (Ctrl-C) prints the trial score: picks that matched the cued tile, misses, abstains,
 and picks made while no cue was on (false selections per minute).
@@ -191,6 +193,9 @@ def main():
     ap.add_argument("--hop", type=float, default=0.5)
     ap.add_argument("--refractory", type=float, default=2.0, help="s after a pick before the next")
     ap.add_argument("--cue-port")
+    ap.add_argument("--buzz-on", choices=["pick", "phrase"], default="pick",
+                    help="pick: buzz tile+1 pulses on every pick (old behaviour); phrase: only when "
+                         "ssvep_stim.py --tree finishes a phrase, group+1 pulses")
     ap.add_argument("--log")
     ap.add_argument("--seconds", type=float, default=0, help="stop after this many signal seconds (0 = run until Ctrl-C)")
     ap.add_argument("--model", help="personal TRCA model from ssvep_calibrate.py; scores come from it, CCA is logged beside")
@@ -217,15 +222,6 @@ def main():
     tx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     cue_now = {"i": None}
 
-    def listen():  # cues from ssvep_stim.py --trials
-        rx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        rx.bind(("127.0.0.1", 5006))
-        while True:
-            msg, _ = rx.recvfrom(64)
-            p = msg.decode().split()
-            cue_now["i"] = int(p[1]) if p[0] == "cue" else None
-    threading.Thread(target=listen, daemon=True).start()
-
     ser = None
     if a.cue_port:
         import serial
@@ -237,6 +233,21 @@ def main():
                 ser.write(b"b\n")
                 time.sleep(0.6)
         threading.Thread(target=run, daemon=True).start()
+
+    def listen():  # messages from ssvep_stim.py: cues (--trials) and finished phrases (--tree)
+        rx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        rx.bind(("127.0.0.1", 5006))
+        while True:
+            msg, _ = rx.recvfrom(64)
+            p = msg.decode().split()
+            if p[0] == "cue":
+                cue_now["i"] = int(p[1])
+            elif p[0] == "rest":
+                cue_now["i"] = None
+            elif p[0] == "phrase" and ser and a.buzz_on == "phrase":
+                print(f"# phrase done: group {p[1]}, phrase {p[2]} -> buzz {int(p[1]) + 1}", flush=True)
+                buzz(int(p[1]))  # group 0..3 -> 1..4 pulses, so the carer knows NEED/BODY/PEOPLE/ANSWER
+    threading.Thread(target=listen, daemon=True).start()
 
     log = open(a.log, "w") if a.log else None
     if log:
@@ -274,7 +285,7 @@ def main():
             if pick is not None:
                 last_pick_t = t
                 tx.sendto(f"pick {pick}".encode(), ("127.0.0.1", 5005))
-                if ser:
+                if ser and a.buzz_on == "pick":
                     buzz(pick)
             if cued is None:
                 stats["t_free"] += a.hop
