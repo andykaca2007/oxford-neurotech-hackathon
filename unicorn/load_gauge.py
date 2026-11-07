@@ -39,7 +39,7 @@ def src_fake(seed=0):
     while True:
         t = n / FS
         x = rng.normal(0, 8, 8)
-        load = t > 45
+        load = t > 75
         a_amp = 6 if load else 14
         th_amp = 10 if load else 3
         x[4] += a_amp * np.sin(2 * np.pi * 10 * t)
