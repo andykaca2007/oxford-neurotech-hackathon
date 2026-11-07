@@ -49,6 +49,17 @@
   .m .v { font-size:26px; font-weight:700; font-variant-numeric:tabular-nums; margin-top:2px; }
   .m .v small { font-size:12px; color:var(--dim); font-weight:500; margin-left:4px; }
   .trace { grid-column:1 / -1; height:150px; }
+  .chal { display:grid; grid-template-columns:auto 1fr auto; gap:12px; align-items:center; }
+  .chal .cur { font-size:40px; font-weight:900; font-variant-numeric:tabular-nums; letter-spacing:-.03em; }
+  .chal input { font:inherit; font-size:26px; font-weight:700; width:100%; padding:10px 14px; border-radius:12px; border:1px solid var(--line); background:var(--bg); color:var(--fg); outline:none; }
+  .chal input:focus { border-color:var(--accent); }
+  .btn { font:inherit; font-weight:700; font-size:14px; padding:10px 16px; border-radius:10px; border:1px solid var(--line); background:var(--bg); color:var(--fg); cursor:pointer; }
+  .btn.primary { background:var(--fg); color:#000; border-color:transparent; }
+  .score { display:flex; gap:18px; margin-top:10px; font-size:13px; color:var(--dim); }
+  .score b { color:var(--fg); font-weight:700; }
+  .score .err { color:var(--bad); }
+  .debrief { white-space:pre-wrap; line-height:1.45; font-size:15px; margin-top:10px; min-height:3em; }
+  .src { font-size:11px; color:var(--dim); margin-top:6px; }
   .trace canvas { width:100%; height:100%; display:block; }
   .alarmline { font-weight:700; font-size:clamp(15px, 1.6vw, 18px); color:var(--bad); display:none; margin-top:10px; text-align:center; }
   body.alarm .alarmline { display:block; }
@@ -93,6 +104,21 @@
         <div class="m"><div class="k">Dead electrodes</div><div class="v" id="m_dead">–</div></div>
       </div>
     </div>
+    <div class="card">
+      <h2>Challenge · 4000 minus 7, as fast as you can</h2>
+      <div class="chal">
+        <div class="cur" id="cur">4000</div>
+        <input id="ans" type="number" placeholder="next number" disabled>
+        <button class="btn primary" id="go">Start</button>
+      </div>
+      <div class="score"><span>answers <b id="n_ans">0</b></span><span>errors <b class="err" id="n_err">0</b></span><span>time <b id="n_time">0 s</b></span></div>
+    </div>
+    <div class="card">
+      <h2>Debrief</h2>
+      <div><button class="btn" id="debrief">Write the debrief</button></div>
+      <div class="debrief" id="dtext"></div>
+      <div class="src" id="dsrc"></div>
+    </div>
   </section>
   <section class="card trace"><canvas id="trace"></canvas></section>
 </div>
@@ -114,6 +140,35 @@ function heat(db){ // -6..+6 dB -> blue .. grey .. red
   return `rgb(${r|0},${gch|0},${b|0})`;
 }
 const ALARM = 70;
+let chal = { on:false, cur:4000, answers:0, errors:0, t0:0, errT:[] };
+let lastT = 0;
+const curEl = document.getElementById('cur'), ans = document.getElementById('ans'), go = document.getElementById('go');
+async function postEvent(kind, extra={}) {
+  try { await fetch('/event', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({kind, t:lastT, ...extra})}); } catch(e) {}
+}
+go.onclick = () => {
+  if (!chal.on) {
+    chal = { on:true, cur:4000, answers:0, errors:0, t0:lastT, errT:[] };
+    curEl.textContent = '4000'; ans.disabled = false; ans.value=''; ans.focus(); go.textContent='Stop';
+    postEvent('challenge_start');
+  } else {
+    chal.on = false; ans.disabled = true; go.textContent='Start'; postEvent('challenge_end');
+  }
+};
+ans.addEventListener('keydown', e => {
+  if (e.key !== 'Enter' || !chal.on) return;
+  const v = parseInt(ans.value, 10); ans.value='';
+  chal.answers++;
+  if (v === chal.cur - 7) { chal.cur -= 7; curEl.textContent = chal.cur; postEvent('answer', {value:v, ok:true}); }
+  else { chal.errors++; chal.errT.push(lastT); curEl.style.color='#fb7185'; setTimeout(()=>curEl.style.color='', 300); postEvent('error', {value:v, expected:chal.cur-7}); }
+  document.getElementById('n_ans').textContent = chal.answers; document.getElementById('n_err').textContent = chal.errors;
+});
+document.getElementById('debrief').onclick = async () => {
+  document.getElementById('dtext').textContent = 'writing…';
+  try { const r = await (await fetch('/debrief', {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'})).json();
+        document.getElementById('dtext').textContent = r.text; document.getElementById('dsrc').textContent = 'written by ' + r.source; }
+  catch(e) { document.getElementById('dtext').textContent = 'debrief failed'; }
+};
 const canvas = document.getElementById('trace'), ctx = canvas.getContext('2d');
 function draw(hist){
   const w = canvas.width = canvas.clientWidth*devicePixelRatio, h = canvas.height = canvas.clientHeight*devicePixelRatio;
@@ -122,6 +177,9 @@ function draw(hist){
   ctx.beginPath(); ctx.moveTo(0,h-ALARM/100*h); ctx.lineTo(w,h-ALARM/100*h); ctx.stroke(); ctx.setLineDash([]);
   if (hist.length<2) return;
   const n = Math.max(hist.length, 120);
+  // error ticks: an error at time te sits at hist index (len-1) - (lastT - te)
+  ctx.strokeStyle='#fb7185'; ctx.lineWidth=2*devicePixelRatio;
+  for (const te of chal.errT) { const i = hist.length-1 - Math.round(lastT - te); if (i<0) continue; const x=i/(n-1)*w; ctx.beginPath(); ctx.moveTo(x,h*0.1); ctx.lineTo(x,h*0.3); ctx.stroke(); }
   ctx.strokeStyle='#f4f4f5'; ctx.lineWidth=2*devicePixelRatio; ctx.beginPath();
   hist.forEach((v,i)=>{ const x=i/(n-1)*w, y=h-v/100*h; i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
   ctx.stroke();
@@ -129,6 +187,8 @@ function draw(hist){
 async function tick(){
   try {
     const s = await (await fetch('/state')).json();
+    lastT = s.t;
+    if (chal.on) document.getElementById('n_time').textContent = Math.max(0, Math.round(s.t - chal.t0)) + ' s';
     const m=Math.floor(s.t/60), sec=Math.floor(s.t%60);
     document.getElementById('clock').textContent = `${m}:${sec.toString().padStart(2,'0')}`;
     const lv = s.baseline_done ? s.load : 0;

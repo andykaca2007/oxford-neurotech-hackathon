@@ -17,7 +17,7 @@ athletes and coaches (table tennis pre-session readiness), same engine, smaller 
 |---|---|---|
 | Model: rest vs mental load | `unicorn/readiness_model.py` | done, evaluated |
 | Live gauge: baseline, load 0 to 100, alarm, speech | `unicorn/load_gauge.py` | done, tested on fake data |
-| Web dashboard: head map, load, markers, trace | `unicorn/gauge_server.py`, `unicorn/web/index.html` | done, checked in a browser |
+| Web dashboard: head map, load, markers, trace, maths challenge with error ticks, debrief | `unicorn/gauge_server.py`, `unicorn/web/index.html` | done, checked in a browser |
 | Headset bridge (Core-8 to LSL) | `unicorn/unicorn_gpype.py` | done, works on the Mac |
 | Live run on a real head | | NOT done: the loaner cap has dead electrodes |
 
@@ -57,8 +57,10 @@ Personalisation beats a universal model.
    the answers. The load climbs, the frontal electrode lights up, the page turns to alarm.
 3. Wrong answers appear as red ticks on the load trace: strain shows before the mistakes.
 4. They stop. The number falls. Blue again.
-5. A three-line LLM-written debrief appears: when load peaked, how long above the line, where
-   the errors fell, one recommendation. (To build, with the challenge screen: about 90 min.)
+5. A three-line debrief appears, written by Claude (claude-opus-5-5) from the session numbers:
+   when load peaked, how long above the line, where the errors fell, one recommendation.
+   Built. Needs `export ANTHROPIC_API_KEY=...` before starting gauge_server.py; without a key it
+   falls back to a plain template so the demo never hangs.
 
 ## What we claim, and what we do not
 Claim: a 400-pound dry headset plus a 30-second baseline detects mental load on people the
