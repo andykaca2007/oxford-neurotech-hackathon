@@ -89,6 +89,13 @@ def main():
 
     m = joblib.load(a.model)
     clf = m["model"]
+    riem = None
+    if m.get("riem"):
+        from riem_live import RiemFB
+        riem = RiemFB(FS, m["riem"]["ts"])
+        riem_clf = m["riem"]["clf"]
+        print("# stack: boosting on band powers + logistic on Riemannian filter-bank covariances, probabilities averaged", flush=True)
+    base_covs = []
     rich = bool(m.get("rich", False))
     # the model's own channel list wins: works for the old 5-channel and the new 8-channel model
     import readiness_model as _rm, model_search as _ms
@@ -227,10 +234,14 @@ def main():
                     post_state(t)
                     continue
                 base_feats.append(f)
+                if riem is not None:
+                    base_covs.append(riem.covs(X8[IDX]))
                 base_chan.append(chan_now)
                 base_fat.append(fat_now)
                 if len(base_feats) * 1.0 >= a.baseline:
                     base = np.mean(base_feats, axis=0)
+                    if riem is not None:
+                        riem.set_baseline(base_covs)
                     chan_base = {k: np.mean([c[k] for c in base_chan], axis=0) for k in ("tot", "th", "al")}
                     fat_base = float(np.mean(base_fat))
                     state = "monitoring"
@@ -251,6 +262,9 @@ def main():
             else:
                 state = "monitoring"
                 p = float(clf.predict_proba((f - base)[None, :])[0, 1])
+                if riem is not None:
+                    pr = float(riem_clf.predict_proba(riem.features(riem.covs(X8[IDX]))[None, :])[0, 1])
+                    p = 0.5 * (p + pr)
                 ema = 0.2 if ema is None else ema   # start calm, let the evidence raise it
                 ema = ema + (p - ema) * (1.0 / a.smooth)
                 load_pct = 100 * ema
