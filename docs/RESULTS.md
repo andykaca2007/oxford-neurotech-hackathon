@@ -53,6 +53,18 @@ set and loses on strangers. Loss curves and the search: figures/model_figures.pn
 figures/model_search.png. The gauge uses the gradient-boosting model (models/readiness.joblib,
 rebuild with `loadmonitor/model_search.py --fit-best`).
 
+## Electrode layouts (Andy's proposal, docs/ELECTRODE_LAYOUT.md), same pipeline
+
+| layout | electrodes | AUC all 36 | bal acc | strict: chosen on subjects 0-17, scored on 18-35 |
+|---|---|---|---|---|
+| now | Fz C3 Cz C4 Pz | 0.84 | 75% | AUC 0.825, acc 74% |
+| A | + P3 P4 O1 (PO7/PO8/POz moved back) | 0.84 | 75% | AUC 0.836, acc 74% |
+| B | A, plus C3->F3, C4->F4 | **0.87** | **77%** | **AUC 0.839, acc 75%** |
+
+Moving the three back electrodes alone changes nothing. Moving C3 and C4 forward to F3 and F4
+helps a little: the effort signal is frontal. Recommendation: layout B if the leads reach; otherwise
+stay with the current layout. Script: loadmonitor/layout_compare.py.
+
 ## Live headset (Unicorn BCI Core-8): pending
 - Slot 1 (12:00 to 12:30): amplifier pogo row unseated, even channels open; no usable data.
 - Next slot: scalp proof (occipital RMS under 40 uV, eyes-closed alpha ratio over 2), then
