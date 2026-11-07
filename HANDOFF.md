@@ -77,6 +77,14 @@ AI: a 3-class command classifier (clench / blink / nothing) trained on the team'
 are muscle and eye signals, not thought; the headset is the sensor, the classifier is the model.
 Earlier modes (SSVEP, speller, scanning) stay in the repo as evidence of the exploration.
 
+## FINAL DECISION 17:50 Sat: BRAIN-STEERED ROBOT, SSVEP decoder is the model
+After four pivots he settled on: the personal SSVEP decoder (public-data calibration curve =
+the science) steering a simulated robot in an arena (`unicorn/arena.py`): four small, dim,
+pulsing patches at the screen edges = forward/back/left/right, blink confirms, replay from
+public data when no headset (`replay_demo.py` sends the same UDP picks). Gentle flicker:
+contrast 0.45, edges only. Chain: unicorn_gpype.py -> ssvep_decode.py --lsl [--model] [--confirm blink]
+-> arena.py. Earlier modes (speller, scanning, head game) stay in the repo. NO MORE PIVOTS.
+
 ## Scope is frozen
 Four tiles, personal vs generic decoder, fixed 16-phrase tree (two looks per phrase,
 generated once, not a runtime LLM), wristband, replay mode. No new features.
