@@ -59,6 +59,8 @@ def main():
     ap.add_argument("--tree-timeout", type=float, default=10.0, help="s to make the second look before going back to groups")
     ap.add_argument("--settle", type=float, default=3.0, help="phrase mode: ignore picks this soon after a group opens")
     ap.add_argument("--phrase-log", help="CSV of phrase-mode events, for looks-per-message and errors")
+    ap.add_argument("--scan", type=float, default=0.0,
+                    help="NO FLICKER: a highlight walks the tiles, this many s per tile; a blink (blink_switch.py sends 'sel') or the space bar selects the highlighted tile")
     ap.add_argument("--tiles", type=int, default=4, choices=[4, 12],
                     help="4 tiles at 60 Hz (default) or 12 tiles at 120 Hz; lock the display to that rate")
     ap.add_argument("--speak", action="store_true",
@@ -116,6 +118,8 @@ def main():
 
     pick = None
     cand = None   # tile proposed by a stare, waiting for a blink (orange)
+    scan_idx, scan_t = 0, time.monotonic()
+    fake_select = False
     pick_t = 0.0
     frame = 0
     full = False
@@ -134,6 +138,8 @@ def main():
             elif e.type == pygame.KEYDOWN:
                 if e.key == pygame.K_ESCAPE:
                     running = False
+                elif a.scan and e.key == pygame.K_SPACE:
+                    fake_select = True
                 elif speller is not None and pygame.K_1 <= e.key <= pygame.K_9:
                     fake_pick = e.key - pygame.K_1          # keys 1-9 fake tiles 1-9
                 elif speller is not None and e.key in (pygame.K_0, pygame.K_MINUS, pygame.K_EQUALS):
@@ -146,9 +152,14 @@ def main():
             while True:
                 if fake_pick is not None:
                     parts, fake_pick = ["pick", str(fake_pick)], None
+                elif fake_select:
+                    parts, fake_select = ["sel"], False
                 else:
                     msg, _ = rx.recvfrom(64)
                     parts = msg.decode().split()
+                if parts[0] == "sel" and a.scan:
+                    parts = ["pick", str(scan_idx)]
+                    scan_idx, scan_t = 0, time.monotonic()
                 if parts[0] == "cand":
                     cand = None if parts[1] == "none" else int(parts[1])
                     continue
@@ -211,30 +222,38 @@ def main():
         screen.fill((0, 0, 0))
         if speller is not None:
             tree = speller   # same drawing path: labels(), prompt(now)
+        if a.scan:
+            cur_labels = tree.labels() if tree is not None else [t[0] for t in TILES]
+            if now - scan_t >= a.scan:
+                scan_t = now
+                for _ in range(len(TILES)):
+                    scan_idx = (scan_idx + 1) % len(TILES)
+                    if cur_labels[scan_idx]:
+                        break
         bar = 130 if tree is not None else 0     # carer bar at the bottom in phrase mode
         gap = 40 if a.tiles == 4 else 20
         tw, th = (w - gap * (COLS + 1)) // COLS, (h - bar - gap * (ROWS + 1)) // ROWS
         labels = tree.labels() if tree is not None else [t[0] for t in TILES]
         for i, (_, period, col) in enumerate(TILES):
-            on = (frame % period) < (period + 1) // 2
+            on = (scan_idx == i) if a.scan else (frame % period) < (period + 1) // 2
             x = gap + (i % COLS) * (tw + gap)
             y = gap + (i // COLS) * (th + gap)
             rect = pygame.Rect(x, y, tw, th)
-            pygame.draw.rect(screen, col if on else (20, 20, 20), rect, border_radius=24)
+            pygame.draw.rect(screen, col if on else ((45, 45, 45) if a.scan else (20, 20, 20)), rect, border_radius=24)
             if cued == i:
                 pygame.draw.rect(screen, (255, 255, 255), rect, width=12, border_radius=24)
             if cand == i:
                 pygame.draw.rect(screen, (255, 140, 0), rect.inflate(-16, -16), width=10, border_radius=20)
             if pick == i and now - pick_t < 1.5:
                 pygame.draw.rect(screen, (255, 255, 0), rect.inflate(-30, -30), width=8, border_radius=18)
-            colour = (255, 255, 255) if on else (90, 90, 90)
+            colour = (255, 255, 255) if on else ((170, 170, 170) if a.scan else (90, 90, 90))
             if tree is None:
-                txt = font.render(f"{labels[i]}  {FREQS[i]:.2f} Hz", True, colour)
+                txt = font.render(labels[i] if a.scan else f"{labels[i]}  {FREQS[i]:.2f} Hz", True, colour)
                 screen.blit(txt, txt.get_rect(center=rect.center))
             else:
                 txt = fit(labels[i], tw - 40, colour)
                 screen.blit(txt, txt.get_rect(center=rect.center))
-                if a.tiles == 4:
+                if a.tiles == 4 and not a.scan:
                     hz = small.render(f"{FREQS[i]:.2f} Hz", True, colour)
                     screen.blit(hz, hz.get_rect(midtop=(rect.centerx, rect.centery + 34)))
         if tree is not None:
