@@ -110,6 +110,13 @@
       </div>
     </div>
     <div class="card">
+      <h2>Fatigue · (theta + alpha) / beta drift since baseline</h2>
+      <div class="load">
+        <div class="n" id="fval">–</div>
+        <div class="s"><b id="flabel">Baseline</b><span id="fsub">published ratio, not a trained model · rises over minutes</span></div>
+      </div>
+    </div>
+    <div class="card">
       <h2>Markers</h2>
       <div class="markers">
         <div class="m"><div class="k">Fz theta</div><div class="v" id="m_theta">–<small>dB</small></div></div>
@@ -251,6 +258,11 @@ async function tick(){
       val.textContent='–'; val.style.color='var(--dim)'; label.textContent='Baseline'; sub.textContent='sit still, eyes open';
       document.getElementById('basebar').style.display='block'; document.getElementById('basefill').style.width=(100*s.baseline_progress)+'%';
     }
+    const fv = document.getElementById('fval'), fl = document.getElementById('flabel');
+    if (s.baseline_done && s.fatigue !== undefined) {
+      const fz_ = Math.round(s.fatigue); fv.textContent = fz_; fv.style.color = fz_>=60 ? 'var(--accent)' : 'var(--fg)';
+      fl.textContent = fz_>=60 ? 'Tiring' : fz_>=30 ? 'Drifting' : 'Fresh';
+    } else { fv.textContent='–'; fv.style.color='var(--dim)'; fl.textContent='Baseline'; }
     let top=null, dead=[];
     const present = new Set((s.channels||[]).map(c => c.name));
     for (const [name, e] of Object.entries(els)) e.g.style.display = present.size && !present.has(name) ? 'none' : '';

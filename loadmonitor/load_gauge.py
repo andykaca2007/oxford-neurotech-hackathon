@@ -106,6 +106,7 @@ def main():
     base_chan, chan_base, chan_now = [], None, None
     CH8 = MONTAGE
     ema, above_since, alarmed = None, None, False
+    base_fat, fat_base, fat_ema, fatigue_pct = [], 0.0, None, 0.0
     log = open(a.log, "w") if a.log else None
     if log:
         header_written = [False]
@@ -154,7 +155,7 @@ def main():
             sig = [[int(v) for v in row] for row in Xs]
         except Exception:
             pass
-        body = json.dumps(dict(t=round(t_now, 1), state=state, load=round(load_pct, 1), alarm=bool(alarmed), channels=chans, sig=sig,
+        body = json.dumps(dict(t=round(t_now, 1), state=state, load=round(load_pct, 1), fatigue=round(fatigue_pct, 1), alarm=bool(alarmed), channels=chans, sig=sig,
                                baseline_done=base is not None, baseline_s=a.baseline,
                                baseline_progress=min(1.0, len(base_feats) / a.baseline) if base is None else 1.0,
                                hist=list(hist))).encode()
@@ -202,14 +203,21 @@ def main():
             tot = pw[:, (fr >= 1) & (fr < 40)].mean(1)
             th = pw[:, (fr >= 4) & (fr < 8)].mean(1)
             al = pw[:, (fr >= 8) & (fr < 13)].mean(1)
+            be = pw[:, (fr >= 13) & (fr < 30)].mean(1)
             dead = X8.std(1) < 1e-6
             chan_now = dict(tot=np.log10(tot + 1e-12), th=np.log10(th + 1e-12), al=np.log10(al + 1e-12), dead=dead)
+            # fatigue index: log10((theta + alpha) / beta) over the live model channels (Jap et al. 2009 ratio);
+            # it drifts UP over minutes as someone tires. Not a trained model: a published ratio against the baseline.
+            live = [i for i in IDX if not dead[i]] or list(IDX)
+            fat_now = float(np.mean(np.log10((th[live] + al[live]) / (be[live] + 1e-12) + 1e-12)))
             if base is None:
                 base_feats.append(f)
                 base_chan.append(chan_now)
+                base_fat.append(fat_now)
                 if len(base_feats) * 1.0 >= a.baseline:
                     base = np.mean(base_feats, axis=0)
                     chan_base = {k: np.mean([c[k] for c in base_chan], axis=0) for k in ("tot", "th", "al")}
+                    fat_base = float(np.mean(base_fat))
                     state = "monitoring"
                     print("# baseline done", flush=True)
                     speak("Baseline done")
@@ -220,6 +228,9 @@ def main():
                 ema = 0.2 if ema is None else ema   # start calm, let the evidence raise it
                 ema = ema + (p - ema) * (1.0 / a.smooth)
                 load_pct = 100 * ema
+                # fatigue: slow EMA (about 60 s) of the ratio drift; +0.3 log10 (ratio doubled) reads as 100
+                fat_ema = fat_now if fat_ema is None else fat_ema + (fat_now - fat_ema) / 60.0
+                fatigue_pct = float(np.clip((fat_ema - fat_base) / 0.3 * 100, 0, 100))
                 if load_pct >= a.alarm:
                     above_since = above_since or t
                     if not alarmed and t - above_since >= a.hold:
@@ -230,9 +241,9 @@ def main():
                     above_since, alarmed = None, False
                 if log:
                     if not header_written[0]:
-                        log.write("t,load_pct,alarm,condition," + ",".join(f"f{i}" for i in range(len(f))) + "\n")
+                        log.write("t,load_pct,fatigue_pct,alarm,condition," + ",".join(f"f{i}" for i in range(len(f))) + "\n")
                         header_written[0] = True
-                    log.write(f"{t:.1f},{load_pct:.1f},{int(alarmed)},{cond['now']}," + ",".join(f"{v:.3f}" for v in f) + "\n")
+                    log.write(f"{t:.1f},{load_pct:.1f},{fatigue_pct:.1f},{int(alarmed)},{cond['now']}," + ",".join(f"{v:.3f}" for v in f) + "\n")
                     log.flush()
                 hist.append(round(load_pct, 1))
                 post_state(t)
