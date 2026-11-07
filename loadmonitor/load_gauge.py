@@ -30,6 +30,8 @@ from readiness_model import CH, features as features_basic  # noqa: E402
 from model_search import feats as features_rich  # noqa: E402
 
 FS = 250
+from scipy.signal import butter as _butter, sosfiltfilt
+SIG_SOS = _butter(4, [1, 40], btype="band", fs=FS, output="sos")
 IDX = [0, 1, 2, 3, 4]   # Fz C3 Cz C4 Pz in the Core-8 stream
 
 
@@ -130,7 +132,15 @@ def main():
                 else:
                     d["db"] = 0.0
                 chans.append(d)
-        body = json.dumps(dict(t=round(t_now, 1), state=state, load=round(load_pct, 1), alarm=bool(alarmed), channels=chans,
+        # last 2 s of every channel, 1 to 40 Hz, 50 samples per second, for the live traces on the page
+        sig = []
+        try:
+            Xs = np.array(buf)[-2 * FS:, :8].T
+            Xs = sosfiltfilt(SIG_SOS, Xs - Xs.mean(1, keepdims=True), axis=1)[:, ::5]
+            sig = [[int(v) for v in row] for row in Xs]
+        except Exception:
+            pass
+        body = json.dumps(dict(t=round(t_now, 1), state=state, load=round(load_pct, 1), alarm=bool(alarmed), channels=chans, sig=sig,
                                baseline_done=base is not None, baseline_s=a.baseline,
                                baseline_progress=min(1.0, len(base_feats) / a.baseline) if base is None else 1.0,
                                hist=list(hist))).encode()

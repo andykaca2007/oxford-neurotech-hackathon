@@ -121,6 +121,10 @@
     </div>
   </section>
   <section class="card trace"><canvas id="trace"></canvas></section>
+  <section class="card" id="sigcard">
+    <div class="k" style="font-size:11px;letter-spacing:.08em;opacity:.6;margin-bottom:6px">SIGNALS · LAST 2 S · 1 TO 40 HZ · EACH ROW AUTOSCALED</div>
+    <div id="sigrows" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px 14px"></div>
+  </section>
 </div>
 <script>
 const POS = { Fz:[100,52], C3:[55,110], Cz:[100,110], C4:[145,110], Pz:[100,158], PO7:[52,172], POz:[100,188], PO8:[148,172] };
@@ -184,6 +188,29 @@ function draw(hist){
   hist.forEach((v,i)=>{ const x=i/(n-1)*w, y=h-v/100*h; i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
   ctx.stroke();
 }
+const SIGN = ['Fz','C3','Cz','C4','Pz','PO7','POz','PO8'];
+const sigrows = document.getElementById('sigrows'), sigc = [];
+for (const n of SIGN) {
+  const d = document.createElement('div'); d.style.cssText='display:flex;align-items:center;gap:8px';
+  const l = document.createElement('div'); l.style.cssText='width:58px;font-size:12px;opacity:.8;text-align:right'; l.textContent = n;
+  const c = document.createElement('canvas'); c.style.cssText='flex:1;height:44px;background:rgba(255,255,255,.03);border-radius:6px';
+  d.append(l,c); sigrows.append(d); sigc.push({l,c});
+}
+function drawSig(sig){
+  if (!sig || !sig.length) return;
+  sig.forEach((row,i)=>{
+    const {l,c} = sigc[i]; const g = c.getContext('2d');
+    const w = c.width = c.clientWidth*devicePixelRatio, h = c.height = c.clientHeight*devicePixelRatio;
+    g.clearRect(0,0,w,h);
+    let mx = 0; for (const v of row) mx = Math.max(mx, Math.abs(v));
+    const rms = Math.sqrt(row.reduce((a,v)=>a+v*v,0)/Math.max(1,row.length));
+    const lim = Math.max(5, mx*1.1);
+    l.innerHTML = `${SIGN[i]}<br><span style="font-size:10px;color:${rms<40?'#34d399':rms<100?'#fbbf24':'#fb7185'}">${rms.toFixed(0)} uV</span>`;
+    g.strokeStyle = rms<40?'#34d399':rms<100?'#fbbf24':'#fb7185'; g.lineWidth = 1.2*devicePixelRatio; g.beginPath();
+    row.forEach((v,j)=>{ const x=j/(row.length-1)*w, y=h/2 - v/lim*(h/2-2); j?g.lineTo(x,y):g.moveTo(x,y); });
+    g.stroke();
+  });
+}
 async function tick(){
   try {
     const s = await (await fetch('/state')).json();
@@ -224,6 +251,7 @@ async function tick(){
     document.getElementById('m_theta').innerHTML = (fz && s.baseline_done ? (fz.theta_db>0?'+':'')+fz.theta_db.toFixed(1) : '–') + '<small>dB</small>';
     document.getElementById('m_alpha').innerHTML = (pz && s.baseline_done ? (pz.alpha_db>0?'+':'')+pz.alpha_db.toFixed(1) : '–') + '<small>dB</small>';
     draw(s.hist||[]);
+    drawSig(s.sig);
   } catch(e) { document.getElementById('state').textContent='waiting'; }
 }
 setInterval(tick, 500); tick();
