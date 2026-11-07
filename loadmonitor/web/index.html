@@ -7,31 +7,31 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;700;900&display=swap" rel="stylesheet">
 <style>
-  :root { --bg:#0b0b0d; --card:#141417; --line:#232328; --fg:#f4f4f5; --dim:#8a8a93; --ok:#34d399; --warn:#fbbf24; --bad:#fb7185; --accent:#60a5fa; }
+  :root { --bg:#090807; --card:#090807; --line:color-mix(in oklch, #eeebe4 13%, transparent); --fg:#eeebe4; --dim:#8f8c84; --mid:#bbb7af; --ok:#bbb7af; --warn:#e9ae57; --bad:#e9ae57; --accent:#e9ae57; }
   * { box-sizing:border-box; margin:0; padding:0; }
   html, body { height:100%; background:var(--bg); color:var(--fg); font-family:"Archivo", system-ui, sans-serif; }
   body { display:grid; grid-template-rows:auto 1fr; gap:12px; padding:14px 20px; overflow:hidden; }
   body { transition:background .8s; }
-  body.calm { --bg:#070f22; --card:#0f1a36; --line:#1c2a52; }          /* blue when calm */
-  body.work { --bg:#0b0b0d; --card:#141417; --line:#232328; }          /* neutral while working */
-  body.alarm { --bg:#0b0b0d; --card:#141417; --line:#232328; }         /* alarm: quiet page, loud card */
-  body.alarm::before { content:""; position:fixed; left:0; right:0; top:0; height:6px; background:var(--bad); }
-  body.alarm .loadcard { border-color:var(--bad); box-shadow:0 0 0 1px var(--bad) inset; }
+  body.calm { }
+  body.work { }
+  body.alarm { }
+  body.alarm::before { content:""; position:fixed; left:0; right:0; top:0; height:3px; background:var(--accent); }
+  body.alarm .loadcard { border-top-color:var(--accent); }
   @keyframes pulse { 0%,100% { opacity:1 } 50% { opacity:.55 } }
   body.alarm .pill.on { animation:pulse 1.2s ease-in-out infinite; }
   header { display:flex; align-items:center; justify-content:space-between; }
-  header .t { font-weight:900; font-size:20px; letter-spacing:-.02em; }
+  header .t { font-weight:700; font-size:18px; letter-spacing:-.01em; }
   header .t span { color:var(--dim); font-weight:500; margin-left:10px; }
-  .pill { font-size:13px; font-weight:700; padding:6px 12px; border-radius:999px; background:var(--card); border:1px solid var(--line); }
-  .pill.on { background:var(--bad); color:#fff; border-color:transparent; }
+  .pill { font-size:12px; font-weight:500; letter-spacing:.06em; text-transform:uppercase; padding:4px 0; color:var(--dim); background:none; border:0; }
+  .pill.on { color:var(--accent); }
   .grid { display:grid; grid-template-columns:minmax(0,1.1fr) minmax(0,1fr); grid-template-rows:minmax(0,1fr) 210px; gap:12px; min-height:0; }
-  .card { background:var(--card); border:1px solid var(--line); border-radius:18px; padding:14px 18px; display:flex; flex-direction:column; min-height:0; }
-  .card h2 { font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--dim); margin-bottom:8px; }
+  .card { background:transparent; border:0; border-top:1px solid var(--line); border-radius:0; padding:12px 0 0; display:flex; flex-direction:column; min-height:0; }
+  .card h2 { font-size:11px; font-weight:500; letter-spacing:.08em; text-transform:uppercase; color:var(--dim); margin-bottom:8px; }
   .head { display:flex; align-items:center; justify-content:center; }
   .head { flex:1; min-height:0; display:flex; align-items:center; justify-content:center; }
   .head svg { width:100%; height:100%; }
-  .ring { fill:none; stroke:var(--line); stroke-width:2; }
-  .el circle { stroke:#000; stroke-width:1.5; transition:fill .5s, r .5s; }
+  .ring { fill:none; stroke:var(--dim); stroke-width:1; }
+  .el circle { stroke:var(--bg); stroke-width:1; transition:fill .5s, r .5s; }
   .el text { font-family:"Archivo"; font-weight:700; fill:#fff; text-anchor:middle; dominant-baseline:central; font-size:7px; pointer-events:none; }
   .el .v { font-size:5.5px; font-weight:500; fill:#cfcfd6; }
   .el.dead circle { fill:none; stroke:#555; stroke-dasharray:3 2; }
@@ -46,7 +46,7 @@
   .bar { height:8px; background:var(--line); border-radius:4px; overflow:hidden; margin-top:6px; }
   .bar i { display:block; height:100%; width:0; background:var(--fg); transition:width .5s; }
   .markers { display:grid; grid-template-columns:1fr 1fr; gap:10px; align-content:start; }
-  .m { background:var(--bg); border:1px solid var(--line); border-radius:12px; padding:12px 14px; }
+  .m { background:transparent; border:0; border-top:1px solid var(--line); border-radius:0; padding:8px 0 0; }
   .m .k { font-size:11px; color:var(--dim); text-transform:uppercase; letter-spacing:.06em; }
   .m .v { font-size:22px; font-weight:700; font-variant-numeric:tabular-nums; margin-top:2px; }
   .m .v small { font-size:12px; color:var(--dim); font-weight:500; margin-left:4px; }
@@ -57,8 +57,8 @@
   .chal .cur { font-size:40px; font-weight:900; font-variant-numeric:tabular-nums; letter-spacing:-.03em; }
   .chal input { font:inherit; font-size:26px; font-weight:700; width:100%; padding:10px 14px; border-radius:12px; border:1px solid var(--line); background:var(--bg); color:var(--fg); outline:none; }
   .chal input:focus { border-color:var(--accent); }
-  .btn { font:inherit; font-weight:700; font-size:14px; padding:10px 16px; border-radius:10px; border:1px solid var(--line); background:var(--bg); color:var(--fg); cursor:pointer; }
-  .btn.primary { background:var(--fg); color:#000; border-color:transparent; }
+  .btn { font:inherit; font-weight:500; font-size:13px; padding:6px 12px; border-radius:0; border:1px solid var(--mid); background:none; color:var(--fg); cursor:pointer; }
+  .btn.primary { background:var(--fg); color:var(--bg); }
   .score { display:flex; gap:18px; margin-top:10px; font-size:13px; color:var(--dim); }
   .score b { color:var(--fg); font-weight:700; }
   .score .err { color:var(--bad); }
@@ -152,10 +152,10 @@ for (const [name,[x,y]] of Object.entries(POS)) {
   const v = document.createElementNS(NS,'text'); v.setAttribute('class','v'); v.setAttribute('x',x); v.setAttribute('y',y+6); v.textContent='';
   g.append(c,t,v); svg.append(g); els[name] = {g,c,v};
 }
-function heat(db){ // -6..+6 dB -> blue .. grey .. red
+function heat(db){ // -6..+6 dB -> dark .. grey .. ochre
   const x = Math.max(-1, Math.min(1, db/6));
-  const r = x>0 ? 60+195*x : 60, gch = 60+40*(1-Math.abs(x)), b = x<0 ? 60+195*(-x) : 60;
-  return `rgb(${r|0},${gch|0},${b|0})`;
+  if (x>=0) { const r=0x55+(0xe9-0x55)*x, g=0x55+(0xae-0x55)*x, b=0x55+(0x57-0x55)*x; return `rgb(${r|0},${g|0},${b|0})`; }
+  const k = 0x55 + (0x22-0x55)*(-x); return `rgb(${k|0},${k|0},${k|0})`;
 }
 const ALARM = 70;
 let chal = { on:false, cur:4000, answers:0, errors:0, t0:0, errT:[] };
@@ -178,7 +178,7 @@ ans.addEventListener('keydown', e => {
   const v = parseInt(ans.value, 10); ans.value='';
   chal.answers++;
   if (v === chal.cur - 7) { chal.cur -= 7; curEl.textContent = chal.cur; postEvent('answer', {value:v, ok:true}); }
-  else { chal.errors++; chal.errT.push(lastT); curEl.style.color='#fb7185'; setTimeout(()=>curEl.style.color='', 300); postEvent('error', {value:v, expected:chal.cur-7}); }
+  else { chal.errors++; chal.errT.push(lastT); curEl.style.color='#e9ae57'; setTimeout(()=>curEl.style.color='', 300); postEvent('error', {value:v, expected:chal.cur-7}); }
   document.getElementById('n_ans').textContent = chal.answers; document.getElementById('n_err').textContent = chal.errors;
 });
 document.getElementById('debrief').onclick = async () => {
@@ -191,14 +191,14 @@ const canvas = document.getElementById('trace'), ctx = canvas.getContext('2d');
 function draw(hist){
   const w = canvas.width = canvas.clientWidth*devicePixelRatio, h = canvas.height = canvas.clientHeight*devicePixelRatio;
   ctx.clearRect(0,0,w,h);
-  ctx.strokeStyle='#fb718566'; ctx.setLineDash([4,6]); ctx.lineWidth=1;
+  ctx.strokeStyle='#e9ae5766'; ctx.setLineDash([4,6]); ctx.lineWidth=1;
   ctx.beginPath(); ctx.moveTo(0,h-ALARM/100*h); ctx.lineTo(w,h-ALARM/100*h); ctx.stroke(); ctx.setLineDash([]);
   if (hist.length<2) return;
   const n = Math.max(hist.length, 120);
   // error ticks: an error at time te sits at hist index (len-1) - (lastT - te)
-  ctx.strokeStyle='#fb7185'; ctx.lineWidth=2*devicePixelRatio;
+  ctx.strokeStyle='#e9ae57'; ctx.lineWidth=2*devicePixelRatio;
   for (const te of chal.errT) { const i = hist.length-1 - Math.round(lastT - te); if (i<0) continue; const x=i/(n-1)*w; ctx.beginPath(); ctx.moveTo(x,h*0.1); ctx.lineTo(x,h*0.3); ctx.stroke(); }
-  ctx.strokeStyle='#f4f4f5'; ctx.lineWidth=2*devicePixelRatio; ctx.beginPath();
+  ctx.strokeStyle='#eeebe4'; ctx.lineWidth=2*devicePixelRatio; ctx.beginPath();
   hist.forEach((v,i)=>{ const x=i/(n-1)*w, y=h-v/100*h; i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
   ctx.stroke();
 }
@@ -207,7 +207,7 @@ const sigrows = document.getElementById('sigrows'), sigc = [];
 for (const n of SIGN) {
   const d = document.createElement('div'); d.style.cssText='display:flex;align-items:center;gap:8px;min-height:0;min-width:0;height:100%';
   const l = document.createElement('div'); l.style.cssText='width:58px;font-size:12px;opacity:.8;text-align:right'; l.textContent = n;
-  const c = document.createElement('canvas'); c.style.cssText='flex:1;width:100%;min-width:0;height:100%;min-height:24px;background:rgba(255,255,255,.03);border-radius:6px';
+  const c = document.createElement('canvas'); c.style.cssText='flex:1;width:100%;min-width:0;height:100%;min-height:24px;background:none;border-top:1px solid var(--line)';
   d.append(l,c); sigrows.append(d); sigc.push({l,c});
 }
 function drawSig(sig){
@@ -219,8 +219,8 @@ function drawSig(sig){
     let mx = 0; for (const v of row) mx = Math.max(mx, Math.abs(v));
     const rms = Math.sqrt(row.reduce((a,v)=>a+v*v,0)/Math.max(1,row.length));
     const lim = Math.max(5, mx*1.1);
-    l.innerHTML = `${SIGN[i]}<br><span style="font-size:10px;color:${rms<40?'#34d399':rms<100?'#fbbf24':'#fb7185'}">${rms.toFixed(0)} uV</span>`;
-    g.strokeStyle = rms<40?'#34d399':rms<100?'#fbbf24':'#fb7185'; g.lineWidth = 1.2*devicePixelRatio; g.beginPath();
+    l.innerHTML = `${SIGN[i]}<br><span style="font-size:10px;color:${rms<40?'#bbb7af':rms<100?'#e9ae57':'#e9ae57'}">${rms.toFixed(0)} uV</span>`;
+    g.strokeStyle = rms<40?'#bbb7af':rms<100?'#e9ae57':'#e9ae57'; g.lineWidth = 1.2*devicePixelRatio; g.beginPath();
     row.forEach((v,j)=>{ const x=j/(row.length-1)*w, y=h/2 - v/lim*(h/2-2); j?g.lineTo(x,y):g.moveTo(x,y); });
     g.stroke();
   });
@@ -243,7 +243,7 @@ async function tick(){
     const val = document.getElementById('val'), label = document.getElementById('label'), sub = document.getElementById('sub');
     if (s.baseline_done) {
       const v = Math.max(0, Math.min(100, s.load));
-      val.textContent = Math.round(v); val.style.color = v>=ALARM?'#fb7185':v>=ALARM-20?'#fbbf24':'#34d399';
+      val.textContent = Math.round(v); val.style.color = v>=ALARM?'#e9ae57':'#eeebe4';
       label.textContent = s.alarm?'High load':v>=ALARM?'Load rising':v>=ALARM-20?'Working':'Calm';
       sub.textContent = 'alarm after 20 s above 70'; document.getElementById('basebar').style.display='none';
     } else {
