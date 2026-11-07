@@ -252,6 +252,8 @@ async function tick(){
       document.getElementById('basebar').style.display='block'; document.getElementById('basefill').style.width=(100*s.baseline_progress)+'%';
     }
     let top=null, dead=[];
+    const present = new Set((s.channels||[]).map(c => c.name));
+    for (const [name, e] of Object.entries(els)) e.g.style.display = present.size && !present.has(name) ? 'none' : '';
     for (const ch of (s.channels||[])) {
       const e = els[ch.name]; if (!e) continue;
       e.g.classList.toggle('dead', ch.dead);
