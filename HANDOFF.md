@@ -57,6 +57,26 @@ Next slot, in order, do not skip:
 6. 2 min eyes-open rest with the decoder armed (no stim): false selections per minute.
 7. Film the best run on a phone. The bridge auto-saves unicorn_rec_*.csv; keep them.
 
+## DECISION 17:00 Sat: NO FLICKER. Scanning + blink switch is the product
+The user rejected flicker (tiring, impractical). The product is now a scanning communication aid:
+a highlight walks the tiles (`ssvep_stim.py --spell --tiles 12 --scan 1.0 --speak`), a deliberate
+blink on Fz selects (`blink_switch.py --lsl`, sends "sel" over UDP 5005; space bar fakes it).
+Letters in two blinks, predicted word in one, phrases (`--tree --scan 1.0`) in two.
+AI: a deliberate-vs-spontaneous blink classifier trained on the team's logged blinks
+(`blink_switch.py --log`), held-out people, false-selection rate. SSVEP/TRCA code stays in the
+repo as the optional fast mode and the public-data result stays on the slides as prior work.
+Only Fz and the mastoid stickies need to work for the demo.
+
+## DECISION 17:30 Sat: HEAD-CONTROLLED GAME (he dropped the communication aid)
+Product: a game you play with your face. Jaw CLENCH = jump, deliberate BLINK = duck/second
+action. Both are the signals a dry loaner cap reads reliably (EMG burst on all channels; EOG on
+Fz). `unicorn/cmd_switch.py --lsl --keys` detects them and presses keys system-wide (Space, S),
+so a Roblox Studio obby/runner, or `unicorn/game_runner.py` (pygame fallback, UDP 5007), reacts.
+AI: a 3-class command classifier (clench / blink / nothing) trained on the team's logged events
+(`cmd_switch.py --log`), held-out people, accuracy + false triggers per minute. Honest line: these
+are muscle and eye signals, not thought; the headset is the sensor, the classifier is the model.
+Earlier modes (SSVEP, speller, scanning) stay in the repo as evidence of the exploration.
+
 ## Scope is frozen
 Four tiles, personal vs generic decoder, fixed 16-phrase tree (two looks per phrase,
 generated once, not a runtime LLM), wristband, replay mode. No new features.
