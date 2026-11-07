@@ -33,11 +33,26 @@ BANDS_BASIC = {"theta": (4, 8), "alpha": (8, 13), "beta": (13, 30)}
 BANDS_RICH = {"delta": (1, 4), "theta": (4, 8), "alpha": (8, 13), "lbeta": (13, 20), "hbeta": (20, 30), "gamma": (30, 40)}
 
 
-def feats(x, fs, rich):
-    sos = butter(4, [1, 40], btype="band", fs=fs, output="sos")
-    x = sosfiltfilt(sos, x - x.mean(1, keepdims=True), axis=1)
+# Processing config, saved into the model file and applied identically live. ROBUST: dry electrodes on hair give
+# 50 Hz mains hum and sub-4 Hz drift that together can be 90 percent of the power; a notch, a steeper 3 Hz high-pass
+# and no delta band keep the features on the bands the model is about.
+FEAT_CFG = dict(lo=1.0, hi=40.0, notch=False, order=4, drop_delta=False)
+ROBUST_CFG = dict(lo=3.0, hi=40.0, notch=True, order=6, drop_delta=True)
+
+
+def feats(x, fs, rich, cfg=None):
+    from scipy.signal import iirnotch, tf2sos
+    cfg = cfg or FEAT_CFG
+    x = x - x.mean(1, keepdims=True)
+    if cfg.get("notch"):
+        b, a_ = iirnotch(50.0, 30.0, fs=fs)
+        x = sosfiltfilt(tf2sos(b, a_), x, axis=1)
+    sos = butter(cfg.get("order", 4), [cfg["lo"], cfg["hi"]], btype="band", fs=fs, output="sos")
+    x = sosfiltfilt(sos, x, axis=1)
     f, p = welch(x, fs=fs, nperseg=int(fs * 2), axis=1)
     bands = BANDS_RICH if rich else BANDS_BASIC
+    if cfg.get("drop_delta"):
+        bands = {k: v for k, v in bands.items() if k != "delta"}
     bp = {b: p[:, (f >= lo) & (f < hi)].mean(1) for b, (lo, hi) in bands.items()}
     out = [np.log(bp[b] + 1e-12) for b in bands]
     fz, pz, cz = CH.index("Fz"), CH.index("Pz"), CH.index("Cz")
@@ -47,7 +62,7 @@ def feats(x, fs, rich):
     if rich:
         tot = sum(bp.values()) + 1e-12
         out += [np.log(bp[b] / tot + 1e-12) for b in bands]                      # relative powers
-        psd = p[:, (f >= 1) & (f < 40)]; psd = psd / psd.sum(1, keepdims=True)
+        psd = p[:, (f >= cfg["lo"]) & (f < cfg["hi"])]; psd = psd / psd.sum(1, keepdims=True)
         out.append(-(psd * np.log(psd + 1e-12)).sum(1))                            # spectral entropy per ch
         out.append(np.array([np.log(th[fz]) - np.log(th[pz]), np.log(al[cz] / th[cz])]))
         lo = p[:, (f >= 0.5) & (f < 4)].mean(1)
@@ -55,7 +70,7 @@ def feats(x, fs, rich):
     return np.concatenate(out)
 
 
-def build(win_s, overlap, rich):
+def build(win_s, overlap, rich, cfg=None):
     X, y, subj = [], [], []
     for rest_path in sorted(glob.glob("data/eegmat/Subject*_1.edf")):
         sid = re.search(r"Subject(\d+)_1", rest_path).group(1)
@@ -64,7 +79,7 @@ def build(win_s, overlap, rich):
         n = int(win_s * fs); step = n // 2 if overlap else n
         def ep(x, start_s, end_s):
             a, b = int(start_s * fs), int(end_s * fs)
-            return [feats(x[:, i:i + n], fs, rich) for i in range(a, min(b, x.shape[1]) - n + 1, step)]
+            return [feats(x[:, i:i + n], fs, rich, cfg) for i in range(a, min(b, x.shape[1]) - n + 1, step)]
         base = np.mean(ep(xr, 0, 28), axis=0)
         er = [e - base for e in ep(xr, 30, 90)]
         et = [e - base for e in ep(xt, 0, 60)]
@@ -109,25 +124,28 @@ def main():
     ap.add_argument("--save", action="store_true")
     ap.add_argument("--quick", action="store_true", help="4 s windows only")
     ap.add_argument("--fit-best", action="store_true", help="skip the search: fit the known winner (4 s, overlap, rich, gradient boosting) and save it")
+    ap.add_argument("--robust", action="store_true", help="with --fit-best: 50 Hz notch, 3 Hz high-pass, no delta band (ROBUST_CFG), for dry electrodes")
     ap.add_argument("--invariant", action="store_true", help="with --fit-best: drop the absolute log band powers and the blink band, keep only amplitude-invariant features (relative powers, ratios, entropy, gradient)")
     a = ap.parse_args()
     if a.fit_best:
         import joblib
         from sklearn.base import clone
-        X, y, subj = build(4.0, True, True)
+        cfg = ROBUST_CFG if a.robust else FEAT_CFG
+        X, y, subj = build(4.0, True, True, cfg)
         mask = None
         if a.invariant:
-            # feats() layout: [6 bands x n_ch log power][2 ratios][6 x n_ch relative][n_ch entropy][2 gradient][1 blink]
-            mask = np.ones(X.shape[1], bool); mask[:6 * len(CH)] = False; mask[-1] = False
+            # feats() layout: [nb bands x n_ch log power][2 ratios][nb x n_ch relative][n_ch entropy][2 gradient][1 blink]
+            nb = 5 if cfg.get("drop_delta") else 6
+            mask = np.ones(X.shape[1], bool); mask[:nb * len(CH)] = False; mask[-1] = False
             X = X[:, mask]
         acc, sd, auc, tr = loso(dict(models())["grad boosting"], X, y, subj)
         clf = clone(dict(models())["grad boosting"]).fit(X, y)
         os.makedirs("models", exist_ok=True)
-        joblib.dump(dict(model=clf, channels=CH, epoch_s=4.0, rich=True, feature_fn="model_search.feats", feature_mask=mask,
+        joblib.dump(dict(model=clf, channels=CH, epoch_s=4.0, rich=True, feature_fn="model_search.feats", feature_mask=mask, feat_cfg=cfg,
                          loso_bal_acc=float(acc), loso_auc=float(auc), n_subjects=36,
-                         config=dict(win=4.0, overlap=True, rich=True, invariant=bool(a.invariant),
-                                     model="grad boosting" + (" (amplitude-invariant features)" if a.invariant else ""))), "models/readiness.joblib")
-        print(f"saved models/readiness.joblib: grad boosting, rich{' invariant' if a.invariant else ''}, 4 s, {X.shape[1]} features; LOSO bal acc {acc:.3f} +/- {sd:.3f}, AUC {auc:.3f}, train {tr:.3f}")
+                         config=dict(win=4.0, overlap=True, rich=True, invariant=bool(a.invariant), robust=bool(a.robust),
+                                     model="grad boosting" + (" invariant" if a.invariant else "") + (" robust" if a.robust else ""))), "models/readiness.joblib")
+        print(f"saved models/readiness.joblib: grad boosting, rich{' invariant' if a.invariant else ''}{' robust' if a.robust else ''}, 4 s, {X.shape[1]} features; LOSO bal acc {acc:.3f} +/- {sd:.3f}, AUC {auc:.3f}, train {tr:.3f}")
         return
     rows = []
     wins = [4.0] if a.quick else [2.0, 4.0, 6.0]

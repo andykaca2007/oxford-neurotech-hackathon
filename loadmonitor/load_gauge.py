@@ -111,7 +111,10 @@ def main():
     global IDX
     IDX = [MONTAGE.index(c) for c in model_ch]
     print(f"# model channels {model_ch} -> stream slots {IDX}", flush=True)
-    features = (lambda x, fs: features_rich(x, fs, True)) if rich else features_basic
+    feat_cfg = m.get("feat_cfg")
+    if feat_cfg:
+        print(f"# processing: {feat_cfg['lo']:.0f} to {feat_cfg['hi']:.0f} Hz order {feat_cfg.get('order', 4)}{', 50 Hz notch' if feat_cfg.get('notch') else ''}{', no delta band' if feat_cfg.get('drop_delta') else ''}", flush=True)
+    features = (lambda x, fs: features_rich(x, fs, True, feat_cfg)) if rich else features_basic
     print(f"# model: {m.get('config', {}).get('model', 'logreg')}, {'rich' if rich else 'basic'} features, held-out AUC {m.get('loso_auc', 0):.2f}", flush=True)
     win = int(m["epoch_s"] * FS)
     buf = deque(maxlen=win)
@@ -275,7 +278,7 @@ def main():
                 # settle check: the median amplitude over the last 10 s must be within 25 percent of the 10 s before,
                 # else the baseline would capture the drift and everything after reads as "load"
                 if a.strict and not a.fake and not base_feats:
-                    if len(amp_hist) < 20 or amp_hist[-1] <= 0 or abs(np.median(list(amp_hist)[-10:]) / (np.median(list(amp_hist)[-20:-10]) + 1e-9) - 1) > 0.25:
+                    if len(amp_hist) < 20 or len(list(amp_hist)) < 20 or amp_hist[-1] <= 0 or abs(np.median(list(amp_hist)[-10:]) / (np.median(list(amp_hist)[-20:-10]) + 1e-9) - 1) > 0.25:
                         state = f"SETTLING: {live_n}/8 live, signal still drifting ({amp_hist[-1]:.0f} uV); hold still"
                         if int(t) % 5 == 0:
                             print(f"# {state}", flush=True)
