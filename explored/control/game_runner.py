@@ -1,6 +1,6 @@
 """Head Runner: a side-scrolling runner you play with your face.
 
-    .venv/bin/python unicorn/game_runner.py            # then cmd_switch.py --lsl or --fake in another terminal
+    .venv/bin/python explored/control/game_runner.py            # then cmd_switch.py --lsl or --fake in another terminal
 
 Clench your jaw to JUMP over the low blocks. Long blink to DUCK under the high bars.
 Keys fake the commands for a demo without a headset: UP or SPACE = clench, DOWN = blink.

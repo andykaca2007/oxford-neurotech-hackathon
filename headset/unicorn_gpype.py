@@ -1,17 +1,17 @@
 """Unicorn BCI Core-8 (default) or Hybrid Black (--hybrid) -> LSL stream "Unicorn" (+ CSV), via g.Pype.
 
 Paing's unit is a BCI Core-8, serial U8-2025.10.14 (BLE, 8 ch, 250 Hz, montage
-Fz C3 Cz C4 Pz PO7 POz PO8). Run:  .venv/bin/python unicorn/unicorn_gpype.py --serial U8-2025.10.14
+Fz C3 Cz C4 Pz PO7 POz PO8). Run:  .venv/bin/python headset/unicorn_gpype.py --serial U8-2025.10.14
 
 Route C from GTEC_TRACK_RESEARCH.md. Official, macOS supported, no dongle:
 "macOS and Linux open a discoverable Unicorn paired or not" (g.Pype S3E2).
 
 Run from the hackathon folder with the project venv (VS Code picks it up):
-    .venv/bin/python unicorn/unicorn_gpype.py            # real headset, opens a scope window
-    .venv/bin/python unicorn/unicorn_gpype.py --sim      # no headset: 8-ch generator, headless
-    .venv/bin/python unicorn/unicorn_gpype.py --serial UN-2024.01.01
+    .venv/bin/python headset/unicorn_gpype.py            # real headset, opens a scope window
+    .venv/bin/python headset/unicorn_gpype.py --sim      # no headset: 8-ch generator, headless
+    .venv/bin/python headset/unicorn_gpype.py --serial UN-2024.01.01
 Then in another terminal:
-    .venv/bin/python unicorn/ssvep_decode.py --lsl ...
+    .venv/bin/python explored/ssvep/ssvep_decode.py --lsl ...
 
 macOS gotchas (g.Pype platform notes):
   - The app running Python (Terminal, or VS Code) needs the Bluetooth permission in

@@ -10,7 +10,7 @@ per channel, plus Fz theta/alpha and Pz alpha/beta ratios. Classifier: logistic 
 Evaluation: leave-one-subject-out, epoch-level balanced accuracy and AUC. Rest epochs are
 subsampled to 1 min per subject so the classes are balanced.
 
-    .venv/bin/python unicorn/readiness_model.py            # prints LOSO results, saves models/readiness.joblib
+    .venv/bin/python loadmonitor/readiness_model.py            # prints LOSO results, saves models/readiness.joblib
 """
 import glob
 import os

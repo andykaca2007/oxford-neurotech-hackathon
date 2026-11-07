@@ -4,7 +4,7 @@
 
 Dataset: Nakanishi et al. 2015, PLoS ONE 10(10):e0140703. 10 subjects, 12 targets
 (9.25 to 14.75 Hz), 8 occipital channels, 256 Hz, 15 blocks. Credited and downloaded from
-github.com/mnakanishi/12JFPM_SSVEP. Code: unicorn/trca.py, unicorn/calibration_curve.py
+github.com/mnakanishi/12JFPM_SSVEP. Code: explored/ssvep/trca.py, explored/ssvep/calibration_curve.py
 (written during the hackathon; TRCA from Nakanishi et al. 2018, IEEE TBME 65(1):104).
 
 Protocol: for every subject, blocks 9 to 15 are held out and never touched by training.
@@ -21,7 +21,7 @@ ITR = Wolpaw bits per selection x selections per minute, assuming window + 0.5 s
 | 2.0 s | 82% +/- 20 | 94% +/- 11 (48 s) | 99% +/- 3 (120 s) | 99% +/- 2 (192 s) |
 
 ITR (bit/min): 1 s window, CCA 38 vs TRCA 107 (24 s calib) vs 124 (60 s). 0.5 s window, TRCA 140.
-Plots: data/curve_12class_{0.5,1,1.5,2}s.png, data/curve_4class_2s.png (4 classes: CCA already 95%, ceiling).
+Plots: figures/curve_12class_{0.5,1,1.5,2}s.png, figures/curve_4class_2s.png (4 classes: CCA already 95%, ceiling).
 
 Takeaways for the slide
 - A generic decoder is near chance at 0.5 s; 12 s of personal calibration makes it 74%.

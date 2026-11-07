@@ -10,8 +10,8 @@ Protocol (held-out blocks, never split inside a block):
   is scored on the same test blocks. Window: --win seconds from stimulus onset (default 2 s,
   like the live system). Classes: --classes 4 uses the 4 targets closest to our live tiles.
 
-    .venv/bin/python unicorn/calibration_curve.py            # prints a table, saves curve.png
-    .venv/bin/python unicorn/calibration_curve.py --win 3 --classes 12
+    .venv/bin/python explored/ssvep/calibration_curve.py            # prints a table, saves curve.png
+    .venv/bin/python explored/ssvep/calibration_curve.py --win 3 --classes 12
 """
 import argparse
 import glob
@@ -53,7 +53,7 @@ def main():
     ap.add_argument("--data", default="data/nakanishi2015")
     ap.add_argument("--win", type=float, default=2.0)
     ap.add_argument("--classes", type=int, default=4, choices=[4, 12])
-    ap.add_argument("--out", default="data/calibration_curve.png")
+    ap.add_argument("--out", default="figures/calibration_curve.png")
     a = ap.parse_args()
 
     # 4 classes nearest to the live tiles (7.5, 8.57, 10, 12 Hz): pick 4 well-spread targets

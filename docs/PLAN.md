@@ -15,10 +15,10 @@ athletes and coaches (table tennis pre-session readiness), same engine, smaller 
 ## What is built (all in the repo, branch paing/readiness, PR 6)
 | piece | file | status |
 |---|---|---|
-| Model: rest vs mental load | `unicorn/readiness_model.py` | done, evaluated |
-| Live gauge: baseline, load 0 to 100, alarm, speech | `unicorn/load_gauge.py` | done, tested on fake data |
-| Web dashboard: head map, load, markers, trace, maths challenge with error ticks, debrief | `unicorn/gauge_server.py`, `unicorn/web/index.html` | done, checked in a browser |
-| Headset bridge (Core-8 to LSL) | `unicorn/unicorn_gpype.py` | done, works on the Mac |
+| Model: rest vs mental load | `loadmonitor/readiness_model.py` | done, evaluated |
+| Live gauge: baseline, load 0 to 100, alarm, speech | `loadmonitor/load_gauge.py` | done, tested on fake data |
+| Web dashboard: head map, load, markers, trace, maths challenge with error ticks, debrief | `loadmonitor/gauge_server.py`, `loadmonitor/web/index.html` | done, checked in a browser |
+| Headset bridge (Core-8 to LSL) | `headset/unicorn_gpype.py` | done, works on the Mac |
 | Live run on a real head | | NOT done: the loaner cap has dead electrodes |
 
 ## The science
@@ -88,12 +88,12 @@ eleven; that one session proves errors follow load. Say these before the judges 
 ## Run it
 ```bash
 # terminal 1: headset -> stream
-.venv/bin/python unicorn/unicorn_gpype.py --serial U8-2025.10.14
+.venv/bin/python headset/unicorn_gpype.py --serial U8-2025.10.14
 # terminal 2: the web page
-.venv/bin/python unicorn/gauge_server.py        # http://localhost:8765
+.venv/bin/python loadmonitor/gauge_server.py        # http://localhost:8765
 # terminal 3: the gauge (real head)             or without a headset:
-.venv/bin/python unicorn/load_gauge.py --lsl --web --log s1.csv
-.venv/bin/python unicorn/load_gauge.py --fake --web --no-ui
+.venv/bin/python loadmonitor/load_gauge.py --lsl --web --log s1.csv
+.venv/bin/python loadmonitor/load_gauge.py --fake --web --no-ui
 ```
 
 ## Everything else in the repo

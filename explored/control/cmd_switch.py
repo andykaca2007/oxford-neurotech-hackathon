@@ -1,7 +1,7 @@
 """Head commands from the Unicorn stream: jaw CLENCH and deliberate BLINK -> UDP to a game.
 
-    .venv/bin/python unicorn/cmd_switch.py --lsl [--log cmds.csv]
-    .venv/bin/python unicorn/cmd_switch.py --fake            # synthetic clenches and blinks
+    .venv/bin/python explored/control/cmd_switch.py --lsl [--log cmds.csv]
+    .venv/bin/python explored/control/cmd_switch.py --fake            # synthetic clenches and blinks
 
 Sends "cmd clench" / "cmd blink" to UDP 5007 (game_runner.py listens there), and with --keys
 presses keys system-wide so Roblox (or any game) reacts: clench = Space (jump), blink = S.

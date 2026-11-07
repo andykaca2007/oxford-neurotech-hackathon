@@ -4,7 +4,7 @@ Look 1 opens a group (four tiles = four groups). Look 2 picks a phrase inside th
 (the same four tiles now show four phrases). The phrase goes to the carer, and the tree
 goes back to the four groups.
 
-    python unicorn/phrase_tree.py          # prints the tree and which two tiles say each phrase
+    python explored/communication/phrase_tree.py          # prints the tree and which two tiles say each phrase
 
 Why a fixed tree and not a runtime LLM (see EXPERT_PANEL_2026-11-07.md): every phrase is
 known in advance, so we can test every path, and the decoder's accuracy is the only thing

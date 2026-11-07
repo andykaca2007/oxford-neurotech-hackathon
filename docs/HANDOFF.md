@@ -20,16 +20,16 @@ replicated live on team members with a g.tec Unicorn BCI Core-8 (pending the nex
 ## State of the build (all in this folder, Python venv in .venv, run from this folder)
 | file | what | status |
 |---|---|---|
-| unicorn/unicorn_gpype.py | Core-8 (BLE) -> LSL stream "Unicorn" + CSV, via g.tec's g.Pype SDK; opens a scope window that must stay open | works; `--serial U8-2025.10.14` |
-| unicorn/live_view.py | autoscaled 8-channel viewer, typed amplitude/window, keys 1-8 toggle | works |
-| unicorn/alpha_check.py | spoken eyes-open/closed contact + alpha test | works |
-| unicorn/ssvep_stim.py | 4 flicker tiles 7.5/8.57/10/12 Hz, `--trials N` cues tiles, `--banner REPLAY` | works; display must be locked to 60 Hz |
-| unicorn/ssvep_decode.py | live decoder: `--lsl`, `--csv file`, `--fake`; `--model models/x.npz` uses the personal TRCA; `--cue-port` buzzes the ESP32; `--log` | works on fake and replay |
-| unicorn/ssvep_calibrate.py | records cued epochs while the stim runs `--trials`, fits TRCA, leave-one-out CCA vs TRCA, saves models/*.npz | works on fake |
-| unicorn/trca.py | CCA and ensemble TRCA (Nakanishi 2018), ITR | works |
-| unicorn/calibration_curve.py, speed_accuracy_plot.py | public-data evaluation, Nakanishi 2015 in data/nakanishi2015 | DONE, plots in data/ |
-| unicorn/replay_demo.py | held-out public trials -> tiles + wristband, for a no-headset demo; `--say "Yes;Call the nurse"` composes phrases from held-out trials | works; `--say` tested on synthetic data only |
-| unicorn/phrase_tree.py | the fixed 16-phrase tree (4 groups x 4, two looks per phrase, 10 s timeout back to groups) | DONE (Andy, ~14:00), tests in tests/ |
+| headset/unicorn_gpype.py | Core-8 (BLE) -> LSL stream "Unicorn" + CSV, via g.tec's g.Pype SDK; opens a scope window that must stay open | works; `--serial U8-2025.10.14` |
+| headset/live_view.py | autoscaled 8-channel viewer, typed amplitude/window, keys 1-8 toggle | works |
+| headset/alpha_check.py | spoken eyes-open/closed contact + alpha test | works |
+| explored/ssvep/ssvep_stim.py | 4 flicker tiles 7.5/8.57/10/12 Hz, `--trials N` cues tiles, `--banner REPLAY` | works; display must be locked to 60 Hz |
+| explored/ssvep/ssvep_decode.py | live decoder: `--lsl`, `--csv file`, `--fake`; `--model models/x.npz` uses the personal TRCA; `--cue-port` buzzes the ESP32; `--log` | works on fake and replay |
+| explored/ssvep/ssvep_calibrate.py | records cued epochs while the stim runs `--trials`, fits TRCA, leave-one-out CCA vs TRCA, saves models/*.npz | works on fake |
+| explored/ssvep/trca.py | CCA and ensemble TRCA (Nakanishi 2018), ITR | works |
+| explored/ssvep/calibration_curve.py, speed_accuracy_plot.py | public-data evaluation, Nakanishi 2015 in data/nakanishi2015 | DONE, plots in data/ |
+| explored/ssvep/replay_demo.py | held-out public trials -> tiles + wristband, for a no-headset demo; `--say "Yes;Call the nurse"` composes phrases from held-out trials | works; `--say` tested on synthetic data only |
+| explored/communication/phrase_tree.py | the fixed 16-phrase tree (4 groups x 4, two looks per phrase, 10 s timeout back to groups) | DONE (Andy, ~14:00), tests in tests/ |
 | ssvep_stim.py `--tree` | phrase mode: tiles show groups then phrases, carer bar shows the phrase, `--phrase-log`, ignores picks within `--settle` 3 s of a group opening | works with scripted picks |
 | ssvep_decode.py `--buzz-on phrase` | buzz only on a finished phrase (group+1 pulses); use `--refractory 4` in phrase mode | runs on fake; not tested with the ESP32 |
 | RESULTS.md | the numbers and the limitations | current |
@@ -37,7 +37,7 @@ replicated live on team members with a g.tec Unicorn BCI Core-8 (pending the nex
 | GTEC_TRACK_RESEARCH.md | headset facts, Mac routes, judge questions | reference |
 
 Headline public result: 12 targets, held-out blocks, 10 subjects. 0.5 s window: generic CCA
-20%, personal TRCA 74% after 12 s of calibration. 1 s: 53% -> 89% after 24 s. Fig: data/speed_accuracy.png.
+20%, personal TRCA 74% after 12 s of calibration. 1 s: 53% -> 89% after 24 s. Fig: figures/speed_accuracy.png.
 
 ## Live headset: what happened and what is next
 Slot 1 (about 12:00 to 12:30): the amplifier was not seated on the cap, every even channel
@@ -45,8 +45,8 @@ read a flat rail (+200 mV), odd channels 130 to 520 uV, no alpha. No usable data
 Next slot, in order, do not skip:
 1. Cap on, amplifier pressed flat onto both pogo-pin rows, mastoid stickies with L/R clips,
    chin strap tight, twist electrodes through hair, wait 2 min.
-2. `.venv/bin/python unicorn/unicorn_gpype.py --serial U8-2025.10.14` (keep window open).
-3. `.venv/bin/python unicorn/alpha_check.py`: pass = PO7 POz PO8 Pz under 40 uV RMS and
+2. `.venv/bin/python headset/unicorn_gpype.py --serial U8-2025.10.14` (keep window open).
+3. `.venv/bin/python headset/alpha_check.py`: pass = PO7 POz PO8 Pz under 40 uV RMS and
    eyes-closed/open alpha ratio at POz of 2 or more. Fail = fix contact, do not decode.
 4. Calibration (two terminals): `ssvep_stim.py --trials 12 --on 4 --off 2` and
    `ssvep_calibrate.py --lsl --out models/NAME.npz`. 48 s of looking.
@@ -70,8 +70,8 @@ Only Fz and the mastoid stickies need to work for the demo.
 ## DECISION 17:30 Sat: HEAD-CONTROLLED GAME (he dropped the communication aid)
 Product: a game you play with your face. Jaw CLENCH = jump, deliberate BLINK = duck/second
 action. Both are the signals a dry loaner cap reads reliably (EMG burst on all channels; EOG on
-Fz). `unicorn/cmd_switch.py --lsl --keys` detects them and presses keys system-wide (Space, S),
-so a Roblox Studio obby/runner, or `unicorn/game_runner.py` (pygame fallback, UDP 5007), reacts.
+Fz). `explored/control/cmd_switch.py --lsl --keys` detects them and presses keys system-wide (Space, S),
+so a Roblox Studio obby/runner, or `explored/control/game_runner.py` (pygame fallback, UDP 5007), reacts.
 AI: a 3-class command classifier (clench / blink / nothing) trained on the team's logged events
 (`cmd_switch.py --log`), held-out people, accuracy + false triggers per minute. Honest line: these
 are muscle and eye signals, not thought; the headset is the sensor, the classifier is the model.
@@ -79,7 +79,7 @@ Earlier modes (SSVEP, speller, scanning) stay in the repo as evidence of the exp
 
 ## FINAL DECISION 17:50 Sat: BRAIN-STEERED ROBOT, SSVEP decoder is the model
 After four pivots he settled on: the personal SSVEP decoder (public-data calibration curve =
-the science) steering a simulated robot in an arena (`unicorn/arena.py`): four small, dim,
+the science) steering a simulated robot in an arena (`explored/control/arena.py`): four small, dim,
 pulsing patches at the screen edges = forward/back/left/right, blink confirms, replay from
 public data when no headset (`replay_demo.py` sends the same UDP picks). Gentle flicker:
 contrast 0.45, edges only. Chain: unicorn_gpype.py -> ssvep_decode.py --lsl [--model] [--confirm blink]
@@ -87,10 +87,10 @@ contrast 0.45, edges only. Chain: unicorn_gpype.py -> ssvep_decode.py --lsl [--m
 
 ## DIRECTION 19:30 Sat: MENTAL-LOAD / FATIGUE MONITOR (sixth and current)
 Audience he accepted: safety-critical workers (SmartCap precedent) and table tennis players
-(pre-serve focus). Science: unicorn/readiness_model.py on PhysioNet eegmat (36 subjects, rest vs
+(pre-serve focus). Science: loadmonitor/readiness_model.py on PhysioNet eegmat (36 subjects, rest vs
 mental arithmetic), 5 live channels Fz C3 Cz C4 Pz, leave-one-subject-out: raw 63% / AUC 0.75,
 BASELINE-RELATIVE 70% / AUC 0.79. Model in models/readiness.joblib (local, rebuild with the script).
-Live: unicorn/load_gauge.py --lsl: 30 s personal baseline, 4 s windows every 1 s, smoothed load
+Live: loadmonitor/load_gauge.py --lsl: 30 s personal baseline, 4 s windows every 1 s, smoothed load
 0 to 100, alarm (red + speech) after --hold s above --alarm. --fake shows rest then load.
 Demo: volunteer does mental arithmetic, gauge climbs, alarm fires; rests, it drops.
 Honest limits: load is not accident risk; students doing sums are not surgeons; 70% on strangers

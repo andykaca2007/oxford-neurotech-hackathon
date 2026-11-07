@@ -1,7 +1,7 @@
 """Live view of the Unicorn LSL stream with typed amplitude and window, per-channel toggles.
 
-    .venv/bin/python unicorn/live_view.py            # 1 to 40 Hz
-    .venv/bin/python unicorn/live_view.py --raw      # unfiltered, shows DC drift
+    .venv/bin/python headset/live_view.py            # 1 to 40 Hz
+    .venv/bin/python headset/live_view.py --raw      # unfiltered, shows DC drift
 
 Boxes at the bottom: Amplitude in uV (blank or 0 = auto, each row fits its whole
 trace), Window in seconds. Keys: 1 to 8 hide/show a channel, 0 shows all, a = auto.

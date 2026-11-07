@@ -2,8 +2,8 @@
 
 For when there is no headset in the room. Says REPLAY on screen; never pass it off as live.
 
-    .venv/bin/python unicorn/ssvep_stim.py --banner REPLAY          (in another terminal)
-    .venv/bin/python unicorn/replay_demo.py --subject 3 [--cue-port /dev/cu.usbserial-XXXX]
+    .venv/bin/python explored/ssvep/ssvep_stim.py --banner REPLAY          (in another terminal)
+    .venv/bin/python explored/ssvep/replay_demo.py --subject 3 [--cue-port /dev/cu.usbserial-XXXX]
 
 Trains TRCA on blocks 1 to 5 of one Nakanishi 2015 subject for the 4 targets mapped to our
 tiles, then walks through blocks 9 to 15 (held out) in random order: shows the cued tile
@@ -11,8 +11,8 @@ tiles, then walks through blocks 9 to 15 (held out) in random order: shows the c
 
 Phrase replay: compose phrases from held-out trials, two looks each.
 
-    .venv/bin/python unicorn/ssvep_stim.py --tree --banner REPLAY
-    .venv/bin/python unicorn/replay_demo.py --subject 3 --say "Water, please;Call the nurse"
+    .venv/bin/python explored/ssvep/ssvep_stim.py --tree --banner REPLAY
+    .venv/bin/python explored/ssvep/replay_demo.py --subject 3 --say "Water, please;Call the nurse"
 
 For each phrase it takes the two tiles that say it (phrase_tree.py), and for each tile replays an
 unused held-out trial of that tile's class. Whatever the personal decoder picks is what the
@@ -29,6 +29,7 @@ import time
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(__file__))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'communication'))
 from calibration_curve import FREQS, FS, TEST_BLOCKS, load  # noqa: E402
 from phrase_tree import PhraseTree  # noqa: E402
 from trca import CCA, TRCA  # noqa: E402

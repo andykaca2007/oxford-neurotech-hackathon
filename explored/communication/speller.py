@@ -8,7 +8,7 @@
 
 Prediction = most frequent English word with that prefix (wordfreq top 30 000, offline).
 
-    python unicorn/speller.py          # spells "app" on both layouts and accepts the guess
+    python explored/communication/speller.py          # spells "app" on both layouts and accepts the guess
 
 State machine like phrase_tree.PhraseTree: select(tile, now) -> word or None, labels(), prompt().
 """

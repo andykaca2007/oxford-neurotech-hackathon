@@ -13,13 +13,17 @@ lines), then [RESULTS.md](RESULTS.md) (numbers and limits).
 ## Layout
 | path | what |
 |---|---|
-| `unicorn/` | everything written during the hackathon (7 to 8 Nov 2026): headset bridge, viewer, stim, calibration, decoder, TRCA, evaluation, replay, phrase tree |
-| `unicorn/phrase_tree.py` | the 16-phrase tree (4 groups x 4 phrases, two looks each); edit the phrases here |
+| `loadmonitor/` | THE PRODUCT: mental-load model (`readiness_model.py`), live gauge (`load_gauge.py`), web dashboard (`gauge_server.py` + `web/index.html`), model figures |
+| `headset/` | Unicorn BCI Core-8 bridge to LSL (`unicorn_gpype.py`), raw-Bluetooth fallback, live viewer, alpha/contact check |
+| `explored/ssvep/` | SSVEP decoder, TRCA, public calibration curve, flicker screen, replay: explored Saturday, kept as evidence |
+| `explored/communication/` | phrase tree, speller, blink switch |
+| `explored/control/` | head-command detector, runner game, robot arena |
+| `figures/` | result plots (committed) |
+| `docs/` | PLAN (read first), RESULTS, HANDOFF, expert panel, headset research |
 | `tests/` | `python -m pytest tests` |
-| `data/` | result plots (committed); put the public dataset in `data/nakanishi2015/` (not committed) |
-| `models/`, `recordings/` | personal TRCA models and headset recordings: local only, never committed |
-| `pre_event/` | material from **before** the hackathon: ESP32 wristband firmware (`planb_imu/`), warm-up scripts, prep notes. Declare it as brought kit; it is not hackathon code |
-| `EXPERT_PANEL_2026-11-07.md`, `GTEC_TRACK_RESEARCH.md` | reference notes |
+| `data/` | datasets, not committed: `data/eegmat/` (PhysioNet) and `data/nakanishi2015/` |
+| `models/`, `recordings/` | trained model and headset recordings: local only |
+| `pre_event/` | material from **before** the hackathon: declare as brought kit, not hackathon code |
 
 ## Setup
 ```bash
@@ -33,8 +37,8 @@ Public dataset: Nakanishi et al. 2015, from github.com/mnakanishi/12JFPM_SSVEP, 
 ## Phrase mode (two looks per phrase)
 Two terminals, run from the repo root:
 ```bash
-python unicorn/ssvep_stim.py --tree --speak --phrase-log recordings/NAME_phrases.csv   # --speak: the Mac says the phrase (no wristband at the event)
-python unicorn/ssvep_decode.py --lsl --model models/NAME.npz --refractory 4 --buzz-on phrase [--cue-port PORT]
+python explored/ssvep/ssvep_stim.py --tree --speak --phrase-log recordings/NAME_phrases.csv   # --speak: the Mac says the phrase (no wristband at the event)
+python explored/ssvep/ssvep_decode.py --lsl --model models/NAME.npz --refractory 4 --buzz-on phrase [--cue-port PORT]
 ```
 - Look 1 opens a group (NEED, BODY, PEOPLE, ANSWER); the tiles then show that group's phrases.
   Look 2 says the phrase. No second look within `--tree-timeout` (10 s) goes back to the groups,
@@ -46,8 +50,8 @@ python unicorn/ssvep_decode.py --lsl --model models/NAME.npz --refractory 4 --bu
 
 No headset (replay of held-out public trials, labelled REPLAY on screen):
 ```bash
-python unicorn/ssvep_stim.py --tree --banner REPLAY
-python unicorn/replay_demo.py --subject 3 --say "Water, please;Call the nurse;Yes"
+python explored/ssvep/ssvep_stim.py --tree --banner REPLAY
+python explored/ssvep/replay_demo.py --subject 3 --say "Water, please;Call the nurse;Yes"
 ```
 
 ## Rules we must meet (AI stream)

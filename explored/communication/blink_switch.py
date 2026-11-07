@@ -1,8 +1,8 @@
 """Blink switch: a deliberate blink on Fz selects the highlighted tile. No flicker anywhere.
 
-    .venv/bin/python unicorn/ssvep_stim.py --spell --tiles 12 --scan 1.0 --speak   (screen)
-    .venv/bin/python unicorn/blink_switch.py --lsl [--uv 150] [--log blinks.csv]      (this)
-    .venv/bin/python unicorn/blink_switch.py --fake                                   (no headset)
+    .venv/bin/python explored/ssvep/ssvep_stim.py --spell --tiles 12 --scan 1.0 --speak   (screen)
+    .venv/bin/python explored/communication/blink_switch.py --lsl [--uv 150] [--log blinks.csv]      (this)
+    .venv/bin/python explored/communication/blink_switch.py --fake                                   (no headset)
 
 Fz is band-passed 0.5 to 8 Hz and read signed (blinks are positive at Fz). A blink is a deflection beyond --uv that lasts between
 --min-ms and --max-ms (spontaneous blinks are short and small; a deliberate one is longer

@@ -4,10 +4,10 @@
 # ///
 """SSVEP cue remote: four flickering tiles. Look at one, the decoder picks it.
 
-    uv run unicorn/ssvep_stim.py                 # free mode: tiles flicker, decoder highlights its pick
-    uv run unicorn/ssvep_stim.py --trials 12     # trial mode: cues a tile (white border) for --on s,
+    uv run explored/ssvep/ssvep_stim.py                 # free mode: tiles flicker, decoder highlights its pick
+    uv run explored/ssvep/ssvep_stim.py --trials 12     # trial mode: cues a tile (white border) for --on s,
                                                  # rests --off s, repeats; the decoder logs cued vs picked
-    uv run unicorn/ssvep_stim.py --tree          # phrase mode: look 1 opens a group, look 2 says a
+    uv run explored/ssvep/ssvep_stim.py --tree          # phrase mode: look 1 opens a group, look 2 says a
                                                  # phrase (phrase_tree.py); the carer bar shows it
         --phrase-log NAME_phrases.csv            # logs every open / say / timeout / ignored pick
     In phrase mode run the decoder with --refractory at least window + 1 s (e.g. 4 for a 3 s
@@ -38,6 +38,7 @@ import time
 import pygame
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'communication'))
 from phrase_tree import PhraseTree  # noqa: E402
 from speller import Speller  # noqa: E402
 from tiles import tile_set  # noqa: E402

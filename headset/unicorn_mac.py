@@ -6,9 +6,9 @@
 
 Pair the headset first: System Settings > Bluetooth, it appears as UN-YYYYMMDD.
 Then:
-    uv run unicorn/unicorn_mac.py --list
-    uv run unicorn/unicorn_mac.py --port /dev/cu.UN-20240101 --log s0.csv
-    uv run unicorn/unicorn_mac.py --port ... --lsl        (needs: uv pip install pylsl)
+    uv run headset/unicorn_mac.py --list
+    uv run headset/unicorn_mac.py --port /dev/cu.UN-20240101 --log s0.csv
+    uv run headset/unicorn_mac.py --port ... --lsl        (needs: uv pip install pylsl)
 
 Prints one quality line per second: battery, and RMS in uV per channel.
 Under ~30 uV at rest = good contact. Hundreds = not touching. Ctrl-C stops.

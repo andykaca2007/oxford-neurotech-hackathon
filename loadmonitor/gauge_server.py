@@ -1,9 +1,9 @@
 """Local web server for the load gauge page, the maths challenge and the debrief.
 
-    .venv/bin/python unicorn/gauge_server.py            # http://localhost:8765
-    .venv/bin/python unicorn/load_gauge.py --fake --web   # posts its state here every second
+    .venv/bin/python loadmonitor/gauge_server.py            # http://localhost:8765
+    .venv/bin/python loadmonitor/load_gauge.py --fake --web   # posts its state here every second
 
-GET  /            the page (unicorn/web/index.html)
+GET  /            the page (loadmonitor/web/index.html)
 GET  /state       latest gauge state + challenge events
 POST /state       the gauge pushes {t, state, load, alarm, channels, hist, ...}
 POST /event       the page pushes {t, kind: "answer"|"error"|"challenge_start"|"challenge_end", ...}

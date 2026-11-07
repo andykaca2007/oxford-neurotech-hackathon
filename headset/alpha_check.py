@@ -1,6 +1,6 @@
 """Contact and alpha check on the live Unicorn LSL stream. Speaks the instructions.
 
-    .venv/bin/python unicorn/alpha_check.py
+    .venv/bin/python headset/alpha_check.py
 
 10 s eyes open, 10 s eyes closed. Reports per channel: RMS (uV), 50 Hz mains share,
 alpha (8 to 12 Hz) power closed / open. Good occipital contact: Oz, PO7, PO8 ratio

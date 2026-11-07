@@ -1,7 +1,7 @@
 """One figure: held-out accuracy vs calibration time for several window lengths.
 Same protocol as calibration_curve.py (Nakanishi 2015, 12 classes, blocks 9 to 15 held out).
 
-    .venv/bin/python unicorn/speed_accuracy_plot.py        -> data/speed_accuracy.png
+    .venv/bin/python explored/ssvep/speed_accuracy_plot.py        -> figures/speed_accuracy.png
 """
 import glob
 import os
@@ -56,8 +56,8 @@ def main():
     for s in ("top", "right"):
         ax.spines[s].set_visible(False)
     fig.tight_layout()
-    fig.savefig("data/speed_accuracy.png", dpi=160)
-    print("saved data/speed_accuracy.png")
+    fig.savefig("figures/speed_accuracy.png", dpi=160)
+    print("saved figures/speed_accuracy.png")
 
 
 if __name__ == "__main__":

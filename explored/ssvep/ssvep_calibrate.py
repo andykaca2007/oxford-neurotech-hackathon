@@ -1,10 +1,10 @@
 """Personal SSVEP calibration: record cued trials from the live stream, fit TRCA, save it.
 
 Run the stim in trial mode and this at the same time:
-    .venv/bin/python unicorn/ssvep_stim.py --trials 12 --on 4 --off 2     (3 trials per tile = 48 s of looking)
-    .venv/bin/python unicorn/ssvep_calibrate.py --lsl --out models/paing.npz
+    .venv/bin/python explored/ssvep/ssvep_stim.py --trials 12 --on 4 --off 2     (3 trials per tile = 48 s of looking)
+    .venv/bin/python explored/ssvep/ssvep_calibrate.py --lsl --out models/paing.npz
 Or from a recording with a cue log:
-    .venv/bin/python unicorn/ssvep_calibrate.py --fake --out models/fake.npz        (synthetic, for testing)
+    .venv/bin/python explored/ssvep/ssvep_calibrate.py --fake --out models/fake.npz        (synthetic, for testing)
 
 It listens for "cue i" / "rest" from the stim on UDP 5006, cuts one epoch per cue
 (--epoch s after a --latency s delay), band-passes 5 to 40 Hz with a 50 Hz notch,

@@ -1,7 +1,7 @@
 """Live mental-load gauge with a personal baseline and an alarm.
 
-    .venv/bin/python unicorn/load_gauge.py --lsl [--log shift.csv]      # headset via unicorn_gpype.py
-    .venv/bin/python unicorn/load_gauge.py --fake                        # no headset: rest, then load after 45 s
+    .venv/bin/python loadmonitor/load_gauge.py --lsl [--log shift.csv]      # headset via unicorn_gpype.py
+    .venv/bin/python loadmonitor/load_gauge.py --fake                        # no headset: rest, then load after 45 s
     add --no-ui for a text readout only
 
 Protocol: the first --baseline seconds (default 30) the person sits quietly: that is their

@@ -1,7 +1,7 @@
 """Brain-steered robot arena: four dim pulsing patches at the screen edges, a robot in the middle.
 
-    .venv/bin/python unicorn/arena.py                 # then ssvep_decode.py --lsl ... (picks arrive on UDP 5005)
-    .venv/bin/python unicorn/arena.py --banner REPLAY  # with replay_demo.py
+    .venv/bin/python explored/control/arena.py                 # then ssvep_decode.py --lsl ... (picks arrive on UDP 5005)
+    .venv/bin/python explored/control/arena.py --banner REPLAY  # with replay_demo.py
 
 Patches flicker at the 4-tile rates (7.5, 8.57, 10, 12 Hz at a locked 60 Hz display), but
 gently: a dim grey pulse, not full on/off, and only around the edges, so the arena in the

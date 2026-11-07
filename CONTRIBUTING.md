@@ -5,7 +5,7 @@
 - Open a pull request as soon as the branch exists, even if it is not finished. Title = what
   changes, body = how you tested it (fake, replay, or live headset). Draft PRs are fine.
 - One teammate reviews, then "Squash and merge". Delete the branch after merging.
-- Before you push: `python -m pytest tests` passes, and `python unicorn/ssvep_decode.py --fake --seconds 20` still prints scores.
+- Before you push: `python -m pytest tests` passes, and `python explored/ssvep/ssvep_decode.py --fake --seconds 20` still prints scores.
 - Never commit: `.venv/`, `data/nakanishi2015/`, `models/`, `recordings/`, raw CSVs, videos.
   `.gitignore` already covers them; if git shows one of these as untracked, stop and ask.
 - Pull `main` before starting a branch: `git checkout main && git pull`.
