@@ -196,7 +196,7 @@ def main():
                 continue
             next_eval = t + 1.0
             X8 = np.array(buf).T                      # (8, n)
-            f = features(X8[IDX], FS)
+            f = np.nan_to_num(features(X8[IDX], FS), nan=0.0, posinf=0.0, neginf=0.0)   # a flat channel gives log(0)
             # per-electrode activity: band power 1 to 40 Hz and theta/alpha, for the head map
             from scipy.signal import welch as _welch
             fr, pw = _welch(X8 - X8.mean(1, keepdims=True), fs=FS, nperseg=FS * 2, axis=1)
