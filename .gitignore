@@ -25,3 +25,4 @@ skidl_REPL.log
 # OS
 .DS_Store
 Thumbs.db
+logs/
