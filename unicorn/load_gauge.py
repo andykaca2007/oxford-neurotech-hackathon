@@ -183,7 +183,8 @@ def main():
                 post_state(t)
             else:
                 p = float(clf.predict_proba((f - base)[None, :])[0, 1])
-                ema = p if ema is None else ema + (p - ema) * (1.0 / a.smooth)
+                ema = 0.2 if ema is None else ema   # start calm, let the evidence raise it
+                ema = ema + (p - ema) * (1.0 / a.smooth)
                 load_pct = 100 * ema
                 if load_pct >= a.alarm:
                     above_since = above_since or t
