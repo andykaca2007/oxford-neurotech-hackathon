@@ -178,7 +178,7 @@
       <div class="score"><span>answers <b id="n_ans">0</b></span><span>errors <b id="n_err">0</b></span><span><b id="n_time">0 s</b></span></div>
     </div>
     <div style="margin-top:auto; padding-top:14px; display:flex; flex-direction:column; min-height:0">
-      <div><button class="btn" id="debrief">Debrief</button></div>
+      <div><button class="btn" id="debrief">Debrief</button> <button class="btn" id="rebase" title="Redo the 30 s baseline without restarting">Rebaseline</button></div>
       <div class="debrief" id="dtext"></div>
       <div class="src" id="dsrc"></div>
     </div>
@@ -234,6 +234,9 @@ document.getElementById('debrief').onclick = async () => {
   try { const r = await (await fetch('/debrief', {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'})).json();
         document.getElementById('dtext').textContent = r.text; document.getElementById('dsrc').textContent = 'written by ' + r.source; }
   catch(e) { document.getElementById('dtext').textContent = 'debrief failed'; }
+};
+document.getElementById('rebase').onclick = () => {
+  fetch('/event', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({kind:'rebaseline', t:lastT})});
 };
 document.querySelectorAll('#condbar button').forEach(b => b.onclick = () => {
   fetch('/event', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({kind:'condition', value:b.dataset.c, t:lastT})});
@@ -304,9 +307,9 @@ async function tick(){
       sub.textContent = lost ? (s.state||'').replace('CONTACT LOST: ','') + ' · frozen until the cap is back' : 'alarm after 20 s above 70';
       document.getElementById('basebar').style.display='none';
     } else {
-      const waiting = (s.state||'').startsWith('WAITING');
+      const waiting = (s.state||'').startsWith('WAITING') || (s.state||'').startsWith('SETTLING');
       val.textContent='—'; val.className = 'n dim';
-      label.textContent = waiting ? 'No contact' : 'Baseline';
+      label.textContent = (s.state||'').startsWith('SETTLING') ? 'Settling' : waiting ? 'No contact' : 'Baseline';
       sub.textContent = waiting ? s.state.replace('WAITING FOR CONTACT: ','') + ' · baseline starts by itself' : 'sit still, eyes open · 30 s';
       document.getElementById('basebar').style.display='block'; document.getElementById('basefill').style.width=(100*s.baseline_progress)+'%';
     }

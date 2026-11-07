@@ -111,10 +111,11 @@ class H(BaseHTTPRequestHandler):
             with LOCK:
                 cond = STATE.get("condition", "none")
                 data.pop("condition", None)          # the page owns the condition, not the gauge
+                data.pop("rebaseline", None)
                 STATE.update(data)
                 if data.get("baseline_done"):
                     LOADLOG.append((float(data.get("t", 0)), float(data.get("load", 0))))
-            self._send(200, json.dumps({"condition": cond}).encode(), "application/json")
+            self._send(200, json.dumps({"condition": cond, "rebaseline": STATE.get("rebaseline", 0)}).encode(), "application/json")
         elif self.path.startswith("/event"):
             with LOCK:
                 data.setdefault("t", STATE.get("t", 0))
@@ -124,6 +125,8 @@ class H(BaseHTTPRequestHandler):
                 if data.get("kind") == "reset":
                     EVENTS.clear()
                     LOADLOG.clear()
+                if data.get("kind") == "rebaseline":
+                    STATE["rebaseline"] = STATE.get("rebaseline", 0) + 1
             self._send(200, b"ok", "text/plain")
         elif self.path.startswith("/debrief"):
             s = summary()
@@ -146,4 +149,5 @@ def main(port=8765):
 
 
 if __name__ == "__main__":
-    main()
+    import sys
+    main(int(sys.argv[1]) if len(sys.argv) > 1 else 8765)

@@ -114,13 +114,14 @@ def main():
     CH8 = MONTAGE
     ema, above_since, alarmed = None, None, False
     base_fat, fat_base, fat_ema, fatigue_pct, contact = [], 0.0, None, 0.0, False
+    amp_hist = deque(maxlen=40)
     log = open(a.log, "w") if a.log else None
     if log:
         header_written = [False]
     markers = open(a.log.replace(".csv", "") + "_markers.csv", "w") if a.log else None
     if markers:
         markers.write("t,condition\n")
-    cond = {"now": "none"}
+    cond = {"now": "none", "rebaseline": 0, "redo": False}
 
     ui = None
     if not a.no_ui:
@@ -169,14 +170,21 @@ def main():
         try:
             r = urllib.request.urlopen(urllib.request.Request(f"http://127.0.0.1:{a.web_port}/state", data=body,
                                                               headers={"Content-Type": "application/json"}), timeout=0.3)
-            new = json.loads(r.read() or b"{}").get("condition", cond["now"])
+            reply = json.loads(r.read() or b"{}")
+            new = reply.get("condition", cond["now"])
+            rb = int(reply.get("rebaseline", 0))
+            if rb != cond["rebaseline"]:
+                cond["rebaseline"] = rb
+                cond["redo"] = True
             if new != cond["now"]:
                 cond["now"] = new
                 print(f"t={t_now:6.1f} CONDITION {new}", flush=True)
                 if markers:
                     markers.write(f"{t_now:.1f},{new}\n"); markers.flush()
-        except Exception:
-            pass
+        except Exception as e:
+            if cond.get("web_err") != repr(e)[:60]:
+                cond["web_err"] = repr(e)[:60]
+                print(f"# web page not reachable: {cond['web_err']}", flush=True)
     next_eval = 0.0
     load_pct = 0.0
     t = 0.0
@@ -222,10 +230,19 @@ def main():
             live_n = int(sum(not dead[i] for i in IDX))
             contact = live_n >= 6 or a.fake
             fat_now = float(np.median(np.log10((th[live] + al[live]) / (be[live] + 1e-12) + 1e-12)))
+            # amplitude of the live channels, 1 to 40 Hz, for the settle check (dry electrodes drift for a minute or two)
+            amp_hist.append(float(np.median(np.sqrt(tot[live]))) if len(live) else 0.0)
+            if cond.get("redo"):
+                cond["redo"] = False
+                base, chan_base, fat_ema, fatigue_pct, alarmed, above_since, ema = None, None, None, 0.0, False, None, None
+                base_feats.clear(); base_chan.clear(); base_fat.clear(); base_covs.clear(); amp_hist.clear()
+                print(f"t={t:6.1f} REBASELINE requested from the page", flush=True)
+                speak("New baseline")
             if base is None:
                 # do not start the baseline until the electrodes are really on the head: a channel pinned at the
                 # +/-200 mV rail (open input) or perfectly flat is dead. Need at least 6 of the model's channels live.
                 if not contact:
+                    amp_hist.clear()
                     base_feats.clear(); base_chan.clear(); base_fat.clear()
                     names = [MONTAGE[i] for i in IDX if dead[i] or rail[i]]
                     state = f"WAITING FOR CONTACT: {live_n}/8 live, dead {' '.join(names)}"
@@ -233,6 +250,15 @@ def main():
                         print(f"# {state}", flush=True)
                     post_state(t)
                     continue
+                # settle check: the median amplitude over the last 10 s must be within 25 percent of the 10 s before,
+                # else the baseline would capture the drift and everything after reads as "load"
+                if not a.fake and not base_feats:
+                    if len(amp_hist) < 20 or amp_hist[-1] <= 0 or abs(np.median(list(amp_hist)[-10:]) / (np.median(list(amp_hist)[-20:-10]) + 1e-9) - 1) > 0.25:
+                        state = f"SETTLING: {live_n}/8 live, signal still drifting ({amp_hist[-1]:.0f} uV); hold still"
+                        if int(t) % 5 == 0:
+                            print(f"# {state}", flush=True)
+                        post_state(t)
+                        continue
                 base_feats.append(f)
                 if riem is not None:
                     base_covs.append(riem.covs(X8[IDX]))
