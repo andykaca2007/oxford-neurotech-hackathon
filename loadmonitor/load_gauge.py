@@ -33,6 +33,9 @@ from model_search import feats as features_rich  # noqa: E402
 FS = 250
 from scipy.signal import butter as _butter, sosfiltfilt
 SIG_SOS = _butter(4, [1, 40], btype="band", fs=FS, output="sos")
+FAT_SOS_TH = _butter(4, [4, 8], btype="band", fs=FS, output="sos")
+FAT_SOS_AL = _butter(4, [8, 13], btype="band", fs=FS, output="sos")
+FAT_SOS_BE = _butter(4, [13, 30], btype="band", fs=FS, output="sos")
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'headset'))
 from montage import MONTAGE  # noqa: E402
 IDX = [MONTAGE.index(c) for c in CH]   # model channels -> stream slots, from headset/montage.py
@@ -253,9 +256,18 @@ def main():
             rms = sosfiltfilt(SIG_SOS, X8 - X8.mean(1, keepdims=True), axis=1).std(1)
             clean = [i for i in IDX if (not dead[i]) and rms[i] < a.quality_uv]
             clean_n = len(clean)
-            fat_now = float(np.median(np.log10((th[clean] + al[clean]) / (be[clean] + 1e-12) + 1e-12))) if clean_n >= 3 or a.fake else None
-            if a.fake and fat_now is None:
-                fat_now = float(np.median(np.log10((th[live] + al[live]) / (be[live] + 1e-12) + 1e-12)))
+            # fatigue ratio from Hilbert band envelopes: band-pass theta, alpha, beta, take the analytic-signal envelope,
+            # and use its MEDIAN over the window as the band amplitude (a burst cannot set it); median over clean channels
+            if clean_n >= 3 or a.fake:
+                from scipy.signal import hilbert as _hilbert
+                idxs = clean if clean_n >= 3 else live
+                env = []
+                for sos_b in (FAT_SOS_TH, FAT_SOS_AL, FAT_SOS_BE):
+                    xb = sosfiltfilt(sos_b, X8[idxs] - X8[idxs].mean(1, keepdims=True), axis=1)
+                    env.append(np.median(np.abs(_hilbert(xb, axis=1))[:, FS // 2:-FS // 2], axis=1))     # drop the filter edges
+                fat_now = float(np.median(np.log10((env[0] ** 2 + env[1] ** 2) / (env[2] ** 2 + 1e-12) + 1e-12)))
+            else:
+                fat_now = None
             # amplitude of the live channels, 1 to 40 Hz, for the settle check (dry electrodes drift for a minute or two)
             amp_hist.append(float(np.median(np.sqrt(tot[live]))) if len(live) else 0.0)
             if cond.get("redo"):

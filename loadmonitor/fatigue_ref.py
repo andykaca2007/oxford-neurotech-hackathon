@@ -22,9 +22,14 @@ CH = ["Fz", "C3", "Cz", "C4", "Pz", "P3", "P4", "O1"]
 
 
 def ratio(x, fs):
-    f, p = welch(x - x.mean(1, keepdims=True), fs=fs, nperseg=int(fs * 2), axis=1)
-    th = p[:, (f >= 4) & (f < 8)].mean(1); al = p[:, (f >= 8) & (f < 13)].mean(1); be = p[:, (f >= 13) & (f < 30)].mean(1)
-    return float(np.median(np.log10((th + al) / (be + 1e-12) + 1e-12)))
+    """log10((theta + alpha) / beta) from Hilbert band envelopes (median over time), median over channels."""
+    from scipy.signal import butter, sosfiltfilt, hilbert
+    x = x - x.mean(1, keepdims=True)
+    env = []
+    for lo, hi in ((4, 8), (8, 13), (13, 30)):
+        xb = sosfiltfilt(butter(4, [lo, hi], btype="band", fs=fs, output="sos"), x, axis=1)
+        env.append(np.median(np.abs(hilbert(xb, axis=1))[:, int(fs) // 2:-int(fs) // 2], axis=1))
+    return float(np.median(np.log10((env[0] ** 2 + env[1] ** 2) / (env[2] ** 2 + 1e-12) + 1e-12)))
 
 
 def main():

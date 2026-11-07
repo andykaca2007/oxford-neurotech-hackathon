@@ -37,7 +37,7 @@ BANDS_RICH = {"delta": (1, 4), "theta": (4, 8), "alpha": (8, 13), "lbeta": (13, 
 # 50 Hz mains hum and sub-4 Hz drift that together can be 90 percent of the power; a notch, a steeper 3 Hz high-pass
 # and no delta band keep the features on the bands the model is about.
 FEAT_CFG = dict(lo=1.0, hi=40.0, notch=False, order=4, drop_delta=False)
-ROBUST_CFG = dict(lo=3.0, hi=40.0, notch=True, order=6, drop_delta=True)
+ROBUST_CFG = dict(lo=3.0, hi=40.0, notch=True, order=6, drop_delta=True, median=True)
 
 
 def feats(x, fs, rich, cfg=None):
@@ -49,7 +49,10 @@ def feats(x, fs, rich, cfg=None):
         x = sosfiltfilt(tf2sos(b, a_), x, axis=1)
     sos = butter(cfg.get("order", 4), [cfg["lo"], cfg["hi"]], btype="band", fs=fs, output="sos")
     x = sosfiltfilt(sos, x, axis=1)
-    f, p = welch(x, fs=fs, nperseg=int(fs * 2), axis=1)
+    # median-averaged Welch: the PSD is the median over 1 s segments instead of the mean, so one artefact burst inside
+    # the 4 s window does not set the band power (Welch is FFT-based; median averaging is the robust estimator)
+    f, p = welch(x, fs=fs, nperseg=int(fs * 1) if cfg.get("median") else int(fs * 2), noverlap=int(fs * 0.5) if cfg.get("median") else None,
+                 average="median" if cfg.get("median") else "mean", axis=1)
     bands = BANDS_RICH if rich else BANDS_BASIC
     if cfg.get("drop_delta"):
         bands = {k: v for k, v in bands.items() if k != "delta"}
