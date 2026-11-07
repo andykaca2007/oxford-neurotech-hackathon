@@ -115,6 +115,7 @@ def main():
         tx.sendto(msg.encode(), ("127.0.0.1", 5006))
 
     pick = None
+    cand = None   # tile proposed by a stare, waiting for a blink (orange)
     pick_t = 0.0
     frame = 0
     full = False
@@ -148,7 +149,11 @@ def main():
                 else:
                     msg, _ = rx.recvfrom(64)
                     parts = msg.decode().split()
+                if parts[0] == "cand":
+                    cand = None if parts[1] == "none" else int(parts[1])
+                    continue
                 if parts[0] == "pick":
+                    cand = None
                     pick = None if parts[1] == "none" else int(parts[1])
                     pick_t = time.monotonic()
                     if speller is not None and pick is not None:
@@ -218,6 +223,8 @@ def main():
             pygame.draw.rect(screen, col if on else (20, 20, 20), rect, border_radius=24)
             if cued == i:
                 pygame.draw.rect(screen, (255, 255, 255), rect, width=12, border_radius=24)
+            if cand == i:
+                pygame.draw.rect(screen, (255, 140, 0), rect.inflate(-16, -16), width=10, border_radius=20)
             if pick == i and now - pick_t < 1.5:
                 pygame.draw.rect(screen, (255, 255, 0), rect.inflate(-30, -30), width=8, border_radius=18)
             colour = (255, 255, 255) if on else (90, 90, 90)

@@ -134,6 +134,9 @@ def src_fake(seed=0, snr=1.0, period_s=6.0):
         amp = 0.995 * amp + 0.005 * rng.uniform(0.3, 1.7)
         eeg += 10 * amp * np.sin(phase)
         ssvep = snr * 10 * (np.sin(2 * np.pi * FREQS[k] * t) + 0.4 * np.sin(2 * np.pi * 2 * FREQS[k] * t))
+        local = t % period_s
+        if 4.0 <= local < 4.3:
+            eeg[0] += 400 * np.sin(np.pi * (local - 4.0) / 0.3)  # a deliberate blink on Fz
         for c in USE_IDX:
             eeg[c] += ssvep
         yield t, eeg, k
@@ -201,6 +204,10 @@ def main():
     ap.add_argument("--seconds", type=float, default=0, help="stop after this many signal seconds (0 = run until Ctrl-C)")
     ap.add_argument("--model", help="personal TRCA model from ssvep_calibrate.py; scores come from it, CCA is logged beside")
     ap.add_argument("--tiles", type=int, default=4, choices=[4, 12], help="tile set, must match ssvep_stim.py --tiles")
+    ap.add_argument("--confirm", choices=["dwell", "blink"], default="dwell",
+                    help="dwell: a stare selects. blink: a stare proposes (orange), a deliberate blink on Fz within --confirm-window confirms")
+    ap.add_argument("--blink-uv", type=float, default=150.0, help="Fz deflection (uV, 1 to 8 Hz) that counts as a deliberate blink")
+    ap.add_argument("--confirm-window", type=float, default=2.5, help="s after a candidate in which a blink confirms it")
     ap.add_argument("--channels", help="comma list of channels to decode from, e.g. POz,Pz,Cz when PO7/PO8 are dead (default PO7,Oz,PO8,Pz)")
     ap.add_argument("--floor", type=float, help=f"pick rule: best score must reach this (default {FLOOR})")
     ap.add_argument("--margin", type=float, help=f"pick rule: best minus runner-up must reach this (default {MARGIN})")
@@ -279,8 +286,13 @@ def main():
 
     history = deque(maxlen=5)
     rest_acc, bias = [], None
+    from scipy.signal import butter as _butter, sosfilt as _sosfilt, sosfilt_zi as _sosfilt_zi
+    blink_sos = _butter(2, [1, 8], btype="band", fs=FS, output="sos")
+    blink_zi = _sosfilt_zi(blink_sos) * 0
+    last_blink_t = -1e9
+    candidate, candidate_t = None, 0.0
     last_pick_t = -1e9
-    stats = dict(hit=0, miss=0, abstain=0, false=0, t_free=0.0)
+    stats = dict(hit=0, miss=0, abstain=0, false=0, t_free=0.0, confirmed=0, expired=0)
     since = 0
     t = 0.0
     try:
@@ -288,6 +300,10 @@ def main():
             if a.seconds and t > a.seconds:
                 break
             buf.append(filt.push(eeg[USE_IDX][None, :])[0])
+            if a.confirm == "blink":
+                fz, blink_zi = _sosfilt(blink_sos, [eeg[0]], zi=blink_zi)
+                if abs(fz[0]) > a.blink_uv and t - last_blink_t > 0.6:
+                    last_blink_t = t
             since += 1
             if len(buf) < nwin or since < nhop:
                 continue
@@ -319,6 +335,23 @@ def main():
                 except NotImplementedError:
                     pick = None
             history.append(pick)
+            if a.confirm == "blink":
+                if candidate is None and pick is not None:
+                    candidate, candidate_t = pick, t
+                    tx.sendto(f"cand {pick}".encode(), ("127.0.0.1", 5005))
+                    print(f"t={t:6.1f} candidate tile {pick}: blink to confirm", flush=True)
+                pick = None
+                if candidate is not None:
+                    if candidate_t + 0.15 < last_blink_t <= t:
+                        pick = candidate
+                        stats["confirmed"] += 1
+                        candidate = None
+                        tx.sendto(b"cand none", ("127.0.0.1", 5005))
+                    elif t - candidate_t > a.confirm_window:
+                        stats["expired"] += 1
+                        candidate = None
+                        tx.sendto(b"cand none", ("127.0.0.1", 5005))
+                        print(f"t={t:6.1f} candidate expired, no blink", flush=True)
             if pick is not None:
                 last_pick_t = t
                 tx.sendto(f"pick {pick}".encode(), ("127.0.0.1", 5005))
@@ -346,6 +379,8 @@ def main():
     finally:
         if log:
             log.close()
+        if a.confirm == "blink":
+            print(f"# blink confirm: {stats['confirmed']} confirmed, {stats['expired']} candidates expired without a blink")
         n = stats["hit"] + stats["miss"] + stats["abstain"]
         print("\n# windows during a cue:", n)
         if n:
