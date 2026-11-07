@@ -67,6 +67,16 @@ AI: a deliberate-vs-spontaneous blink classifier trained on the team's logged bl
 repo as the optional fast mode and the public-data result stays on the slides as prior work.
 Only Fz and the mastoid stickies need to work for the demo.
 
+## DECISION 17:30 Sat: HEAD-CONTROLLED GAME (he dropped the communication aid)
+Product: a game you play with your face. Jaw CLENCH = jump, deliberate BLINK = duck/second
+action. Both are the signals a dry loaner cap reads reliably (EMG burst on all channels; EOG on
+Fz). `unicorn/cmd_switch.py --lsl --keys` detects them and presses keys system-wide (Space, S),
+so a Roblox Studio obby/runner, or `unicorn/game_runner.py` (pygame fallback, UDP 5007), reacts.
+AI: a 3-class command classifier (clench / blink / nothing) trained on the team's logged events
+(`cmd_switch.py --log`), held-out people, accuracy + false triggers per minute. Honest line: these
+are muscle and eye signals, not thought; the headset is the sensor, the classifier is the model.
+Earlier modes (SSVEP, speller, scanning) stay in the repo as evidence of the exploration.
+
 ## Scope is frozen
 Four tiles, personal vs generic decoder, fixed 16-phrase tree (two looks per phrase,
 generated once, not a runtime LLM), wristband, replay mode. No new features.
