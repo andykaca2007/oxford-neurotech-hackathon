@@ -36,13 +36,14 @@ if [ "$SERIAL" != "fake" ]; then
   # 2. headset bridge (its scope window must stay open; minimise it)
   pkill -f unicorn_gpype.py 2>/dev/null
   $PY headset/unicorn_gpype.py --serial "$SERIAL" --csv "${SESSION}_raw.csv" > logs/bridge_$STAMP.log 2>&1 &
-  PIDS+=($!)
+  BRIDGE_PID=$!
+  PIDS+=($BRIDGE_PID)
   echo "connecting to $SERIAL ..."
   for i in $(seq 1 40); do
     if $PY -c "from pylsl import resolve_byprop; import sys; sys.exit(0 if resolve_byprop('name','Unicorn',timeout=1) else 1)" 2>/dev/null; then
       echo "headset streaming"; break
     fi
-    if ! kill -0 "${PIDS[-1]}" 2>/dev/null; then echo "bridge died, see logs/bridge_$STAMP.log:"; tail -3 logs/bridge_$STAMP.log; cleanup; fi
+    if ! kill -0 "$BRIDGE_PID" 2>/dev/null; then echo "bridge died, see logs/bridge_$STAMP.log:"; tail -3 logs/bridge_$STAMP.log; cleanup; fi
     sleep 1
   done
 fi
