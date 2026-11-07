@@ -32,7 +32,7 @@ def main():
     ap.add_argument("--sim", action="store_true", help="generator instead of the headset, headless")
     ap.add_argument("--serial", help='e.g. "UN-2024.01.01"; default = first Unicorn found')
     ap.add_argument("--stream", default="Unicorn", help="LSL stream name (ssvep_decode.py expects Unicorn)")
-    ap.add_argument("--csv", default="unicorn_rec.csv", help="CSV base name; g.Pype appends a timestamp")
+    ap.add_argument("--csv", default="recordings/raw.csv", help="CSV base name; g.Pype appends a timestamp")
     ap.add_argument("--list", action="store_true", help="list Hybrid Blacks and exit (Core-8s cannot be listed)")
     ap.add_argument("--hybrid", action="store_true", help="Hybrid Black (UN-...) instead of the default BCI Core-8 (U8-...)")
     a = ap.parse_args()

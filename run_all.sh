@@ -4,6 +4,10 @@
 #   ./run_all.sh                      # headset U8-2025.10.14 (default)
 #   ./run_all.sh U8-2025.11.14        # another amplifier
 #   ./run_all.sh fake                 # no headset: fake signal, for rehearsing
+#   ./run_all.sh U8-2025.10.14 andy   # second word = who is wearing it; names the recordings
+#
+# Every run writes two CSVs in recordings/: <who>_<date>_<time>_raw.csv (all 8 channels, 250 Hz,
+# from the bridge) and <who>_<date>_<time>_gauge.csv (load, alarm and features, once a second).
 #
 # Ctrl-C stops everything. Logs in logs/. Needs Bluetooth permission for the app you run it from
 # (Terminal or VS Code: System Settings > Privacy & Security > Bluetooth).
@@ -11,8 +15,11 @@ set -u
 cd "$(dirname "$0")"
 PY=.venv/bin/python
 SERIAL="${1:-U8-2025.10.14}"
+WHO="${2:-anon}"                      # ./run_all.sh U8-2025.10.14 paing  -> files named with the wearer
 mkdir -p logs recordings
-STAMP=$(date +%H%M%S)
+STAMP=$(date +%Y%m%d_%H%M%S)
+SESSION="recordings/${WHO}_${STAMP}"
+echo "session files: ${SESSION}_raw.csv (8-ch EEG at 250 Hz) and ${SESSION}_gauge.csv (load per second)"
 PIDS=()
 cleanup() { echo; echo "stopping"; for p in "${PIDS[@]}"; do kill "$p" 2>/dev/null; done; exit 0; }
 trap cleanup INT TERM
@@ -28,7 +35,7 @@ fi
 if [ "$SERIAL" != "fake" ]; then
   # 2. headset bridge (its scope window must stay open; minimise it)
   pkill -f unicorn_gpype.py 2>/dev/null
-  $PY headset/unicorn_gpype.py --serial "$SERIAL" > logs/bridge_$STAMP.log 2>&1 &
+  $PY headset/unicorn_gpype.py --serial "$SERIAL" --csv "${SESSION}_raw.csv" > logs/bridge_$STAMP.log 2>&1 &
   PIDS+=($!)
   echo "connecting to $SERIAL ..."
   for i in $(seq 1 40); do
@@ -47,6 +54,6 @@ open http://localhost:8765 2>/dev/null || true
 if [ "$SERIAL" = "fake" ]; then
   $PY loadmonitor/load_gauge.py --fake --web --no-ui
 else
-  $PY loadmonitor/load_gauge.py --lsl --web --no-ui --log recordings/run_$STAMP.csv
+  $PY loadmonitor/load_gauge.py --lsl --web --no-ui --log "${SESSION}_gauge.csv"
 fi
 cleanup
