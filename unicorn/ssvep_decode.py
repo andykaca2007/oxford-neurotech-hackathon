@@ -134,6 +134,9 @@ def src_fake(seed=0, snr=1.0, period_s=6.0):
         amp = 0.995 * amp + 0.005 * rng.uniform(0.3, 1.7)
         eeg += 10 * amp * np.sin(phase)
         ssvep = snr * 10 * (np.sin(2 * np.pi * FREQS[k] * t) + 0.4 * np.sin(2 * np.pi * 2 * FREQS[k] * t))
+        local = t % period_s
+        if 4.0 <= local < 4.3:
+            eeg[0] += 400 * np.sin(np.pi * (local - 4.0) / 0.3)  # a deliberate blink on Fz
         for c in USE_IDX:
             eeg[c] += ssvep
         yield t, eeg, k
@@ -183,6 +186,7 @@ def src_lsl():
 
 
 def main():
+    global FLOOR, MARGIN, USE, USE_IDX, FREQS
     ap = argparse.ArgumentParser()
     g = ap.add_mutually_exclusive_group(required=True)
     g.add_argument("--fake", action="store_true")
@@ -199,7 +203,34 @@ def main():
     ap.add_argument("--log")
     ap.add_argument("--seconds", type=float, default=0, help="stop after this many signal seconds (0 = run until Ctrl-C)")
     ap.add_argument("--model", help="personal TRCA model from ssvep_calibrate.py; scores come from it, CCA is logged beside")
+    ap.add_argument("--tiles", type=int, default=4, choices=[4, 12], help="tile set, must match ssvep_stim.py --tiles")
+    ap.add_argument("--confirm", choices=["dwell", "blink"], default="dwell",
+                    help="dwell: a stare selects. blink: a stare proposes (orange), a deliberate blink on Fz within --confirm-window confirms")
+    ap.add_argument("--blink-uv", type=float, default=150.0, help="Fz deflection (uV, 1 to 8 Hz) that counts as a deliberate blink")
+    ap.add_argument("--confirm-window", type=float, default=2.5, help="s after a candidate in which a blink confirms it")
+    ap.add_argument("--channels", help="comma list of channels to decode from, e.g. POz,Pz,Cz when PO7/PO8 are dead (default PO7,Oz,PO8,Pz)")
+    ap.add_argument("--floor", type=float, help=f"pick rule: best score must reach this (default {FLOOR})")
+    ap.add_argument("--margin", type=float, help=f"pick rule: best minus runner-up must reach this (default {MARGIN})")
+    ap.add_argument("--rest-bias", type=float, default=0.0,
+                    help="s at the start where the wearer looks at a blank wall; each tile's mean score then is subtracted later (kills the slow-flicker bias of floating electrodes)")
     a = ap.parse_args()
+    if a.floor is not None:
+        FLOOR = a.floor
+    if a.margin is not None:
+        MARGIN = a.margin
+    print(f"# pick rule: floor {FLOOR}, margin {MARGIN}", flush=True)
+    if a.tiles != 4:
+        import os
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        from tiles import tile_set
+        FREQS = tile_set(a.tiles)["freqs"]
+        print(f"# {a.tiles} tiles: " + " ".join(f"{f:.2f}" for f in FREQS), flush=True)
+    if a.channels:
+        names = [c.strip() for c in a.channels.split(",")]
+        alias = {"Oz": "Oz", "POz": "Oz"}  # Core-8 calls channel 7 POz; same index
+        USE = [alias.get(c, c) for c in names]
+        USE_IDX = [CH_NAMES.index(c) for c in USE]
+        print(f"# decoding from {names} -> indices {USE_IDX}", flush=True)
 
     trca = None
     if a.model:
@@ -254,8 +285,14 @@ def main():
         log.write("t,cued,s0,s1,s2,s3,pick" + (",c0,c1,c2,c3" if trca is not None else "") + "\n")
 
     history = deque(maxlen=5)
+    rest_acc, bias = [], None
+    from scipy.signal import butter as _butter, sosfilt as _sosfilt, sosfilt_zi as _sosfilt_zi
+    blink_sos = _butter(2, [1, 8], btype="band", fs=FS, output="sos")
+    blink_zi = _sosfilt_zi(blink_sos) * 0
+    last_blink_t = -1e9
+    candidate, candidate_t = None, 0.0
     last_pick_t = -1e9
-    stats = dict(hit=0, miss=0, abstain=0, false=0, t_free=0.0)
+    stats = dict(hit=0, miss=0, abstain=0, false=0, t_free=0.0, confirmed=0, expired=0)
     since = 0
     t = 0.0
     try:
@@ -263,6 +300,10 @@ def main():
             if a.seconds and t > a.seconds:
                 break
             buf.append(filt.push(eeg[USE_IDX][None, :])[0])
+            if a.confirm == "blink":
+                fz, blink_zi = _sosfilt(blink_sos, [eeg[0]], zi=blink_zi)
+                if abs(fz[0]) > a.blink_uv and t - last_blink_t > 0.6:
+                    last_blink_t = t
             since += 1
             if len(buf) < nwin or since < nhop:
                 continue
@@ -274,6 +315,18 @@ def main():
             else:
                 scores = cca_scores
             cued = truth if a.fake else cue_now["i"]
+            if a.rest_bias:
+                if t < a.rest_bias + a.win:
+                    rest_acc.append(list(scores))
+                    if len(rest_acc) == 1:
+                        print(f"# REST: look at the wall for {a.rest_bias:.0f} s, measuring per-tile bias", flush=True)
+                    scores = [0.0] * len(scores)
+                else:
+                    if bias is None:
+                        b = np.mean(rest_acc, axis=0)
+                        bias = (b - b.min()).tolist()
+                        print("# bias per tile: " + " ".join(f"{v:.2f}" for v in bias) + "  (subtracted from now on)", flush=True)
+                    scores = [s_ - b_ for s_, b_ in zip(scores, bias)]
             if t - last_pick_t < a.refractory:
                 pick = None
             else:
@@ -282,6 +335,23 @@ def main():
                 except NotImplementedError:
                     pick = None
             history.append(pick)
+            if a.confirm == "blink":
+                if candidate is None and pick is not None:
+                    candidate, candidate_t = pick, t
+                    tx.sendto(f"cand {pick}".encode(), ("127.0.0.1", 5005))
+                    print(f"t={t:6.1f} candidate tile {pick}: blink to confirm", flush=True)
+                pick = None
+                if candidate is not None:
+                    if candidate_t + 0.15 < last_blink_t <= t:
+                        pick = candidate
+                        stats["confirmed"] += 1
+                        candidate = None
+                        tx.sendto(b"cand none", ("127.0.0.1", 5005))
+                    elif t - candidate_t > a.confirm_window:
+                        stats["expired"] += 1
+                        candidate = None
+                        tx.sendto(b"cand none", ("127.0.0.1", 5005))
+                        print(f"t={t:6.1f} candidate expired, no blink", flush=True)
             if pick is not None:
                 last_pick_t = t
                 tx.sendto(f"pick {pick}".encode(), ("127.0.0.1", 5005))
@@ -309,6 +379,8 @@ def main():
     finally:
         if log:
             log.close()
+        if a.confirm == "blink":
+            print(f"# blink confirm: {stats['confirmed']} confirmed, {stats['expired']} candidates expired without a blink")
         n = stats["hit"] + stats["miss"] + stats["abstain"]
         print("\n# windows during a cue:", n)
         if n:
