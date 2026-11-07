@@ -1,16 +1,17 @@
-# Core numerics and plotting
+# Numerics, filtering, plots
 numpy
 scipy
 matplotlib
 
-# EEG handling and public datasets
-mne
-moabb
+# Flicker tiles (stimulus window)
+pygame
 
-# Classic ML baselines (CCA etc.) and deep learning
-scikit-learn
-torch
-
-# Live headset streaming (g.tec Unicorn via BrainFlow, or LSL)
-brainflow
+# Headset streaming: g.tec's g.Pype SDK -> LSL
+gpype
 pylsl
+
+# ESP32 wristband over USB serial
+pyserial
+
+# Tests
+pytest

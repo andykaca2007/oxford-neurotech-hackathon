@@ -1,0 +1,361 @@
+\documentclass[10.5pt,a4paper]{article}
+\usepackage{fontspec}
+\setmainfont{Avenir Next}
+\newfontfamily\display{Avenir Next Condensed}[UprightFont=* Demi Bold]
+\setmonofont{Menlo}[Scale=0.85]
+\usepackage{geometry}
+\geometry{margin=2cm,top=1.8cm,bottom=2cm}
+\usepackage{xcolor}
+\definecolor{ink}{HTML}{1A1A1A}
+\definecolor{rule}{HTML}{9A9A9A}\definecolor{RULE}{HTML}{9A9A9A}
+\definecolor{red3v}{HTML}{C0392B}
+\definecolor{gnd}{HTML}{333333}
+\definecolor{sig}{HTML}{1F5FAD}
+\usepackage[nobottomtitles*]{titlesec}
+\titleformat{\section}{\display\Large\MakeUppercase}{\thesection}{0.8em}{}[\vspace{-0.6ex}{\color{rule}\rule{\linewidth}{0.4pt}}]
+\titleformat{\subsection}{\display\large\MakeUppercase}{\thesubsection}{0.8em}{}
+\titlespacing*{\section}{0pt}{2.2ex}{1.4ex}
+\titlespacing*{\subsection}{0pt}{1.8ex}{0.8ex}
+\usepackage{enumitem}
+\usepackage{needspace}
+\setlist{nosep,leftmargin=1.4em,topsep=0.4ex}
+\usepackage{booktabs,tabularx,array}
+\renewcommand{\arraystretch}{1.25}
+\usepackage{hyperref}
+\hypersetup{colorlinks,linkcolor=ink,urlcolor=sig}
+\usepackage{tikz}
+\usetikzlibrary{positioning,calc}
+\usepackage[siunitx]{circuitikz}
+\usepackage{fancyhdr}
+\pagestyle{fancy}\fancyhf{}
+\fancyhead[L]{\small\display SWALLOWCUE PREP PACK}
+\fancyhead[R]{\small Oxford Neurotech Hackathon, 7 to 8 Nov 2026}
+\fancyfoot[R]{\small\thepage}
+\renewcommand{\headrulewidth}{0.3pt}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.6ex}
+\newcommand{\f}[1]{\texttt{#1}}
+\newcolumntype{L}{>{\raggedright\arraybackslash}X}
+
+\begin{document}
+
+{\display\Huge SWALLOWCUE}\\[0.3ex]
+{\display\Large PREP PACK, OXFORD NEUROTECH HACKATHON}\\[0.5ex]
+Sat 7 Nov 09:00 to Sun 8 Nov 18:00. Mathematical Institute, Andrew Wiles Building, Woodstock Road, Oxford OX2 6GG.\\
+Written Fri 6 Nov. Place confirmed (Discord joined, name matches Luma). Tracks, hardware and schedule are announced on Saturday morning.
+
+\vspace{1ex}
+\section*{The ten things that matter}
+\begin{enumerate}[leftmargin=1.8em]
+\item \textbf{Write \f{is\_swallow()} tonight}, in \f{warmup/swallow.py} (Python, for EMG) and \f{planb\_imu/src/is\_swallow.cpp} (C++, for the throat sensor). Until then nothing counts as a swallow.
+\item \textbf{Leave Marble Arch by 06:15} on the Oxford Tube (student return with the organisers' code). Registration opens 08:45, talks at about 09:45.
+\item \textbf{Bring your own kit} (section \ref{sec:kit}). Hardware is a surprise; the throat-sensor version works with no event hardware at all.
+\item \textbf{First hour: find out what records EMG.} That picks the signal path (section \ref{sec:first}) in five minutes.
+\item \textbf{Pick the track SwallowCue fits} with the decision table (section \ref{sec:track}). Decide by 12:00.
+\item \textbf{An ugly loop that works beats a pretty half}: signal to buzz end to end by Saturday 18:00.
+\item \textbf{Measure, don't claim.} Score real sessions with \f{tools/eval\_session.py}; test on a person you did not tune on (section \ref{sec:measure}).
+\item \textbf{Film the demo working} on Saturday night, as a backup.
+\item \textbf{Claim only what you measured}: detects swallows and cues in healthy volunteers. Never ``reduces drooling''.
+\item \textbf{Be home Sunday night}: MPHY0010 Scenario 3 starts Monday and is compulsory.
+\end{enumerate}
+
+\needspace{14\baselineskip}\section{Tonight, Friday 6 November}
+\begin{tabularx}{\linewidth}{@{}p{2.3cm}L@{}}
+\toprule
+By 20:00 & Write \f{is\_swallow()} in \f{warmup/swallow.py}. Run \f{python3 -m pytest -q test\_swallow.py} in \f{warmup/} until 4 of 4 pass. Start with \f{python3 -c "import swallow; swallow.print\_burst\_stats()"}.\\
+By 20:30 & Port the same idea to \f{planb\_imu/src/is\_swallow.cpp}. Different signal, so treat the numbers as a first guess: you tune them on the real sensor tomorrow. Add a gyro limit for head nods.\\
+By 21:00 & Run the whole EMG pipeline with no hardware:\newline
+\f{uv run live\_emg/swallowcue\_live.py -{}-board fake -{}-speed 10 -{}-log /tmp/f.csv}\newline
+then \f{python3 tools/eval\_session.py /tmp/f.csv}. It now uses YOUR rule.\\
+By 21:30 & Pack (section \ref{sec:kit}). Charge laptop, phone, power bank. Install the Oxford Tube app and buy the student return with the discount code from \#announcements.\\
+By 22:00 & Post in \#find-a-team (section \ref{sec:team}). Text Radin. Alarm for 05:15.\\
+\bottomrule
+\end{tabularx}
+
+\needspace{14\baselineskip}\section{Getting there, Saturday}
+\begin{tabularx}{\linewidth}{@{}p{2.3cm}L@{}}
+\toprule
+05:30 & Leave home. Archway to Marble Arch: Northern line to Tottenham Court Road, Central line 2 stops west (about 30 min). The Night Tube runs on both lines on Friday night into Saturday.\\
+06:15 & Oxford Tube from Marble Arch (Park Lane stop, by the north-east corner of Hyde Park). It runs 24 hours, every few minutes at peak, less often early on Saturday. Allow 2 h: morning journeys are 1 h 40 to 2 h 15.\\
+about 08:15 & Get off at Gloucester Green (city centre). Walk north up St Giles and Woodstock Road to the Radcliffe Observatory Quarter, about 15 to 20 min (check the map).\\
+08:45 & Registration. Show your Luma ticket (Luma app or the email ``My Ticket''). Your Discord name must match Luma.\\
+\bottomrule
+\end{tabularx}
+Faster but dearer: train from Marylebone or Paddington, about 1 h, then 20 min walk from Oxford station. Home on Sunday: the event ends at 18:00; Oxford Tube back from Gloucester Green, about 2 h.
+
+\needspace{14\baselineskip}\section{Kit list}\label{sec:kit}
+\begin{tabularx}{\linewidth}{@{}p{4.2cm}L@{}}
+\toprule
+\textbf{Signal and cue} & ESP32 DevKit (ELEGOO kit), GY-521 motion sensor (plus the kit's GY-6500 as a spare), 2 coin vibration motors, PN2222 (2 in the kit), 1N4007-type diode, 1 k\(\Omega\) resistors, breadboard, 20 jumpers incl.\ 4 long (30 cm+) soft ones, USB cable that carries data (test it tonight), DRV8833 board as spare motor driver.\\
+\textbf{Body} & Snap gel electrodes (TIGA-MED, trim to fit under the chin), alcohol wipes, medical tape (micropore), a cheap razor if you have stubble, scissors.\\
+\textbf{Wearable} & An old watch strap or a strip of velcro and tape for the wristband; a small zip bag to hold the board.\\
+\textbf{Laptop} & Charger, power bank, USB hub or adapter, mouse. Repos and \f{uv} caches already warm (run each command once tonight while on Wi-Fi).\\
+\textbf{Tools} & Multimeter, small screwdriver, spare jumpers, a few M3 bolts if you bring a printed holder.\\
+\textbf{You} & Water bottle (they asked), hoodie and something to sleep on if you stay (classrooms only, no bedding), toiletries, earplugs, phone charger, student ID, bank card.\\
+\bottomrule
+\end{tabularx}
+
+\needspace{14\baselineskip}\section{Timeline and checkpoints}
+Shift the times once the schedule is announced; keep the order and the gaps.
+
+\begin{tabularx}{\linewidth}{@{}p{2.6cm}L@{}}
+\toprule
+Sat 08:45 to 09:45 & Register. Find the hardware table. Ask the questions in section \ref{sec:first}. Meet people from \#find-a-team.\\
+09:45 to 10:30 & Opening talks: write down every track name, its brief, any stated metric, and the judges.\\
+by 11:30 & Team formed (3 to 5). Roles from section \ref{sec:team}.\\
+by 12:00 & \textbf{Track and signal path locked.} One sentence: who it is for, what it senses, what it does.\\
+by 14:00 & First real signal on screen: chin EMG or throat motion, with a swallow visible in the envelope.\\
+by 18:00 & \textbf{Loop works end to end}: signal, burst, \f{is\_swallow()}, buzz on the wrist. Ugly is fine.\\
+18:00 to 22:00 & Tune \f{is\_swallow()} on person A. Record scored sessions (section \ref{sec:measure}). Film the working demo.\\
+22:00 to 00:00 & Slides v1, dashboard polish. Then sleep 4 to 5 h. Sleep is a feature.\\
+Sun 07:00 to 10:00 & Held-out test on person B (not used for tuning). Fill the numbers slide.\\
+10:00 to 12:00 & Second feature only if the core is solid (see the never-add list in section \ref{sec:risks}).\\
+Freeze 3 h before judging & No new code. Rehearse the pitch twice with the live demo and once with the video.\\
+\bottomrule
+\end{tabularx}
+
+\needspace{14\baselineskip}\section{First hour at the venue}\label{sec:first}
+\subsection{Questions for the organisers}
+\begin{enumerate}
+\item What hardware can we use, how many units, and can we take one to our table for the whole weekend?
+\item Does anything record EMG (OpenBCI Cyton, Ganglion, a muscle sensor)? If it is a Cyton with a Daisy board, can we remove the Daisy (it halves the rate to 125 Hz)?
+\item Are electrodes on the face and neck allowed on volunteers? Is there a consent form?
+\item Can we use our own hardware and code written before the event (declared)?
+\item When and how is judging done: track rooms, demo fair, or main stage? How long is the pitch?
+\item What do judges score? (If unstated, assume innovation, technical depth, impact, presentation, 25\% each.)
+\end{enumerate}
+
+\subsection{Pick the signal path from what they have}
+\begin{tabularx}{\linewidth}{@{}p{4.4cm}p{3.2cm}L@{}}
+\toprule
+They provide & Path & Run\\
+\midrule
+OpenBCI Cyton (250 Hz) & A: chin EMG & \f{uv run live\_emg/swallowcue\_live.py -{}-board cyton -{}-port <dongle> -{}-channel 1 -{}-cue-port <esp32> -{}-log s1.csv}\\
+Cyton + Daisy & A, Daisy off & Remove the Daisy (250 Hz). If you cannot: \f{-{}-board cyton\_daisy}; it runs at 125 Hz with a 10 to 56 Hz band, weaker.\\
+OpenBCI Ganglion (200 Hz) & A & \f{-{}-board ganglion -{}-port ...}; channel 1 is a natively bipolar pair.\\
+Analog muscle sensor (MyoWare-style, ENV output) & C: envelope on ESP32 & ENV to GPIO 34, sensor powered from 3V3. Flash \f{planb\_imu}, type \f{e} + Enter. Same detector, same plot.\\
+EEG only (Muse, Crown, Unicorn) & B: throat motion & Your GY-521 kit. Nothing from them needed.\\
+Nothing usable & B & Same.\\
+\bottomrule
+\end{tabularx}
+In every path the ESP32 is the wristband. With no motion sensor attached it starts in wristband-only mode and buzzes when the laptop sends \f{b}.
+
+\needspace{14\baselineskip}\section{Which track, and how to frame it}\label{sec:track}
+The site promises four tracks ``from peripheral nervous-system interfaces to sub-cortical implants''. Match on the brief, not the name.
+
+\begin{tabularx}{\linewidth}{@{}p{3.7cm}p{2.3cm}L@{}}
+\toprule
+Track type & Fit & Framing\\
+\midrule
+Peripheral interfaces, wearables, EMG & Best & A peripheral sensor closes a loop on a motor symptom. Lead with the chin EMG and the live buzz.\\
+Closed-loop neuromodulation or neurorehab & Strong & Sense, decide, deliver a sensory cue, only when needed. This is the organiser's own field (closed-loop, Denison lab), so name the loop and its safety rules: never cue more often than every T, stop when swallowing resumes.\\
+AI, data, decoding & Good with an add-on & Rule vs learned classifier on burst features (duration, peak, gaps, gyro), tested on a person held out of training. Report both, and say which you would trust and why.\\
+Non-invasive BCI (EEG) & Weak & Do not force it. If teams must stay in one track, enter the peripheral one. If EEG is mandatory, switch to the runner-up in PREP.md 4b.\\
+Implants, DBS, sub-cortical & Weak & Concept tracks are won on framing. Only enter if no better fit: SwallowCue as the sensing layer a DBS clinic could use to log swallow rate.\\
+Sponsor track with a metric & Depends & If the brief states a number, build the scoring script in hour 1 and optimise that number.\\
+\bottomrule
+\end{tabularx}
+
+\needspace{14\baselineskip}\section{What you are building}
+\subsection{The loop}
+Signal (chin EMG, throat motion, or a muscle-sensor envelope) \(\rightarrow\) remove slow drift and mains hum \(\rightarrow\) rectify or take magnitude \(\rightarrow\) 5 Hz envelope \(\rightarrow\) burst when the envelope is above 3\(\times\) the quiet level \(\rightarrow\) \f{is\_swallow(burst)} \(\rightarrow\) cue timer: buzz \(T\) s after the last swallow, then every \(T\) s until the next one.
+
+Each burst carries duration, peak, gap before, gap after (capped at 2 s, because the device cannot wait forever), and, for the throat sensor, peak head rotation.
+
+\subsection{What is done and tested}
+\begin{tabularx}{\linewidth}{@{}p{5.4cm}L@{}}
+\toprule
+\f{live\_emg/swallowcue\_live.py} & Live EMG pipeline. Tested on fake sessions (with mains hum) and on BrainFlow's synthetic board. Not yet on a real Cyton.\\
+\f{planb\_imu/} (ESP32 firmware) & Throat motion, wristband-only and EMG-envelope modes. Builds; detector passes 6 of 6 tests on the laptop. Not yet flashed or worn.\\
+\f{tools/live\_plot.py} & Demo screen for every path (serial port or a log file). Tested with fake input.\\
+\f{tools/eval\_session.py} & Scores sessions for the slide. Tested on fake sessions.\\
+\f{is\_swallow()}, both versions & \textbf{Yours to write.}\\
+\bottomrule
+\end{tabularx}
+
+\subsection{Command cheat sheet}
+\begin{tabularx}{\linewidth}{@{}p{4.3cm}L@{}}
+\toprule
+Flash the ESP32 & Ask me: \f{pio\_build}, \f{pio\_devices}, \f{pio\_upload} on \f{planb\_imu}.\\
+ESP32 serial commands & Type in the live-view terminal, then Enter: \f{r} recalibrate (sit still 3 s), \f{t15} cue period 15 s, \f{b} test buzz, \f{e} EMG-envelope mode on GPIO 34, \f{i} back to motion sensor. A blank Enter marks a swallow.\\
+Throat-sensor demo screen & \f{uv run tools/live\_plot.py <esp32 port> -{}-log s1.csv} and press Enter after each swallow.\\
+EMG live & \f{uv run live\_emg/swallowcue\_live.py -{}-board cyton -{}-port <p> -{}-cue-port <esp32> -{}-log e1.csv -{}-T 15}\\
+EMG demo screen & In a second terminal: \f{uv run tools/live\_plot.py e1.csv}\\
+Score & \f{python3 tools/eval\_session.py e1.csv e2.csv -{}-period 15}\\
+Find ports & \f{ls /dev/cu.*} (the OpenBCI dongle is an FTDI \f{usbserial}).\\
+\bottomrule
+\end{tabularx}
+
+\needspace{14\baselineskip}\section{Wiring (paths B and C)}
+\begin{center}
+\begin{tikzpicture}[x=1cm,y=1cm,font=\small,
+  blk/.style={draw=ink,line width=0.6pt,fill=white},
+  pn/.style={font=\footnotesize\ttfamily},
+  w/.style={line width=0.8pt,sig},
+  pw/.style={line width=0.8pt,red3v},
+  gw/.style={line width=0.8pt,gnd}]
+% ESP32
+\draw[blk] (0,0) rectangle (3.2,8);
+\node[font=\display] at (1.6,8.35) {ESP32 DEVKIT};
+\foreach \y/\n in {7.4/3V3,6.6/GND,5.8/GPIO21 SDA,5.0/GPIO22 SCL,4.0/GPIO34 ADC,1.6/GPIO25}{
+  \node[pn,anchor=east] at (3.1,\y) {\n};
+  \fill[ink] (3.2,\y) circle (1.4pt);
+}
+% GY-521
+\draw[blk] (8.4,4.6) rectangle (10.8,8);
+\node[font=\display] at (9.6,8.35) {GY-521};
+\foreach \y/\n in {7.4/VCC,6.6/GND,5.8/SDA,5.0/SCL}{
+  \node[pn,anchor=west] at (8.5,\y) {\n};
+  \fill[ink] (8.4,\y) circle (1.4pt);
+}
+\node[font=\footnotesize,align=left,anchor=west] at (11.0,6.4) {taped to\\the throat,\\long soft\\wires};
+\draw[pw] (3.2,7.4) -- (8.4,7.4);
+\draw[gw] (3.2,6.6) -- (8.4,6.6);
+\draw[w] (3.2,5.8) -- (8.4,5.8);
+\draw[w] (3.2,5.0) -- (8.4,5.0);
+% analog envelope input (path C)
+\draw[w] (3.2,4.0) -- (4.2,4.0);
+\node[font=\footnotesize,anchor=west] at (4.25,4.0) {ENV in, path C only};
+% motor stage
+\draw (3.2,1.6) to[R, l={1 kΩ}] (5.4,1.6) -- (6.0,1.6);
+\draw (6.0,1.6) node[npn,anchor=B](Q){};
+\node[font=\footnotesize,anchor=west] at ($(Q.B)+(0.85,-0.05)$) {PN2222};
+\node[font=\footnotesize,anchor=east] at ($(Q.C)+(-0.08,0.12)$) {C};
+\node[font=\footnotesize,anchor=east] at ($(Q.E)+(-0.08,-0.12)$) {E};
+\draw (Q.E) -- ++(0,-0.3) node[ground]{};
+\draw (Q.C) |- (7.2,2.7) coordinate (m1);
+\draw (m1) -- (9.4,2.7) coordinate (m2);
+\node[draw=ink,circle,fill=white,minimum size=0.6cm,font=\footnotesize] at (8.3,2.7) {M};
+\node[font=\footnotesize,anchor=north] at (8.3,2.35) {coin motor};
+\draw (m1) -- (7.2,3.3) to[D] (9.4,3.3) -- (m2);
+\node[font=\footnotesize,anchor=south west] at (8.55,3.45) {stripe $\rightarrow$};
+\draw[pw] (9.4,3.0) -- (10.3,3.0) node[right,font=\footnotesize\ttfamily,text=red3v] {to 3V3};
+\end{tikzpicture}
+\end{center}
+\textbf{Check the PN2222 leg order} on the kit card before powering: some TO-92 parts are E-B-C, others C-B-E. The motor draws about 63 mA from 3V3. Put tape between the GY-521's back and the skin: its solder joints are bare.
+
+\needspace{14\baselineskip}\section{Putting it on a person}
+\subsection{Chin EMG (path A)}
+\begin{enumerate}
+\item Shave and wipe the skin under the chin with alcohol; let it dry.
+\item Two gel electrodes under the chin, either side of the midline, centres about 2 cm apart, over the submental muscles (the floor of the mouth). Trim the 43 mm foam if they overlap.
+\item Reference and bias on bone: behind the ear (mastoid) or on the collarbone.
+\item Cyton, simplest: first chin electrode to \f{N1P}, second to \f{SRB2}, bone electrode to \f{BIAS}. Or use \f{N1P}/\f{N1N} with \f{-{}-bipolar} (it sends the channel setting \f{x1060100X}; check that string against the OpenBCI docs on the day before relying on it).
+\item Check: clench the jaw, swallow, talk. You should see three different bursts in the plot. If the trace is a fat 50 Hz band, an electrode is loose.
+\item Tape the leads to the collar so a head turn does not pull them.
+\end{enumerate}
+
+\subsection{Throat motion (path B)}
+Flat on the front of the neck, just below the Adam's apple, chip side out, held with micropore tape or a loose elastic band. Wires run down to the collar. Too tight changes how swallowing feels; too loose and talking rattles it. Sit still for 3 s after power-up (calibration).
+
+\needspace{14\baselineskip}\section{Measuring: the number on the slide}\label{sec:measure}
+PI judges reward a measured number on a real signal. Plan for it from Saturday afternoon.
+
+\subsection{Protocol, about 6 min per person}
+\begin{tabularx}{\linewidth}{@{}p{3.2cm}p{2cm}L@{}}
+\toprule
+Block & Length & What happens\\
+\midrule
+Quiet sips & 1 min & 5 sips of water, about 10 s apart. Press Enter right after each swallow.\\
+Reading aloud & 1 min & Read a paragraph. No swallowing if you can help it; mark any you do.\\
+Chewing gum & 1 min & Chew normally; mark swallows.\\
+Conversation & 1 min & Talk with a teammate; mark swallows.\\
+Head movement & 1 min & Nod and turn, 10 times each (throat sensor: tests the gyro rule).\\
+Hold off & 1 min & Do not swallow until the buzz, then swallow (tests the cue).\\
+\bottomrule
+\end{tabularx}
+Save each block as its own file (\f{-{}-log A\_read.csv}, \f{A\_chew.csv}, ...), so the score splits by activity.
+
+\subsection{Honest testing}
+\begin{itemize}
+\item Tune \f{is\_swallow()} on person A only. Freeze it. Then record person B and report B's numbers as the result. Say so on the slide.
+\item Report: swallows caught (\%), false counts per minute per activity, and buzzes vs a fixed schedule with the same period. \f{eval\_session.py} prints all of these.
+\item State N (people, swallows, minutes). Small N is fine if it is stated.
+\item What to expect: an offline under-chin EMG study in Parkinson's reported 83\% (MDPI Sensors 2025). Healthy volunteers in a weekend will be different; do not compare directly.
+\end{itemize}
+
+\needspace{14\baselineskip}\section{Pitch}
+\subsection{Structure, 3 minutes}
+\begin{tabularx}{\linewidth}{@{}p{2cm}p{2.6cm}L@{}}
+\toprule
+Time & Slide & Point to land\\
+\midrule
+0:00 to 0:30 & The person & Drooling in Parkinson's is common (often over half of people in studies) and isolating. Saliva is normal; swallowing is too rare. Treatments are anticholinergic drugs (side effects) or botulinum toxin injections.\\
+0:30 to 1:00 & What exists & Cueing works: a once-a-minute wristband reduced drooling (McNaney 2019, 28 people). CueBand is in a 300-person trial (Parkinson's UK). Both buzz on a fixed timer, whether or not you just swallowed.\\
+1:00 to 1:50 & Live demo & Talk: nothing. Sip: count +1. Chew or nod: nothing. Hold off: buzz. Swallow: reset.\\
+1:50 to 2:30 & The number & Held-out person: \% caught, false counts per minute by activity, buzzes vs fixed timer. N stated.\\
+2:30 to 3:00 & What next & Clinician-set \(T\), a swallow-rate log for the neurologist, a pilot with people with Parkinson's. One line on cost (parts under GBP 30).\\
+\bottomrule
+\end{tabularx}
+Write the words yourself; this is the skeleton. Practise the demo order until the transitions are automatic.
+
+\subsection{Positioning}
+Not ``the first''. Northwestern's Aria patch (trial NCT04664634, about 60 people, no results posted) already senses swallows and cues. Swallowing accelerometry is an established research method. Your line: a cheap, open, smart version of the cue that people already wear, which buzzes only when swallowing stops, measured live.
+
+\needspace{14\baselineskip}\section{Questions judges will ask}
+\begin{tabularx}{\linewidth}{@{}p{5.2cm}L@{}}
+\toprule
+Why not just CueBand? & A fixed timer buzzes when you have just swallowed, so people learn to ignore it; ours buzzes only when needed. Show buzzes vs the fixed schedule from your session.\\
+How do you tell a swallow from talking or chewing? & Duration plus the quiet around it (speech is many short bursts close together, chewing repeats every 0.7 s), plus head rotation for the motion sensor. Show the burst table.\\
+Which error is worse, a missed swallow or a false one? & A missed swallow costs one extra buzz (annoying). A false swallow silences a needed cue (drooling). So the rule leans towards missing rather than inventing swallows. Your call: be ready to defend the one you made.\\
+Does it work in Parkinson's? & Not tested. Healthy volunteers only. Parkinson's swallowing is slower and weaker, so thresholds would be set per person in clinic.\\
+Why EMG and not a microphone? & EMG (or motion) does not hear other people talking and is not affected by room noise; Aria went acoustic, which is the comparison.\\
+Beards, sweat, electrodes falling off? & Shaved skin today; long-term it would be a dry-electrode chin patch or the motion sensor. The motion path is the more wearable one.\\
+Battery and size? & ESP32 is a dev board here; a production version is a coin-cell patch plus a band, BLE between them.\\
+Is it a medical device? & Probably yes in the UK if it claims to treat drooling (MHRA); a low-risk class is likely since it only vibrates, but that needs checking. Today it is a research prototype.\\
+What would you do with GBP 5k? & Build 5 units, run a 2-week pilot with a Parkinson's clinic and compare swallow rate and drooling score against the fixed-timer cue.\\
+What did the team build this weekend vs before? & Say exactly: the warm-up code and firmware were written before (declared); the tuning, measurements, wearable and demo happened here.\\
+\bottomrule
+\end{tabularx}
+
+\needspace{14\baselineskip}\section{Risks and fixes}\label{sec:risks}
+\begin{tabularx}{\linewidth}{@{}p{5.2cm}L@{}}
+\toprule
+No EMG hardware & Path B, already built.\\
+Cyton at 125 Hz (Daisy) & Remove the Daisy, or run \f{cyton\_daisy}; envelope still works.\\
+50 Hz everywhere & Notch is on by default; check electrode contact; laptop on battery.\\
+Talking counts as swallows & Raise the quiet-around requirement; add duration window; measure per activity.\\
+Nods count (motion sensor) & Gyro limit in \f{is\_swallow()}.\\
+ESP32 not seen by the laptop & Data cable; hold BOOT while flashing; try the GY-6500 board if the GY-521 is dead.\\
+Live demo fails on stage & Play the filmed backup and say it is a recording.\\
+Overrun & Feature freeze 3 h before judging. The never-add list: phone app, cloud, ML model you cannot explain.\\
+\bottomrule
+\end{tabularx}
+
+\needspace{14\baselineskip}\section{Team}\label{sec:team}
+\begin{itemize}
+\item \textbf{You}: signal processing, \f{is\_swallow()}, measurement.
+\item \textbf{Hardware}: wristband, wiring, wearable comfort.
+\item \textbf{Screen and data}: dashboard, logging, the numbers slide.
+\item \textbf{Story}: the patient, the evidence, the pitch. Ideally a medic, neuroscience or speech-and-language student.
+\end{itemize}
+In \#find-a-team, post three lines in your own words: what you will build (a wearable that cues swallowing in Parkinson's when it stops), what you bring (signal processing, ESP32 firmware, already a working pipeline), who you need (someone clinical, someone for slides and story). Text Radin before you post.
+
+Credit afterwards is team credit. Never present it as solo.
+
+\needspace{14\baselineskip}\section{Safety and ethics}
+\begin{itemize}
+\item Volunteers are teammates who agree, and can stop any time. No data leaves the laptop; delete recordings after the event unless everyone agrees to keep them.
+\item The only output to the body is a vibration motor. No electrical stimulation.
+\item Laptop on battery while electrodes are on a person. OpenBCI boards run on their own battery; the ESP32 never touches skin electrically (tape under the GY-521).
+\item Stop if skin reddens under an electrode.
+\end{itemize}
+
+\needspace{14\baselineskip}\section{After the event}
+\begin{itemize}
+\item Within 2 days: a one-line thank-you to each judge, with the repo or video link.
+\item Push the code with the team's names; keep \f{is\_swallow()} credited to whoever wrote it.
+\item Post the 30 s video. It is the first filmed, worn build for your portfolio: claim only what it shows.
+\end{itemize}
+
+\needspace{14\baselineskip}\section{Sources}
+\small
+\begin{itemize}
+\item Event: \url{https://oxneurotech.com/hackathon}, \url{https://luma.com/ceww7ooe}, the event Discord (\#start-here, \#announcements, \#questions, read 6 Nov).
+\item Drooling in Parkinson's, prevalence and mechanism: \url{https://pmc.ncbi.nlm.nih.gov/articles/PMC7669801}; Cochrane protocol on botulinum toxin: \url{https://www.cochranelibrary.com/cdsr/doi/10.1002/14651858.CD012408}.
+\item Cueing: McNaney et al.\ 2019 (PD-CUE); CueBand trial ISRCTN59284050; Aria patch NCT04664634. Details and links in \f{RESEARCH\_2026-11-04.md}.
+\item OpenBCI sample rates: BrainFlow board descriptions (Cyton 250 Hz, Cyton + Daisy 125 Hz, Ganglion 200 Hz), checked 6 Nov.
+\item Oxford Tube: \url{https://bustimes.org/services/tube-oxford-london}.
+\end{itemize}
+
+\end{document}

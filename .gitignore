@@ -4,18 +4,23 @@ __pycache__/
 .venv/
 venv/
 .ipynb_checkpoints/
+.pytest_cache/
 
-# Data: public datasets are downloaded by scripts, recordings stay local
-data/
+# Public dataset: download it, don't commit it (github.com/mnakanishi/12JFPM_SSVEP)
+data/nakanishi2015/
+
+# Headset recordings, decoder logs and personal models stay on the laptop
 recordings/
+models/
+unicorn_rec_*.csv
+*.csv
+*.npz
 *.fif
 *.edf
-*.npz
-*.csv
 
-# Model weights
-*.pt
-*.pth
+# PCB tool logs
+*.erc
+skidl_REPL.log
 
 # OS
 .DS_Store
