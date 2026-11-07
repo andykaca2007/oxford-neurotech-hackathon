@@ -2,56 +2,165 @@
   "version": "2.0.0",
   "tasks": [
     {
+      "label": "RUN ALL (10.14): bridge + server + gauge, records CSVs",
+      "type": "shell",
+      "command": "./run_all.sh U8-2025.10.14 paing",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "isBackground": true,
+      "presentation": {
+        "panel": "dedicated",
+        "reveal": "always",
+        "focus": true
+      },
+      "problemMatcher": [],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "RUN ALL (11.14)",
+      "type": "shell",
+      "command": "./run_all.sh U8-2025.11.14 paing",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "isBackground": true,
+      "presentation": {
+        "panel": "dedicated",
+        "reveal": "always",
+        "focus": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "RUN ALL (whichever amplifier answers)",
+      "type": "shell",
+      "command": "./run_all.sh '' paing",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "isBackground": true,
+      "presentation": {
+        "panel": "dedicated",
+        "reveal": "always",
+        "focus": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "RUN ALL fake data (no headset)",
+      "type": "shell",
+      "command": "./run_all.sh fake paing",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "isBackground": true,
+      "presentation": {
+        "panel": "dedicated",
+        "reveal": "always",
+        "focus": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "smoke test (every demo path, no Bluetooth)",
+      "type": "shell",
+      "command": "./tests/smoke.sh",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "isBackground": false,
+      "presentation": {
+        "panel": "dedicated",
+        "reveal": "always",
+        "focus": true
+      },
+      "problemMatcher": []
+    },
+    {
       "label": "1 headset bridge (10.14)",
       "type": "shell",
       "command": "${workspaceFolder}/.venv/bin/python headset/unicorn_gpype.py --serial U8-2025.10.14",
-      "options": { "cwd": "${workspaceFolder}" },
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
       "isBackground": true,
-      "presentation": { "panel": "dedicated", "reveal": "always" },
+      "presentation": {
+        "panel": "dedicated",
+        "reveal": "always"
+      },
       "problemMatcher": []
     },
     {
       "label": "1b headset bridge (11.14)",
       "type": "shell",
       "command": "${workspaceFolder}/.venv/bin/python headset/unicorn_gpype.py --serial U8-2025.11.14",
-      "options": { "cwd": "${workspaceFolder}" },
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
       "isBackground": true,
-      "presentation": { "panel": "dedicated", "reveal": "always" },
+      "presentation": {
+        "panel": "dedicated",
+        "reveal": "always"
+      },
       "problemMatcher": []
     },
     {
       "label": "2 web server (localhost:8765)",
       "type": "shell",
       "command": "${workspaceFolder}/.venv/bin/python loadmonitor/gauge_server.py",
-      "options": { "cwd": "${workspaceFolder}" },
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
       "isBackground": true,
-      "presentation": { "panel": "dedicated", "reveal": "always" },
+      "presentation": {
+        "panel": "dedicated",
+        "reveal": "always"
+      },
       "problemMatcher": []
     },
     {
       "label": "3 gauge, real head",
       "type": "shell",
       "command": "${workspaceFolder}/.venv/bin/python loadmonitor/load_gauge.py --lsl --web --no-ui --log recordings/session_$(date +%H%M).csv",
-      "options": { "cwd": "${workspaceFolder}" },
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
       "isBackground": true,
-      "presentation": { "panel": "dedicated", "reveal": "always" },
+      "presentation": {
+        "panel": "dedicated",
+        "reveal": "always"
+      },
       "problemMatcher": []
     },
     {
       "label": "3b gauge, fake data",
       "type": "shell",
       "command": "${workspaceFolder}/.venv/bin/python loadmonitor/load_gauge.py --fake --web --no-ui",
-      "options": { "cwd": "${workspaceFolder}" },
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
       "isBackground": true,
-      "presentation": { "panel": "dedicated", "reveal": "always" },
+      "presentation": {
+        "panel": "dedicated",
+        "reveal": "always"
+      },
       "problemMatcher": []
     },
     {
       "label": "check electrodes (voice test)",
       "type": "shell",
       "command": "${workspaceFolder}/.venv/bin/python headset/alpha_check.py",
-      "options": { "cwd": "${workspaceFolder}" },
-      "presentation": { "panel": "dedicated", "reveal": "always" },
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "panel": "dedicated",
+        "reveal": "always"
+      },
       "problemMatcher": []
     }
   ]
