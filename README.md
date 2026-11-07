@@ -5,6 +5,8 @@ four flickering tiles; two looks say one of 16 fixed phrases, which appears on t
 buzzes the carer's wristband. The science claim: how much per-person calibration the decoder
 needs (personal TRCA against generic CCA, held-out blocks, public data, replicated live).
 
+Branches and pull requests, never direct to main: see [CONTRIBUTING.md](CONTRIBUTING.md).
+
 **Start with [HANDOFF.md](HANDOFF.md)** (state of the build, headset checklist, honest pitch
 lines), then [RESULTS.md](RESULTS.md) (numbers and limits).
 
