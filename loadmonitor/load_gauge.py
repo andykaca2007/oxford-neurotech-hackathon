@@ -125,6 +125,7 @@ def main():
     base_fat, fat_base, fat_ema, fatigue_pct, contact = [], 0.0, None, 0.0, False
     amp_hist = deque(maxlen=40)
     fat_start = 0.0
+    rest_mean, rest_sd = 0.3, 0.2
     fat_recent = deque(maxlen=5)
     clean_n = 0
     try:
@@ -292,6 +293,14 @@ def main():
                     base_fat.append(fat_now)
                 if len(base_feats) * 1.0 >= a.baseline:
                     base = np.mean(base_feats, axis=0)
+                    # rest calibration: what the model says about THIS person's resting signal (mean and spread of p);
+                    # the gauge reads how far above that rest the current output is, so sitting still reads low by construction
+                    try:
+                        pr = clf.predict_proba(np.array(base_feats) - base)[:, 1]
+                        rest_mean, rest_sd = float(np.mean(pr)), max(float(np.std(pr)), 0.05)
+                    except Exception:
+                        rest_mean, rest_sd = 0.3, 0.2
+                    print(f"# rest calibration: model output on your rest = {rest_mean:.2f} +/- {rest_sd:.2f}; load = 15 + 20 x (p - rest) / sd", flush=True)
                     if riem is not None:
                         riem.set_baseline(base_covs)
                     chan_base = {k: np.mean([c[k] for c in base_chan], axis=0) for k in ("tot", "th", "al")}
@@ -326,7 +335,7 @@ def main():
                     p = 0.5 * (p + pr)
                 ema = 0.2 if ema is None else ema   # start calm, let the evidence raise it
                 ema = ema + (p - ema) * (1.0 / a.smooth)
-                load_pct = 100 * ema
+                load_pct = float(np.clip(15 + 20 * (ema - rest_mean) / rest_sd, 0, 100))
                 # fatigue: slow EMA (about 2 min) of the ratio drift, starting AT the baseline; +0.5 log10 (ratio x3) reads as 100
                 if fat_now is not None:
                     fat_recent.append(fat_now)
