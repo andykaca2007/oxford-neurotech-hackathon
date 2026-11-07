@@ -77,6 +77,8 @@ def main():
     ap.add_argument("--smooth", type=float, default=8.0, help="s of smoothing on the gauge")
     ap.add_argument("--log")
     ap.add_argument("--no-ui", action="store_true")
+    ap.add_argument("--web", action="store_true", help="post state to gauge_server.py (http://localhost:8765) every second")
+    ap.add_argument("--web-port", type=int, default=8765)
     ap.add_argument("--seconds", type=float, default=0)
     a = ap.parse_args()
 
@@ -105,6 +107,21 @@ def main():
         subprocess.Popen(["say", txt])
 
     state = "BASELINE: sit still, eyes open, 30 s"
+    hist = deque(maxlen=600)
+    import json, urllib.request
+
+    def post_state(t_now):
+        if not a.web:
+            return
+        body = json.dumps(dict(t=round(t_now, 1), state=state, load=round(load_pct, 1), alarm=bool(alarmed),
+                               baseline_done=base is not None, baseline_s=a.baseline,
+                               baseline_progress=min(1.0, len(base_feats) / a.baseline) if base is None else 1.0,
+                               hist=list(hist))).encode()
+        try:
+            urllib.request.urlopen(urllib.request.Request(f"http://127.0.0.1:{a.web_port}/state", data=body,
+                                                          headers={"Content-Type": "application/json"}), timeout=0.3)
+        except Exception:
+            pass
     next_eval = 0.0
     load_pct = 0.0
     t = 0.0
@@ -139,6 +156,7 @@ def main():
                     print("# baseline done", flush=True)
                     speak("Baseline done")
                 load_pct = 0.0
+                post_state(t)
             else:
                 p = float(clf.predict_proba((f - base)[None, :])[0, 1])
                 ema = p if ema is None else ema + (p - ema) * (1.0 / a.smooth)
@@ -154,6 +172,8 @@ def main():
                 if log:
                     log.write(f"{t:.1f},{load_pct:.1f},{int(alarmed)}," + ",".join(f"{v:.3f}" for v in f) + "\n")
                     log.flush()
+                hist.append(round(load_pct, 1))
+                post_state(t)
                 if a.no_ui or int(t) % 5 == 0:
                     print(f"t={t:6.1f} load {load_pct:5.1f}  raw p {p:.2f}  {'ALARM' if alarmed else ''}", flush=True)
             if ui is not None:

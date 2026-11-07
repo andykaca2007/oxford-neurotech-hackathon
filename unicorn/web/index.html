@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mental Load</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#000; --fg:#f2f2f2; --dim:#6f6f6f; --line:#1f1f1f; --ok:#4ade80; --warn:#fbbf24; --bad:#f43f5e; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  html, body { height:100%; background:var(--bg); color:var(--fg); font-family:"Archivo", system-ui, sans-serif; }
+  body { display:grid; grid-template-rows:auto 1fr auto; padding:28px 32px; gap:12px; transition:background .4s; }
+  body.alarm { background:#2a0a10; }
+  header { display:flex; justify-content:space-between; align-items:baseline; font-size:14px; color:var(--dim); letter-spacing:.04em; text-transform:uppercase; }
+  header b { color:var(--fg); font-weight:600; }
+  main { display:grid; grid-template-columns:minmax(280px, 420px) 1fr; gap:40px; align-items:center; min-height:0; }
+  .dial { position:relative; aspect-ratio:1; width:100%; max-width:420px; }
+  .dial svg { width:100%; height:100%; transform:rotate(135deg); }
+  .dial circle { fill:none; stroke-width:14; stroke-linecap:round; }
+  .track { stroke:var(--line); }
+  .arc { stroke:var(--ok); transition:stroke-dashoffset .6s ease, stroke .4s; }
+  .num { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  .num .v { font-size:clamp(72px, 14vw, 150px); font-weight:800; line-height:1; letter-spacing:-.04em; font-variant-numeric:tabular-nums; }
+  .num .u { font-size:13px; color:var(--dim); letter-spacing:.08em; text-transform:uppercase; margin-top:10px; }
+  .right { display:flex; flex-direction:column; gap:18px; min-width:0; }
+  .state { font-size:clamp(22px, 3vw, 34px); font-weight:600; letter-spacing:-.01em; }
+  .sub { color:var(--dim); font-size:15px; }
+  .trace { width:100%; height:180px; border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
+  .bar { height:6px; background:var(--line); border-radius:3px; overflow:hidden; width:100%; }
+  .bar i { display:block; height:100%; width:0; background:var(--fg); transition:width .5s; }
+  footer { display:flex; gap:28px; font-size:12px; color:var(--dim); letter-spacing:.04em; }
+  footer span b { color:var(--fg); font-weight:600; }
+  .alarmbox { display:none; font-size:clamp(20px, 2.6vw, 30px); font-weight:800; color:#fff; letter-spacing:.02em; }
+  body.alarm .alarmbox { display:block; }
+  @media (max-width:760px) { main { grid-template-columns:1fr; } body { padding:20px 16px; } }
+</style>
+</head>
+<body>
+<header><span><b>Mental load</b> &nbsp;·&nbsp; Unicorn BCI Core-8</span><span id="clock">0:00</span></header>
+<main>
+  <div class="dial">
+    <svg viewBox="0 0 100 100">
+      <circle class="track" cx="50" cy="50" r="42" stroke-dasharray="198 264"/>
+      <circle class="arc" id="arc" cx="50" cy="50" r="42" stroke-dasharray="198 264" stroke-dashoffset="198"/>
+    </svg>
+    <div class="num"><div class="v" id="val">–</div><div class="u">load · vs your baseline</div></div>
+  </div>
+  <div class="right">
+    <div class="state" id="state">waiting for the gauge</div>
+    <div class="sub" id="sub">start load_gauge.py with --web</div>
+    <div class="bar" id="basebar"><i id="basefill"></i></div>
+    <div class="alarmbox">High mental load · take a break</div>
+    <canvas class="trace" id="trace"></canvas>
+  </div>
+</main>
+<footer>
+  <span>alarm above <b id="alarmv">70</b> for 20 s</span>
+  <span>channels <b>Fz C3 Cz C4 Pz</b></span>
+  <span>model <b>36 public subjects · held-out AUC 0.79</b></span>
+</footer>
+<script>
+const arc = document.getElementById('arc'), val = document.getElementById('val');
+const stateEl = document.getElementById('state'), sub = document.getElementById('sub');
+const basebar = document.getElementById('basebar'), basefill = document.getElementById('basefill');
+const canvas = document.getElementById('trace'), ctx = canvas.getContext('2d');
+const ALARM = 70;
+function colour(v){ return v >= ALARM ? '#f43f5e' : v >= ALARM - 20 ? '#fbbf24' : '#4ade80'; }
+function draw(hist){
+  const w = canvas.width = canvas.clientWidth * devicePixelRatio, h = canvas.height = canvas.clientHeight * devicePixelRatio;
+  ctx.clearRect(0,0,w,h);
+  ctx.strokeStyle = '#3a1016'; ctx.lineWidth = 1; ctx.setLineDash([4,6]);
+  ctx.beginPath(); ctx.moveTo(0, h - ALARM/100*h); ctx.lineTo(w, h - ALARM/100*h); ctx.stroke(); ctx.setLineDash([]);
+  if (hist.length < 2) return;
+  ctx.strokeStyle = '#e5e5e5'; ctx.lineWidth = 2 * devicePixelRatio; ctx.beginPath();
+  hist.forEach((v,i) => { const x = i/(600-1)*w, y = h - v/100*h; i ? ctx.lineTo(x,y) : ctx.moveTo(x,y); });
+  ctx.stroke();
+}
+async function tick(){
+  try {
+    const s = await (await fetch('/state')).json();
+    const m = Math.floor(s.t/60), sec = Math.floor(s.t%60);
+    document.getElementById('clock').textContent = `${m}:${sec.toString().padStart(2,'0')}`;
+    document.body.classList.toggle('alarm', !!s.alarm);
+    if (s.baseline_done) {
+      const v = Math.max(0, Math.min(100, s.load));
+      val.textContent = Math.round(v);
+      arc.style.strokeDashoffset = 198 - 198 * v/100;
+      arc.style.stroke = colour(v);
+      stateEl.textContent = s.alarm ? 'High load' : v >= ALARM ? 'Load rising' : v >= ALARM-20 ? 'Working' : 'Calm';
+      sub.textContent = 'relative to your own 30 s baseline · updates every second';
+      basebar.style.display = 'none';
+    } else {
+      val.textContent = '–'; arc.style.strokeDashoffset = 198;
+      stateEl.textContent = 'Baseline'; sub.textContent = 'sit still, eyes open';
+      basebar.style.display = 'block'; basefill.style.width = (100 * s.baseline_progress) + '%';
+    }
+    draw(s.hist || []);
+  } catch (e) { stateEl.textContent = 'waiting for the gauge'; }
+}
+setInterval(tick, 500); tick();
+</script>
+</body>
+</html>
