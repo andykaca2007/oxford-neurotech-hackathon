@@ -40,14 +40,12 @@ import pygame
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from phrase_tree import PhraseTree  # noqa: E402
 from speller import Speller  # noqa: E402
+from tiles import tile_set  # noqa: E402
 
-TILES = [  # label, period in frames at 60 Hz, colour
-    ("WATER", 8, (70, 130, 255)),
-    ("SWALLOW", 7, (80, 200, 120)),
-    ("STAND", 6, (250, 180, 60)),
-    ("HELP", 5, (240, 80, 80)),
-]
-FREQS = [60.0 / p for _, p, _ in TILES]  # 7.5, 8.571, 10, 12
+LABELS4 = ["WATER", "SWALLOW", "STAND", "HELP"]
+TILES = []   # (label, period in frames, colour), filled from --tiles in main()
+FREQS = []
+REFRESH = 60
 
 
 def main():
@@ -61,6 +59,8 @@ def main():
     ap.add_argument("--tree-timeout", type=float, default=10.0, help="s to make the second look before going back to groups")
     ap.add_argument("--settle", type=float, default=3.0, help="phrase mode: ignore picks this soon after a group opens")
     ap.add_argument("--phrase-log", help="CSV of phrase-mode events, for looks-per-message and errors")
+    ap.add_argument("--tiles", type=int, default=4, choices=[4, 12],
+                    help="4 tiles at 60 Hz (default) or 12 tiles at 120 Hz; lock the display to that rate")
     ap.add_argument("--speak", action="store_true",
                     help="phrase mode: the Mac says each finished phrase aloud (macOS `say`); the output when there is no wristband")
     a = ap.parse_args()
@@ -70,8 +70,15 @@ def main():
         sys.exit(f"--tree-timeout ({a.tree_timeout:g} s) must be at least --settle + 2 s ({a.settle + 2:g} s), "
                  "or there is no time left to make the second look")
 
+    global TILES, FREQS, REFRESH
+    ts = tile_set(a.tiles)
+    REFRESH, FREQS = ts["refresh"], ts["freqs"]
+    TILES = [((LABELS4[i] if a.tiles == 4 else f"T{i + 1}"), ts["periods"][i], ts["colours"][i]) for i in range(a.tiles)]
+    COLS, ROWS = ts["cols"], ts["rows"]
+    if a.tree and a.tiles != 4:
+        sys.exit("--tree is a 4-tile mode; use --spell with --tiles 12")
     tree = PhraseTree(timeout_s=a.tree_timeout) if a.tree else None
-    speller = Speller(timeout_s=a.tree_timeout) if a.spell else None
+    speller = Speller(n_tiles=a.tiles, timeout_s=a.tree_timeout) if a.spell else None
     fake_pick = None
     said, said_t, history = None, -1e9, []   # last phrase, when, and the last few for the carer bar
     plog = None
@@ -112,7 +119,7 @@ def main():
     frame = 0
     full = False
     # trial state
-    order = [i % 4 for i in range(a.trials)]
+    order = [i % a.tiles for i in range(a.trials)]
     random.shuffle(order)
     cued = None
     next_change = time.monotonic() + a.off
@@ -126,8 +133,10 @@ def main():
             elif e.type == pygame.KEYDOWN:
                 if e.key == pygame.K_ESCAPE:
                     running = False
-                elif speller is not None and e.key in (pygame.K_1, pygame.K_2, pygame.K_3, pygame.K_4):
-                    fake_pick = e.key - pygame.K_1
+                elif speller is not None and pygame.K_1 <= e.key <= pygame.K_9:
+                    fake_pick = e.key - pygame.K_1          # keys 1-9 fake tiles 1-9
+                elif speller is not None and e.key in (pygame.K_0, pygame.K_MINUS, pygame.K_EQUALS):
+                    fake_pick = {pygame.K_0: 9, pygame.K_MINUS: 10, pygame.K_EQUALS: 11}[e.key]  # 0 - = fake tiles 10-12
                 elif e.key == pygame.K_f:
                     full = not full
                     screen = pygame.display.set_mode((0, 0) if full else (1280, 800),
@@ -198,12 +207,13 @@ def main():
         if speller is not None:
             tree = speller   # same drawing path: labels(), prompt(now)
         bar = 130 if tree is not None else 0     # carer bar at the bottom in phrase mode
-        tw, th = w // 2 - 60, (h - bar) // 2 - 60
+        gap = 40 if a.tiles == 4 else 20
+        tw, th = (w - gap * (COLS + 1)) // COLS, (h - bar - gap * (ROWS + 1)) // ROWS
         labels = tree.labels() if tree is not None else [t[0] for t in TILES]
         for i, (_, period, col) in enumerate(TILES):
             on = (frame % period) < (period + 1) // 2
-            x = 40 + (i % 2) * (tw + 40)
-            y = 40 + (i // 2) * (th + 40)
+            x = gap + (i % COLS) * (tw + gap)
+            y = gap + (i // COLS) * (th + gap)
             rect = pygame.Rect(x, y, tw, th)
             pygame.draw.rect(screen, col if on else (20, 20, 20), rect, border_radius=24)
             if cued == i:
@@ -217,8 +227,9 @@ def main():
             else:
                 txt = fit(labels[i], tw - 40, colour)
                 screen.blit(txt, txt.get_rect(center=rect.center))
-                hz = small.render(f"{FREQS[i]:.2f} Hz", True, colour)
-                screen.blit(hz, hz.get_rect(midtop=(rect.centerx, rect.centery + 34)))
+                if a.tiles == 4:
+                    hz = small.render(f"{FREQS[i]:.2f} Hz", True, colour)
+                    screen.blit(hz, hz.get_rect(midtop=(rect.centerx, rect.centery + 34)))
         if tree is not None:
             top = h - bar - 10
             ptxt = tree.prompt(now) if not isinstance(tree, Speller) else tree.prompt()
@@ -238,7 +249,7 @@ def main():
             tree = None
         pygame.display.flip()
         frame += 1
-        clock.tick(60)
+        clock.tick(REFRESH)
     pygame.quit()
 
 

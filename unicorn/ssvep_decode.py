@@ -183,7 +183,7 @@ def src_lsl():
 
 
 def main():
-    global FLOOR, MARGIN, USE, USE_IDX
+    global FLOOR, MARGIN, USE, USE_IDX, FREQS
     ap = argparse.ArgumentParser()
     g = ap.add_mutually_exclusive_group(required=True)
     g.add_argument("--fake", action="store_true")
@@ -200,6 +200,7 @@ def main():
     ap.add_argument("--log")
     ap.add_argument("--seconds", type=float, default=0, help="stop after this many signal seconds (0 = run until Ctrl-C)")
     ap.add_argument("--model", help="personal TRCA model from ssvep_calibrate.py; scores come from it, CCA is logged beside")
+    ap.add_argument("--tiles", type=int, default=4, choices=[4, 12], help="tile set, must match ssvep_stim.py --tiles")
     ap.add_argument("--channels", help="comma list of channels to decode from, e.g. POz,Pz,Cz when PO7/PO8 are dead (default PO7,Oz,PO8,Pz)")
     ap.add_argument("--floor", type=float, help=f"pick rule: best score must reach this (default {FLOOR})")
     ap.add_argument("--margin", type=float, help=f"pick rule: best minus runner-up must reach this (default {MARGIN})")
@@ -211,6 +212,12 @@ def main():
     if a.margin is not None:
         MARGIN = a.margin
     print(f"# pick rule: floor {FLOOR}, margin {MARGIN}", flush=True)
+    if a.tiles != 4:
+        import os
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        from tiles import tile_set
+        FREQS = tile_set(a.tiles)["freqs"]
+        print(f"# {a.tiles} tiles: " + " ".join(f"{f:.2f}" for f in FREQS), flush=True)
     if a.channels:
         names = [c.strip() for c in a.channels.split(",")]
         alias = {"Oz": "Oz", "POz": "Oz"}  # Core-8 calls channel 7 POz; same index

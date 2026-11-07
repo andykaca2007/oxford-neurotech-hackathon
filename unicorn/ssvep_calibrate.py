@@ -80,9 +80,13 @@ def main():
     ap.add_argument("--latency", type=float, default=0.3, help="s skipped after cue onset")
     ap.add_argument("--out", default="models/personal.npz")
     ap.add_argument("--max-trials", type=int, default=0, help="stop after this many cues (0 = until stim stops / Ctrl-C)")
+    ap.add_argument("--tiles", type=int, default=4, choices=[4, 12], help="tile set, must match ssvep_stim.py --tiles")
     ap.add_argument("--channels", help="comma list, e.g. POz,Pz,Cz when PO7/PO8 are dead (default PO7,POz,PO8,Pz)")
     a = ap.parse_args()
-    global USE_IDX
+    global USE_IDX, FREQS
+    if a.tiles != 4:
+        from tiles import tile_set
+        FREQS = tile_set(a.tiles)["freqs"]
     if a.channels:
         USE_IDX = [CH_NAMES.index(c.strip()) for c in a.channels.split(",")]
         print(f"# calibrating from {a.channels} -> indices {USE_IDX}", flush=True)
@@ -145,9 +149,9 @@ def main():
         pass
 
     X, y = np.array(epochs), np.array(labels)
-    if len(X) < 8 or len(np.unique(y)) < 4:
-        sys.exit(f"not enough epochs ({len(X)}) or classes ({np.unique(y)}): need at least 2 per tile")
-    print(f"\n{len(X)} epochs, per tile {np.bincount(y, minlength=4).tolist()}, {a.epoch:.0f} s each = {len(X) * a.epoch:.0f} s of calibration")
+    if len(X) < 8 or len(np.unique(y)) < len(FREQS):
+        sys.exit(f"not enough epochs ({len(X)}) or classes ({np.unique(y)}): need at least 2 per tile for every tile")
+    print(f"\n{len(X)} epochs, per tile {np.bincount(y, minlength=len(FREQS)).tolist()}, {a.epoch:.0f} s each = {len(X) * a.epoch:.0f} s of calibration")
 
     # leave-one-trial-out: TRCA refit without the held-out epoch, CCA needs no fit
     cca = CCA(FREQS, FS)
@@ -156,7 +160,7 @@ def main():
     for i in range(len(X)):
         m = np.ones(len(X), bool)
         m[i] = False
-        if np.bincount(y[m], minlength=4).min() < 2:
+        if np.bincount(y[m], minlength=len(FREQS)).min() < 2:
             continue
         lab, _ = TRCA().fit(X[m], y[m]).predict(X[i:i + 1])
         hit_trca += int(lab[0] == y[i])
