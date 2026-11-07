@@ -171,6 +171,7 @@
       <div><span>Pz alpha</span><b id="m_alpha">—</b></div>
       <div><span>most active</span><b id="m_top">—</b></div>
       <div><span>dead</span><b id="m_dead">—</b></div>
+      <div><span>clean (under 300 µV)</span><b id="m_clean">—</b></div>
       <div><span>model</span><b>GB · AUC 0.84</b></div>
     </div>
     <div class="chalcard" style="margin-top:14px">
@@ -316,7 +317,7 @@ async function tick(){
     const fv = document.getElementById('fval'), fl = document.getElementById('flabel');
     if (s.baseline_done && s.fatigue !== undefined) {
       const f = Math.round(s.fatigue); fv.textContent = f; fv.className = 'n' + (f >= 60 ? ' hot' : '');
-      fl.textContent = f >= 65 ? 'Tired' : f >= 35 ? 'Average' : 'Rested';
+      fl.textContent = s.fatigue_held ? 'Held · noisy' : f >= 65 ? 'Tired' : f >= 35 ? 'Average' : 'Rested';
     } else { fv.textContent='—'; fv.className='n dim'; fl.textContent='Baseline'; }
     let top=null, dead=[];
     const present = new Set((s.channels||[]).map(c => c.name));
@@ -333,6 +334,7 @@ async function tick(){
     }
     document.getElementById('m_top').textContent = top ? `${top.name} +${top.db.toFixed(1)} dB` : '—';
     document.getElementById('m_dead').textContent = dead.length ? dead.join(' ') : 'none';
+    document.getElementById('m_clean').textContent = s.clean === undefined ? '—' : s.clean + ' / 8';
     const fz = (s.channels||[]).find(c=>c.name==='Fz'), pz = (s.channels||[]).find(c=>c.name==='Pz');
     document.getElementById('m_theta').innerHTML = (fz && s.baseline_done ? (fz.theta_db>0?'+':'')+fz.theta_db.toFixed(1)+'<small>dB</small>' : '—');
     document.getElementById('m_alpha').innerHTML = (pz && s.baseline_done ? (pz.alpha_db>0?'+':'')+pz.alpha_db.toFixed(1)+'<small>dB</small>' : '—');

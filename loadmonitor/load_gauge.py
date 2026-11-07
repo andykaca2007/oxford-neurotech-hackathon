@@ -81,6 +81,7 @@ def main():
     ap.add_argument("--alarm", type=float, default=70.0, help="load percent that triggers the alarm")
     ap.add_argument("--hold", type=float, default=20.0, help="s above --alarm before it fires")
     ap.add_argument("--smooth", type=float, default=8.0, help="s of smoothing on the gauge")
+    ap.add_argument("--quality-uv", type=float, default=300.0, help="a channel counts as clean when its 1 to 40 Hz RMS is under this (uV); fatigue needs 3 clean")
     ap.add_argument("--log")
     ap.add_argument("--no-ui", action="store_true")
     ap.add_argument("--web", action="store_true", help="post state to gauge_server.py (http://localhost:8765) every second")
@@ -117,6 +118,8 @@ def main():
     base_fat, fat_base, fat_ema, fatigue_pct, contact = [], 0.0, None, 0.0, False
     amp_hist = deque(maxlen=40)
     fat_start = 0.0
+    fat_recent = deque(maxlen=5)
+    clean_n = 0
     try:
         FAT_REF = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "fatigue_ref.json")))["values"]
     except Exception:
@@ -169,7 +172,7 @@ def main():
             sig = [[int(v) for v in row] for row in Xs]
         except Exception:
             pass
-        body = json.dumps(dict(t=round(t_now, 1), state=state, load=round(load_pct, 1), fatigue=round(fatigue_pct, 1), contact=bool(contact), alarm=bool(alarmed), channels=chans, sig=sig,
+        body = json.dumps(dict(t=round(t_now, 1), state=state, load=round(load_pct, 1), fatigue=round(fatigue_pct, 1), clean=int(clean_n), fatigue_held=bool(clean_n < 3 and not a.fake), contact=bool(contact), alarm=bool(alarmed), channels=chans, sig=sig,
                                baseline_done=base is not None, baseline_s=a.baseline,
                                baseline_progress=min(1.0, len(base_feats) / a.baseline) if base is None else 1.0,
                                hist=list(hist))).encode()
@@ -235,7 +238,14 @@ def main():
             live = [i for i in IDX if not dead[i]] or list(IDX)
             live_n = int(sum(not dead[i] for i in IDX))
             contact = live_n >= 6 or a.fake
-            fat_now = float(np.median(np.log10((th[live] + al[live]) / (be[live] + 1e-12) + 1e-12)))
+            # signal quality: 1 to 40 Hz RMS per channel; dry electrodes on hair give hundreds to thousands of uV of
+            # artefact, and the fatigue ratio reads artefact as theta. Fatigue uses clean channels only, else holds.
+            rms = sosfiltfilt(SIG_SOS, X8 - X8.mean(1, keepdims=True), axis=1).std(1)
+            clean = [i for i in IDX if (not dead[i]) and rms[i] < a.quality_uv]
+            clean_n = len(clean)
+            fat_now = float(np.median(np.log10((th[clean] + al[clean]) / (be[clean] + 1e-12) + 1e-12))) if clean_n >= 3 or a.fake else None
+            if a.fake and fat_now is None:
+                fat_now = float(np.median(np.log10((th[live] + al[live]) / (be[live] + 1e-12) + 1e-12)))
             # amplitude of the live channels, 1 to 40 Hz, for the settle check (dry electrodes drift for a minute or two)
             amp_hist.append(float(np.median(np.sqrt(tot[live]))) if len(live) else 0.0)
             if cond.get("redo"):
@@ -269,16 +279,21 @@ def main():
                 if riem is not None:
                     base_covs.append(riem.covs(X8[IDX]))
                 base_chan.append(chan_now)
-                base_fat.append(fat_now)
+                if fat_now is not None:
+                    base_fat.append(fat_now)
                 if len(base_feats) * 1.0 >= a.baseline:
                     base = np.mean(base_feats, axis=0)
                     if riem is not None:
                         riem.set_baseline(base_covs)
                     chan_base = {k: np.mean([c[k] for c in base_chan], axis=0) for k in ("tot", "th", "al")}
-                    fat_base = float(np.mean(base_fat))
-                    # fatigue starting point: where this baseline ratio sits among 36 rested people (percentile)
-                    fat_start = 100.0 * float(np.mean(np.array(FAT_REF) < fat_base)) if FAT_REF else 0.0
-                    print(f"# fatigue start {fat_start:.0f}: baseline ratio {fat_base:.2f} vs rested reference mean {np.mean(FAT_REF):.2f}" if FAT_REF else "# no fatigue reference", flush=True)
+                    if len(base_fat) >= 5 and FAT_REF:
+                        fat_base = float(np.median(base_fat))
+                        # fatigue starting point: where this baseline ratio sits among 36 rested people (percentile)
+                        fat_start = 100.0 * float(np.mean(np.array(FAT_REF) < fat_base))
+                        print(f"# fatigue start {fat_start:.0f}: baseline ratio {fat_base:.2f} from {len(base_fat)} clean windows vs rested reference mean {np.mean(FAT_REF):.2f}", flush=True)
+                    else:
+                        fat_base, fat_start = (float(np.median(base_fat)) if base_fat else float(np.mean(FAT_REF)) if FAT_REF else 1.2), 50.0
+                        print(f"# fatigue start unknown (only {len(base_fat)} clean baseline windows under {a.quality_uv:.0f} uV): starting at 50", flush=True)
                     state = "monitoring"
                     print("# baseline done", flush=True)
                     speak("Baseline done")
@@ -304,7 +319,12 @@ def main():
                 ema = ema + (p - ema) * (1.0 / a.smooth)
                 load_pct = 100 * ema
                 # fatigue: slow EMA (about 2 min) of the ratio drift, starting AT the baseline; +0.5 log10 (ratio x3) reads as 100
-                fat_ema = fat_base if fat_ema is None else fat_ema + (fat_now - fat_ema) / 120.0
+                if fat_now is not None:
+                    fat_recent.append(fat_now)
+                    fat_robust = float(np.median(fat_recent))        # median of the last clean windows: one bad window cannot move it
+                    fat_ema = fat_base if fat_ema is None else fat_ema + (fat_robust - fat_ema) / 120.0
+                elif fat_ema is None:
+                    fat_ema = fat_base
                 # percentile start, then drift: a doubling of the ratio (+0.301 log10) adds 50 points
                 fatigue_pct = float(np.clip(fat_start + (fat_ema - fat_base) / 0.301 * 50, 0, 100))
                 if load_pct >= a.alarm:
