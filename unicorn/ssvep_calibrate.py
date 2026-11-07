@@ -80,7 +80,12 @@ def main():
     ap.add_argument("--latency", type=float, default=0.3, help="s skipped after cue onset")
     ap.add_argument("--out", default="models/personal.npz")
     ap.add_argument("--max-trials", type=int, default=0, help="stop after this many cues (0 = until stim stops / Ctrl-C)")
+    ap.add_argument("--channels", help="comma list, e.g. POz,Pz,Cz when PO7/PO8 are dead (default PO7,POz,PO8,Pz)")
     a = ap.parse_args()
+    global USE_IDX
+    if a.channels:
+        USE_IDX = [CH_NAMES.index(c.strip()) for c in a.channels.split(",")]
+        print(f"# calibrating from {a.channels} -> indices {USE_IDX}", flush=True)
 
     filt = Filters(len(USE_IDX))
     n_lat, n_ep = int(a.latency * FS), int(a.epoch * FS)

@@ -199,7 +199,15 @@ def main():
     ap.add_argument("--log")
     ap.add_argument("--seconds", type=float, default=0, help="stop after this many signal seconds (0 = run until Ctrl-C)")
     ap.add_argument("--model", help="personal TRCA model from ssvep_calibrate.py; scores come from it, CCA is logged beside")
+    ap.add_argument("--channels", help="comma list of channels to decode from, e.g. POz,Pz,Cz when PO7/PO8 are dead (default PO7,Oz,PO8,Pz)")
     a = ap.parse_args()
+    global USE, USE_IDX
+    if a.channels:
+        names = [c.strip() for c in a.channels.split(",")]
+        alias = {"Oz": "Oz", "POz": "Oz"}  # Core-8 calls channel 7 POz; same index
+        USE = [alias.get(c, c) for c in names]
+        USE_IDX = [CH_NAMES.index(c) for c in USE]
+        print(f"# decoding from {names} -> indices {USE_IDX}", flush=True)
 
     trca = None
     if a.model:
