@@ -26,7 +26,8 @@ import joblib
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from readiness_model import CH, features  # noqa: E402
+from readiness_model import CH, features as features_basic  # noqa: E402
+from model_search import feats as features_rich  # noqa: E402
 
 FS = 250
 IDX = [0, 1, 2, 3, 4]   # Fz C3 Cz C4 Pz in the Core-8 stream
@@ -84,6 +85,9 @@ def main():
 
     m = joblib.load(a.model)
     clf = m["model"]
+    rich = bool(m.get("rich", False))
+    features = (lambda x, fs: features_rich(x, fs, True)) if rich else features_basic
+    print(f"# model: {m.get('config', {}).get('model', 'logreg')}, {'rich' if rich else 'basic'} features, held-out AUC {m.get('loso_auc', 0):.2f}", flush=True)
     win = int(m["epoch_s"] * FS)
     buf = deque(maxlen=win)
     base_feats, base = [], None

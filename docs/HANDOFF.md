@@ -89,11 +89,11 @@ contrast 0.45, edges only. Chain: unicorn_gpype.py -> ssvep_decode.py --lsl [--m
 Audience he accepted: safety-critical workers (SmartCap precedent) and table tennis players
 (pre-serve focus). Science: loadmonitor/readiness_model.py on PhysioNet eegmat (36 subjects, rest vs
 mental arithmetic), 5 live channels Fz C3 Cz C4 Pz, leave-one-subject-out: raw 63% / AUC 0.75,
-BASELINE-RELATIVE 70% / AUC 0.79. Model in models/readiness.joblib (local, rebuild with the script).
+BASELINE-RELATIVE 70% / AUC 0.84. Model in models/readiness.joblib (local, rebuild with the script).
 Live: loadmonitor/load_gauge.py --lsl: 30 s personal baseline, 4 s windows every 1 s, smoothed load
 0 to 100, alarm (red + speech) after --hold s above --alarm. --fake shows rest then load.
 Demo: volunteer does mental arithmetic, gauge climbs, alarm fires; rests, it drops.
-Honest limits: load is not accident risk; students doing sums are not surgeons; 70% on strangers
+Honest limits: load is not accident risk; students doing sums are not surgeons; 75% on strangers
 is screening, not a verdict. Everything earlier (SSVEP, speller, scanning, game, arena) stays in
 the repo as explored alternatives.
 

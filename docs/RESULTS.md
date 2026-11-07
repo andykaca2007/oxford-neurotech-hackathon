@@ -33,6 +33,26 @@ Limits (say them first)
 - Within-subject, held-out blocks from the same day. No cross-day test.
 - No patients. The communication-aid use case is the motivation, not a result.
 
+## Mental-load model (the product's model), PhysioNet eegmat, 36 subjects, leave-one-subject-out
+
+Window 4 s, 50% overlap as augmentation (2083 epochs), only the 5 channels our cap reads
+(Fz C3 Cz C4 Pz), features relative to each person's own 28 s rest baseline.
+
+| model | features | held-out AUC | balanced acc | train acc | gap |
+|---|---|---|---|---|---|
+| gradient boosting (200 trees, depth 2) | rich (70) | **0.84** | **75%** | 87% | 0.12 |
+| random forest | rich | 0.82 | 74% | 97% | 0.23 |
+| SVM, RBF | rich | 0.82 | 74% | 90% | 0.16 |
+| logistic regression | rich | 0.80 | 71% | 78% | 0.08 |
+| logistic regression | basic (17) | 0.79 | 70% | 74% | 0.04 |
+| MLP (32 hidden) | rich | 0.77 | 69% | 100% | 0.31 |
+
+Rich features add delta/gamma/low- and high-beta, relative powers, spectral entropy, a Fz-Pz
+theta gradient and blink-band power on Fz. Chance is 0.5 / 50%. The MLP memorises the training
+set and loses on strangers. Loss curves and the search: figures/model_figures.png,
+figures/model_search.png. The gauge uses the gradient-boosting model (models/readiness.joblib,
+rebuild with `loadmonitor/model_search.py --fit-best`).
+
 ## Live headset (Unicorn BCI Core-8): pending
 - Slot 1 (12:00 to 12:30): amplifier pogo row unseated, even channels open; no usable data.
 - Next slot: scalp proof (occipital RMS under 40 uV, eyes-closed alpha ratio over 2), then

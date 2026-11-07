@@ -37,7 +37,8 @@ athletes and coaches (table tennis pre-session readiness), same engine, smaller 
 | features | balanced accuracy | AUC |
 |---|---|---|
 | raw | 63% | 0.75 |
-| relative to own baseline | 70% | 0.79 |
+| relative to own baseline, logistic | 70% | 0.79 |
+| relative to own baseline, gradient boosting + rich features | 75% | 0.84 |
 
 Chance is 50% and 0.5. The finding: a 30-second personal baseline is worth 7 points on strangers.
 Personalisation beats a universal model.
@@ -64,7 +65,7 @@ Personalisation beats a universal model.
 
 ## What we claim, and what we do not
 Claim: a 400-pound dry headset plus a 30-second baseline detects mental load on people the
-model never saw, 70% balanced accuracy, AUC 0.79, and shows it live.
+model never saw, 75% balanced accuracy, AUC 0.84, and shows it live.
 Not claimed: that load equals accident risk; that students doing sums are surgeons at hour
 eleven; that one session proves errors follow load. Say these before the judges ask.
 
