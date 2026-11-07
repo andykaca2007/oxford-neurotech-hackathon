@@ -57,6 +57,34 @@ Next slot, in order, do not skip:
 6. 2 min eyes-open rest with the decoder armed (no stim): false selections per minute.
 7. Film the best run on a phone. The bridge auto-saves unicorn_rec_*.csv; keep them.
 
+## DECISION 17:00 Sat: NO FLICKER. Scanning + blink switch is the product
+The user rejected flicker (tiring, impractical). The product is now a scanning communication aid:
+a highlight walks the tiles (`ssvep_stim.py --spell --tiles 12 --scan 1.0 --speak`), a deliberate
+blink on Fz selects (`blink_switch.py --lsl`, sends "sel" over UDP 5005; space bar fakes it).
+Letters in two blinks, predicted word in one, phrases (`--tree --scan 1.0`) in two.
+AI: a deliberate-vs-spontaneous blink classifier trained on the team's logged blinks
+(`blink_switch.py --log`), held-out people, false-selection rate. SSVEP/TRCA code stays in the
+repo as the optional fast mode and the public-data result stays on the slides as prior work.
+Only Fz and the mastoid stickies need to work for the demo.
+
+## DECISION 17:30 Sat: HEAD-CONTROLLED GAME (he dropped the communication aid)
+Product: a game you play with your face. Jaw CLENCH = jump, deliberate BLINK = duck/second
+action. Both are the signals a dry loaner cap reads reliably (EMG burst on all channels; EOG on
+Fz). `unicorn/cmd_switch.py --lsl --keys` detects them and presses keys system-wide (Space, S),
+so a Roblox Studio obby/runner, or `unicorn/game_runner.py` (pygame fallback, UDP 5007), reacts.
+AI: a 3-class command classifier (clench / blink / nothing) trained on the team's logged events
+(`cmd_switch.py --log`), held-out people, accuracy + false triggers per minute. Honest line: these
+are muscle and eye signals, not thought; the headset is the sensor, the classifier is the model.
+Earlier modes (SSVEP, speller, scanning) stay in the repo as evidence of the exploration.
+
+## FINAL DECISION 17:50 Sat: BRAIN-STEERED ROBOT, SSVEP decoder is the model
+After four pivots he settled on: the personal SSVEP decoder (public-data calibration curve =
+the science) steering a simulated robot in an arena (`unicorn/arena.py`): four small, dim,
+pulsing patches at the screen edges = forward/back/left/right, blink confirms, replay from
+public data when no headset (`replay_demo.py` sends the same UDP picks). Gentle flicker:
+contrast 0.45, edges only. Chain: unicorn_gpype.py -> ssvep_decode.py --lsl [--model] [--confirm blink]
+-> arena.py. Earlier modes (speller, scanning, head game) stay in the repo. NO MORE PIVOTS.
+
 ## Scope is frozen
 Four tiles, personal vs generic decoder, fixed 16-phrase tree (two looks per phrase,
 generated once, not a runtime LLM), wristband, replay mode. No new features.
