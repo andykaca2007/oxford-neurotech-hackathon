@@ -183,6 +183,7 @@ def src_lsl():
 
 
 def main():
+    global FLOOR, MARGIN, USE, USE_IDX
     ap = argparse.ArgumentParser()
     g = ap.add_mutually_exclusive_group(required=True)
     g.add_argument("--fake", action="store_true")
@@ -199,7 +200,23 @@ def main():
     ap.add_argument("--log")
     ap.add_argument("--seconds", type=float, default=0, help="stop after this many signal seconds (0 = run until Ctrl-C)")
     ap.add_argument("--model", help="personal TRCA model from ssvep_calibrate.py; scores come from it, CCA is logged beside")
+    ap.add_argument("--channels", help="comma list of channels to decode from, e.g. POz,Pz,Cz when PO7/PO8 are dead (default PO7,Oz,PO8,Pz)")
+    ap.add_argument("--floor", type=float, help=f"pick rule: best score must reach this (default {FLOOR})")
+    ap.add_argument("--margin", type=float, help=f"pick rule: best minus runner-up must reach this (default {MARGIN})")
+    ap.add_argument("--rest-bias", type=float, default=0.0,
+                    help="s at the start where the wearer looks at a blank wall; each tile's mean score then is subtracted later (kills the slow-flicker bias of floating electrodes)")
     a = ap.parse_args()
+    if a.floor is not None:
+        FLOOR = a.floor
+    if a.margin is not None:
+        MARGIN = a.margin
+    print(f"# pick rule: floor {FLOOR}, margin {MARGIN}", flush=True)
+    if a.channels:
+        names = [c.strip() for c in a.channels.split(",")]
+        alias = {"Oz": "Oz", "POz": "Oz"}  # Core-8 calls channel 7 POz; same index
+        USE = [alias.get(c, c) for c in names]
+        USE_IDX = [CH_NAMES.index(c) for c in USE]
+        print(f"# decoding from {names} -> indices {USE_IDX}", flush=True)
 
     trca = None
     if a.model:
@@ -254,6 +271,7 @@ def main():
         log.write("t,cued,s0,s1,s2,s3,pick" + (",c0,c1,c2,c3" if trca is not None else "") + "\n")
 
     history = deque(maxlen=5)
+    rest_acc, bias = [], None
     last_pick_t = -1e9
     stats = dict(hit=0, miss=0, abstain=0, false=0, t_free=0.0)
     since = 0
@@ -274,6 +292,18 @@ def main():
             else:
                 scores = cca_scores
             cued = truth if a.fake else cue_now["i"]
+            if a.rest_bias:
+                if t < a.rest_bias + a.win:
+                    rest_acc.append(list(scores))
+                    if len(rest_acc) == 1:
+                        print(f"# REST: look at the wall for {a.rest_bias:.0f} s, measuring per-tile bias", flush=True)
+                    scores = [0.0] * len(scores)
+                else:
+                    if bias is None:
+                        b = np.mean(rest_acc, axis=0)
+                        bias = (b - b.min()).tolist()
+                        print("# bias per tile: " + " ".join(f"{v:.2f}" for v in bias) + "  (subtracted from now on)", flush=True)
+                    scores = [s_ - b_ for s_, b_ in zip(scores, bias)]
             if t - last_pick_t < a.refractory:
                 pick = None
             else:
