@@ -85,6 +85,18 @@ public data when no headset (`replay_demo.py` sends the same UDP picks). Gentle 
 contrast 0.45, edges only. Chain: unicorn_gpype.py -> ssvep_decode.py --lsl [--model] [--confirm blink]
 -> arena.py. Earlier modes (speller, scanning, head game) stay in the repo. NO MORE PIVOTS.
 
+## DIRECTION 19:30 Sat: MENTAL-LOAD / FATIGUE MONITOR (sixth and current)
+Audience he accepted: safety-critical workers (SmartCap precedent) and table tennis players
+(pre-serve focus). Science: unicorn/readiness_model.py on PhysioNet eegmat (36 subjects, rest vs
+mental arithmetic), 5 live channels Fz C3 Cz C4 Pz, leave-one-subject-out: raw 63% / AUC 0.75,
+BASELINE-RELATIVE 70% / AUC 0.79. Model in models/readiness.joblib (local, rebuild with the script).
+Live: unicorn/load_gauge.py --lsl: 30 s personal baseline, 4 s windows every 1 s, smoothed load
+0 to 100, alarm (red + speech) after --hold s above --alarm. --fake shows rest then load.
+Demo: volunteer does mental arithmetic, gauge climbs, alarm fires; rests, it drops.
+Honest limits: load is not accident risk; students doing sums are not surgeons; 70% on strangers
+is screening, not a verdict. Everything earlier (SSVEP, speller, scanning, game, arena) stays in
+the repo as explored alternatives.
+
 ## Scope is frozen
 Four tiles, personal vs generic decoder, fixed 16-phrase tree (two looks per phrase,
 generated once, not a runtime LLM), wristband, replay mode. No new features.
