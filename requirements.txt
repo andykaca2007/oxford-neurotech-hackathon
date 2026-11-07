@@ -1,0 +1,16 @@
+# Core numerics and plotting
+numpy
+scipy
+matplotlib
+
+# EEG handling and public datasets
+mne
+moabb
+
+# Classic ML baselines (CCA etc.) and deep learning
+scikit-learn
+torch
+
+# Live headset streaming (g.tec Unicorn via BrainFlow, or LSL)
+brainflow
+pylsl

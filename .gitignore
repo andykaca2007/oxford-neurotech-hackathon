@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# Data: public datasets are downloaded by scripts, recordings stay local
+data/
+recordings/
+*.fif
+*.edf
+*.npz
+*.csv
+
+# Model weights
+*.pt
+*.pth
+
+# OS
+.DS_Store
+Thumbs.db
