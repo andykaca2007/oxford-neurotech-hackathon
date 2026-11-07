@@ -211,6 +211,18 @@ def main():
             live = [i for i in IDX if not dead[i]] or list(IDX)
             fat_now = float(np.mean(np.log10((th[live] + al[live]) / (be[live] + 1e-12) + 1e-12)))
             if base is None:
+                # do not start the baseline until the electrodes are really on the head: a channel pinned at the
+                # +/-200 mV rail (open input) or perfectly flat is dead. Need at least 6 of the model's channels live.
+                rail = np.abs(np.abs(X8.mean(1)) - 200000) < 1
+                live_n = int(sum((not dead[i]) and (not rail[i]) for i in IDX))
+                if live_n < 6 and not a.fake:
+                    base_feats.clear(); base_chan.clear(); base_fat.clear()
+                    names = [MONTAGE[i] for i in IDX if dead[i] or rail[i]]
+                    state = f"WAITING FOR CONTACT: {live_n}/8 live, dead {' '.join(names)}"
+                    if int(t) % 5 == 0:
+                        print(f"# {state}", flush=True)
+                    post_state(t)
+                    continue
                 base_feats.append(f)
                 base_chan.append(chan_now)
                 base_fat.append(fat_now)
