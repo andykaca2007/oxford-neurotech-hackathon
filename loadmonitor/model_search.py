@@ -109,18 +109,25 @@ def main():
     ap.add_argument("--save", action="store_true")
     ap.add_argument("--quick", action="store_true", help="4 s windows only")
     ap.add_argument("--fit-best", action="store_true", help="skip the search: fit the known winner (4 s, overlap, rich, gradient boosting) and save it")
+    ap.add_argument("--invariant", action="store_true", help="with --fit-best: drop the absolute log band powers and the blink band, keep only amplitude-invariant features (relative powers, ratios, entropy, gradient)")
     a = ap.parse_args()
     if a.fit_best:
         import joblib
         from sklearn.base import clone
         X, y, subj = build(4.0, True, True)
+        mask = None
+        if a.invariant:
+            # feats() layout: [6 bands x n_ch log power][2 ratios][6 x n_ch relative][n_ch entropy][2 gradient][1 blink]
+            mask = np.ones(X.shape[1], bool); mask[:6 * len(CH)] = False; mask[-1] = False
+            X = X[:, mask]
         acc, sd, auc, tr = loso(dict(models())["grad boosting"], X, y, subj)
         clf = clone(dict(models())["grad boosting"]).fit(X, y)
         os.makedirs("models", exist_ok=True)
-        joblib.dump(dict(model=clf, channels=CH, epoch_s=4.0, rich=True, feature_fn="model_search.feats",
+        joblib.dump(dict(model=clf, channels=CH, epoch_s=4.0, rich=True, feature_fn="model_search.feats", feature_mask=mask,
                          loso_bal_acc=float(acc), loso_auc=float(auc), n_subjects=36,
-                         config=dict(win=4.0, overlap=True, rich=True, model="grad boosting")), "models/readiness.joblib")
-        print(f"saved models/readiness.joblib: grad boosting, rich, 4 s; LOSO bal acc {acc:.3f} +/- {sd:.3f}, AUC {auc:.3f}, train {tr:.3f}")
+                         config=dict(win=4.0, overlap=True, rich=True, invariant=bool(a.invariant),
+                                     model="grad boosting" + (" (amplitude-invariant features)" if a.invariant else ""))), "models/readiness.joblib")
+        print(f"saved models/readiness.joblib: grad boosting, rich{' invariant' if a.invariant else ''}, 4 s, {X.shape[1]} features; LOSO bal acc {acc:.3f} +/- {sd:.3f}, AUC {auc:.3f}, train {tr:.3f}")
         return
     rows = []
     wins = [4.0] if a.quick else [2.0, 4.0, 6.0]
