@@ -87,6 +87,8 @@ def main():
     win = int(m["epoch_s"] * FS)
     buf = deque(maxlen=win)
     base_feats, base = [], None
+    base_chan, chan_base, chan_now = [], None, None
+    CH8 = ["Fz", "C3", "Cz", "C4", "Pz", "PO7", "POz", "PO8"]
     ema, above_since, alarmed = None, None, False
     log = open(a.log, "w") if a.log else None
     if log:
@@ -113,7 +115,18 @@ def main():
     def post_state(t_now):
         if not a.web:
             return
-        body = json.dumps(dict(t=round(t_now, 1), state=state, load=round(load_pct, 1), alarm=bool(alarmed),
+        chans = []
+        if chan_now is not None:
+            for i, n in enumerate(CH8):
+                d = dict(name=n, dead=bool(chan_now["dead"][i]))
+                if chan_base is not None and not d["dead"]:
+                    d["db"] = round(10 * float(chan_now["tot"][i] - chan_base["tot"][i]), 1)       # change vs baseline, dB
+                    d["theta_db"] = round(10 * float(chan_now["th"][i] - chan_base["th"][i]), 1)
+                    d["alpha_db"] = round(10 * float(chan_now["al"][i] - chan_base["al"][i]), 1)
+                else:
+                    d["db"] = 0.0
+                chans.append(d)
+        body = json.dumps(dict(t=round(t_now, 1), state=state, load=round(load_pct, 1), alarm=bool(alarmed), channels=chans,
                                baseline_done=base is not None, baseline_s=a.baseline,
                                baseline_progress=min(1.0, len(base_feats) / a.baseline) if base is None else 1.0,
                                hist=list(hist))).encode()
@@ -130,7 +143,7 @@ def main():
         for t, x in (src_fake() if a.fake else src_lsl()):
             if a.seconds and t > a.seconds:
                 break
-            buf.append(x[IDX])
+            buf.append(x)
             if ui is not None:
                 for e in ui["pygame"].event.get():
                     if e.type == ui["pygame"].QUIT:
@@ -147,11 +160,22 @@ def main():
                     pass
                 continue
             next_eval = t + 1.0
-            f = features(np.array(buf).T, FS)
+            X8 = np.array(buf).T                      # (8, n)
+            f = features(X8[IDX], FS)
+            # per-electrode activity: band power 1 to 40 Hz and theta/alpha, for the head map
+            from scipy.signal import welch as _welch
+            fr, pw = _welch(X8 - X8.mean(1, keepdims=True), fs=FS, nperseg=FS * 2, axis=1)
+            tot = pw[:, (fr >= 1) & (fr < 40)].mean(1)
+            th = pw[:, (fr >= 4) & (fr < 8)].mean(1)
+            al = pw[:, (fr >= 8) & (fr < 13)].mean(1)
+            dead = X8.std(1) < 1e-6
+            chan_now = dict(tot=np.log10(tot + 1e-12), th=np.log10(th + 1e-12), al=np.log10(al + 1e-12), dead=dead)
             if base is None:
                 base_feats.append(f)
+                base_chan.append(chan_now)
                 if len(base_feats) * 1.0 >= a.baseline:
                     base = np.mean(base_feats, axis=0)
+                    chan_base = {k: np.mean([c[k] for c in base_chan], axis=0) for k in ("tot", "th", "al")}
                     state = "monitoring"
                     print("# baseline done", flush=True)
                     speak("Baseline done")

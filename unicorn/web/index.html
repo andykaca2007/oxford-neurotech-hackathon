@@ -5,98 +5,156 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Mental Load</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;700;900&display=swap" rel="stylesheet">
 <style>
-  :root { --bg:#000; --fg:#f2f2f2; --dim:#6f6f6f; --line:#1f1f1f; --ok:#4ade80; --warn:#fbbf24; --bad:#f43f5e; }
+  :root { --bg:#0b0b0d; --card:#141417; --line:#232328; --fg:#f4f4f5; --dim:#8a8a93; --ok:#34d399; --warn:#fbbf24; --bad:#fb7185; --accent:#60a5fa; }
   * { box-sizing:border-box; margin:0; padding:0; }
   html, body { height:100%; background:var(--bg); color:var(--fg); font-family:"Archivo", system-ui, sans-serif; }
-  body { display:grid; grid-template-rows:auto 1fr auto; padding:28px 32px; gap:12px; transition:background .4s; }
-  body.alarm { background:#2a0a10; }
-  header { display:flex; justify-content:space-between; align-items:baseline; font-size:14px; color:var(--dim); letter-spacing:.04em; text-transform:uppercase; }
-  header b { color:var(--fg); font-weight:600; }
-  main { display:grid; grid-template-columns:minmax(280px, 420px) 1fr; gap:40px; align-items:center; min-height:0; }
-  .dial { position:relative; aspect-ratio:1; width:100%; max-width:420px; }
-  .dial svg { width:100%; height:100%; transform:rotate(135deg); }
-  .dial circle { fill:none; stroke-width:14; stroke-linecap:round; }
-  .track { stroke:var(--line); }
-  .arc { stroke:var(--ok); transition:stroke-dashoffset .6s ease, stroke .4s; }
-  .num { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
-  .num .v { font-size:clamp(72px, 14vw, 150px); font-weight:800; line-height:1; letter-spacing:-.04em; font-variant-numeric:tabular-nums; }
-  .num .u { font-size:13px; color:var(--dim); letter-spacing:.08em; text-transform:uppercase; margin-top:10px; }
-  .right { display:flex; flex-direction:column; gap:18px; min-width:0; }
-  .state { font-size:clamp(22px, 3vw, 34px); font-weight:600; letter-spacing:-.01em; }
-  .sub { color:var(--dim); font-size:15px; }
-  .trace { width:100%; height:180px; border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
-  .bar { height:6px; background:var(--line); border-radius:3px; overflow:hidden; width:100%; }
+  body { display:grid; grid-template-rows:auto 1fr; gap:16px; padding:20px 24px; }
+  body.alarm { --bg:#1c0a0f; --card:#2a1017; --line:#44202a; }
+  header { display:flex; align-items:center; justify-content:space-between; }
+  header .t { font-weight:900; font-size:20px; letter-spacing:-.02em; }
+  header .t span { color:var(--dim); font-weight:500; margin-left:10px; }
+  .pill { font-size:13px; font-weight:700; padding:6px 12px; border-radius:999px; background:var(--card); border:1px solid var(--line); }
+  .pill.on { background:var(--bad); color:#fff; border-color:transparent; }
+  .grid { display:grid; grid-template-columns:1.2fr 1fr; grid-template-rows:auto auto; gap:16px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:18px; padding:18px 20px; display:flex; flex-direction:column; }
+  .card h2 { font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--dim); margin-bottom:8px; }
+  .head { display:flex; align-items:center; justify-content:center; }
+  .head svg { width:min(100%, 420px); max-height:62vh; height:auto; }
+  .ring { fill:none; stroke:var(--line); stroke-width:2; }
+  .el circle { stroke:#000; stroke-width:1.5; transition:fill .5s, r .5s; }
+  .el text { font-family:"Archivo"; font-weight:700; fill:#fff; text-anchor:middle; dominant-baseline:central; font-size:7px; pointer-events:none; }
+  .el .v { font-size:5.5px; font-weight:500; fill:#cfcfd6; }
+  .el.dead circle { fill:none; stroke:#555; stroke-dasharray:3 2; }
+  .el.dead text { fill:#666; }
+  .right { display:grid; grid-template-rows:auto auto; gap:16px; align-content:start; }
+  .load { display:flex; align-items:center; gap:22px; }
+  .load .n { font-size:clamp(64px, 9vw, 120px); font-weight:900; line-height:.9; letter-spacing:-.05em; font-variant-numeric:tabular-nums; }
+  .load .s { display:flex; flex-direction:column; gap:6px; }
+  .load .s b { font-size:22px; font-weight:700; }
+  .load .s span { color:var(--dim); font-size:13px; }
+  .bar { height:8px; background:var(--line); border-radius:4px; overflow:hidden; margin-top:6px; }
   .bar i { display:block; height:100%; width:0; background:var(--fg); transition:width .5s; }
-  footer { display:flex; gap:28px; font-size:12px; color:var(--dim); letter-spacing:.04em; }
-  footer span b { color:var(--fg); font-weight:600; }
-  .alarmbox { display:none; font-size:clamp(20px, 2.6vw, 30px); font-weight:800; color:#fff; letter-spacing:.02em; }
-  body.alarm .alarmbox { display:block; }
-  @media (max-width:760px) { main { grid-template-columns:1fr; } body { padding:20px 16px; } }
+  .markers { display:grid; grid-template-columns:1fr 1fr; gap:10px; align-content:start; }
+  .m { background:var(--bg); border:1px solid var(--line); border-radius:12px; padding:12px 14px; }
+  .m .k { font-size:11px; color:var(--dim); text-transform:uppercase; letter-spacing:.06em; }
+  .m .v { font-size:26px; font-weight:700; font-variant-numeric:tabular-nums; margin-top:2px; }
+  .m .v small { font-size:12px; color:var(--dim); font-weight:500; margin-left:4px; }
+  .trace { grid-column:1 / -1; height:150px; }
+  .trace canvas { width:100%; height:100%; display:block; }
+  .alarmline { font-weight:900; font-size:clamp(18px, 2.4vw, 26px); color:#fff; display:none; margin-top:10px; text-align:center; }
+  body.alarm .alarmline { display:block; }
+  @media (max-width:820px) { .grid { grid-template-columns:1fr; } }
 </style>
 </head>
 <body>
-<header><span><b>Mental load</b> &nbsp;·&nbsp; Unicorn BCI Core-8</span><span id="clock">0:00</span></header>
-<main>
-  <div class="dial">
-    <svg viewBox="0 0 100 100">
-      <circle class="track" cx="50" cy="50" r="42" stroke-dasharray="198 264"/>
-      <circle class="arc" id="arc" cx="50" cy="50" r="42" stroke-dasharray="198 264" stroke-dashoffset="198"/>
-    </svg>
-    <div class="num"><div class="v" id="val">–</div><div class="u">load · vs your baseline</div></div>
+<header>
+  <div class="t">Mental load <span>Unicorn BCI Core-8</span></div>
+  <div style="display:flex; gap:10px; align-items:center">
+    <div class="pill" id="state">waiting</div>
+    <div class="pill" id="clock">0:00</div>
   </div>
-  <div class="right">
-    <div class="state" id="state">waiting for the gauge</div>
-    <div class="sub" id="sub">start load_gauge.py with --web</div>
-    <div class="bar" id="basebar"><i id="basefill"></i></div>
-    <div class="alarmbox">High mental load · take a break</div>
-    <canvas class="trace" id="trace"></canvas>
-  </div>
-</main>
-<footer>
-  <span>alarm above <b id="alarmv">70</b> for 20 s</span>
-  <span>channels <b>Fz C3 Cz C4 Pz</b></span>
-  <span>model <b>36 public subjects · held-out AUC 0.79</b></span>
-</footer>
+</header>
+<div class="grid">
+  <section class="card">
+    <h2>Electrode activity · change from baseline</h2>
+    <div class="head">
+      <svg viewBox="0 0 200 220" id="headsvg">
+        <ellipse class="ring" cx="100" cy="110" rx="82" ry="95"/>
+        <path class="ring" d="M100 15 l-8 -10 l16 0 z"/>
+        <path class="ring" d="M18 95 q-10 15 0 30"/><path class="ring" d="M182 95 q10 15 0 30"/>
+      </svg>
+    </div>
+    <div class="alarmline" id="alarmline">High mental load · take a break</div>
+  </section>
+  <section class="right">
+    <div class="card">
+      <h2>Load · relative to your baseline</h2>
+      <div class="load">
+        <div class="n" id="val">–</div>
+        <div class="s"><b id="label">Baseline</b><span id="sub">sit still, eyes open</span>
+          <div class="bar" id="basebar"><i id="basefill"></i></div></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Markers</h2>
+      <div class="markers">
+        <div class="m"><div class="k">Fz theta</div><div class="v" id="m_theta">–<small>dB</small></div></div>
+        <div class="m"><div class="k">Pz alpha</div><div class="v" id="m_alpha">–<small>dB</small></div></div>
+        <div class="m"><div class="k">Most active</div><div class="v" id="m_top">–</div></div>
+        <div class="m"><div class="k">Dead electrodes</div><div class="v" id="m_dead">–</div></div>
+      </div>
+    </div>
+  </section>
+  <section class="card trace"><canvas id="trace"></canvas></section>
+</div>
 <script>
-const arc = document.getElementById('arc'), val = document.getElementById('val');
-const stateEl = document.getElementById('state'), sub = document.getElementById('sub');
-const basebar = document.getElementById('basebar'), basefill = document.getElementById('basefill');
-const canvas = document.getElementById('trace'), ctx = canvas.getContext('2d');
+const POS = { Fz:[100,52], C3:[55,110], Cz:[100,110], C4:[145,110], Pz:[100,158], PO7:[52,172], POz:[100,188], PO8:[148,172] };
+const svg = document.getElementById('headsvg');
+const NS = 'http://www.w3.org/2000/svg';
+const els = {};
+for (const [name,[x,y]] of Object.entries(POS)) {
+  const g = document.createElementNS(NS,'g'); g.setAttribute('class','el');
+  const c = document.createElementNS(NS,'circle'); c.setAttribute('cx',x); c.setAttribute('cy',y); c.setAttribute('r',11); c.setAttribute('fill','#333');
+  const t = document.createElementNS(NS,'text'); t.setAttribute('x',x); t.setAttribute('y',y-2); t.textContent = name;
+  const v = document.createElementNS(NS,'text'); v.setAttribute('class','v'); v.setAttribute('x',x); v.setAttribute('y',y+6); v.textContent='';
+  g.append(c,t,v); svg.append(g); els[name] = {g,c,v};
+}
+function heat(db){ // -6..+6 dB -> blue .. grey .. red
+  const x = Math.max(-1, Math.min(1, db/6));
+  const r = x>0 ? 60+195*x : 60, gch = 60+40*(1-Math.abs(x)), b = x<0 ? 60+195*(-x) : 60;
+  return `rgb(${r|0},${gch|0},${b|0})`;
+}
 const ALARM = 70;
-function colour(v){ return v >= ALARM ? '#f43f5e' : v >= ALARM - 20 ? '#fbbf24' : '#4ade80'; }
+const canvas = document.getElementById('trace'), ctx = canvas.getContext('2d');
 function draw(hist){
-  const w = canvas.width = canvas.clientWidth * devicePixelRatio, h = canvas.height = canvas.clientHeight * devicePixelRatio;
+  const w = canvas.width = canvas.clientWidth*devicePixelRatio, h = canvas.height = canvas.clientHeight*devicePixelRatio;
   ctx.clearRect(0,0,w,h);
-  ctx.strokeStyle = '#3a1016'; ctx.lineWidth = 1; ctx.setLineDash([4,6]);
-  ctx.beginPath(); ctx.moveTo(0, h - ALARM/100*h); ctx.lineTo(w, h - ALARM/100*h); ctx.stroke(); ctx.setLineDash([]);
-  if (hist.length < 2) return;
-  ctx.strokeStyle = '#e5e5e5'; ctx.lineWidth = 2 * devicePixelRatio; ctx.beginPath();
-  hist.forEach((v,i) => { const x = i/(600-1)*w, y = h - v/100*h; i ? ctx.lineTo(x,y) : ctx.moveTo(x,y); });
+  ctx.strokeStyle='#fb718566'; ctx.setLineDash([4,6]); ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(0,h-ALARM/100*h); ctx.lineTo(w,h-ALARM/100*h); ctx.stroke(); ctx.setLineDash([]);
+  if (hist.length<2) return;
+  const n = Math.max(hist.length, 120);
+  ctx.strokeStyle='#f4f4f5'; ctx.lineWidth=2*devicePixelRatio; ctx.beginPath();
+  hist.forEach((v,i)=>{ const x=i/(n-1)*w, y=h-v/100*h; i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
   ctx.stroke();
 }
 async function tick(){
   try {
     const s = await (await fetch('/state')).json();
-    const m = Math.floor(s.t/60), sec = Math.floor(s.t%60);
+    const m=Math.floor(s.t/60), sec=Math.floor(s.t%60);
     document.getElementById('clock').textContent = `${m}:${sec.toString().padStart(2,'0')}`;
     document.body.classList.toggle('alarm', !!s.alarm);
+    const st = document.getElementById('state');
+    st.textContent = s.alarm ? 'ALARM' : (s.baseline_done ? 'live' : 'baseline'); st.classList.toggle('on', !!s.alarm);
+    const val = document.getElementById('val'), label = document.getElementById('label'), sub = document.getElementById('sub');
     if (s.baseline_done) {
       const v = Math.max(0, Math.min(100, s.load));
-      val.textContent = Math.round(v);
-      arc.style.strokeDashoffset = 198 - 198 * v/100;
-      arc.style.stroke = colour(v);
-      stateEl.textContent = s.alarm ? 'High load' : v >= ALARM ? 'Load rising' : v >= ALARM-20 ? 'Working' : 'Calm';
-      sub.textContent = 'relative to your own 30 s baseline · updates every second';
-      basebar.style.display = 'none';
+      val.textContent = Math.round(v); val.style.color = v>=ALARM?'#fb7185':v>=ALARM-20?'#fbbf24':'#34d399';
+      label.textContent = s.alarm?'High load':v>=ALARM?'Load rising':v>=ALARM-20?'Working':'Calm';
+      sub.textContent = 'alarm after 20 s above 70'; document.getElementById('basebar').style.display='none';
     } else {
-      val.textContent = '–'; arc.style.strokeDashoffset = 198;
-      stateEl.textContent = 'Baseline'; sub.textContent = 'sit still, eyes open';
-      basebar.style.display = 'block'; basefill.style.width = (100 * s.baseline_progress) + '%';
+      val.textContent='–'; val.style.color='var(--dim)'; label.textContent='Baseline'; sub.textContent='sit still, eyes open';
+      document.getElementById('basebar').style.display='block'; document.getElementById('basefill').style.width=(100*s.baseline_progress)+'%';
     }
-    draw(s.hist || []);
-  } catch (e) { stateEl.textContent = 'waiting for the gauge'; }
+    let top=null, dead=[];
+    for (const ch of (s.channels||[])) {
+      const e = els[ch.name]; if (!e) continue;
+      e.g.classList.toggle('dead', ch.dead);
+      if (ch.dead) { dead.push(ch.name); e.v.textContent='off'; e.c.setAttribute('r',11); continue; }
+      const db = s.baseline_done ? ch.db : 0;
+      e.c.setAttribute('fill', s.baseline_done ? heat(db) : '#333');
+      e.c.setAttribute('r', 11 + Math.min(6, Math.max(0, db)));
+      e.v.textContent = s.baseline_done ? (db>0?'+':'')+db.toFixed(1) : '';
+      if (s.baseline_done && (top===null || db>top.db)) top = ch;
+    }
+    document.getElementById('m_top').textContent = top ? `${top.name} +${top.db.toFixed(1)} dB` : '–';
+    document.getElementById('m_dead').textContent = dead.length ? dead.join(' ') : 'none';
+    const fz = (s.channels||[]).find(c=>c.name==='Fz'), pz = (s.channels||[]).find(c=>c.name==='Pz');
+    document.getElementById('m_theta').innerHTML = (fz && s.baseline_done ? (fz.theta_db>0?'+':'')+fz.theta_db.toFixed(1) : '–') + '<small>dB</small>';
+    document.getElementById('m_alpha').innerHTML = (pz && s.baseline_done ? (pz.alpha_db>0?'+':'')+pz.alpha_db.toFixed(1) : '–') + '<small>dB</small>';
+    draw(s.hist||[]);
+  } catch(e) { document.getElementById('state').textContent='waiting'; }
 }
 setInterval(tick, 500); tick();
 </script>
