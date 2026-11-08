@@ -38,6 +38,11 @@ FAT_SOS_TH = _butter(4, [4, 8], btype="band", fs=FS, output="sos")
 FAT_SOS_AL = _butter(4, [8, 13], btype="band", fs=FS, output="sos")
 FAT_SOS_BE = _butter(4, [13, 30], btype="band", fs=FS, output="sos")
 ALPHA_SOS = _butter(4, [2, 40], btype="band", fs=FS, output="sos")
+ALPHA_BAND_SOS = _butter(4, [8, 13], btype="band", fs=FS, output="sos")
+# Alpha check noise gate (CRITIQUE alpha-1): real lab eyes-closed alpha (about 7 uV RMS at Pz/O1) injected into his
+# recordings passed the +3/+3 rule in about 19 percent of checks at eyes-open 8 to 13 Hz noise over 30 uV, 31 percent at
+# 8 to 30 uV, about half at 2 to 8 uV. Above this level a FAIL cannot tell "no brain" from "too noisy".
+ALPHA_NOISE_MAX_UV = 15.0
 POSTERIOR = ["Pz", "O1", "P3", "P4"]
 
 
@@ -231,7 +236,7 @@ def main():
     # 0.80 from the 8 Nov null test: 81 calibrations on recordings with no real alternation, median 0.46, 99th pct 0.75, none >= 0.80
     CAL_BLOCKS, CAL_BLOCK_S, CAL_SKIP_S, CAL_MIN_AUC = 8, 20, 5, 0.80
     # eyes-closed alpha check: 20 s eyes open, 20 s eyes closed; PASS when posterior alpha rises 3 dB to a peak of +3 dB or more
-    ac = dict(active=False, t0=None, open=[], closed=[], result=None, said=set())
+    ac = dict(active=False, t0=None, open=[], closed=[], noise=[], result=None, said=set())
     alpha_now = None
 
     ui = None
@@ -307,7 +312,7 @@ def main():
             ac_n = int(reply.get("alpha_check", 0))
             if ac_n != cond["alpha_check"]:
                 cond["alpha_check"] = ac_n
-                ac.update(active=True, t0=None, open=[], closed=[], result=None, said=set())
+                ac.update(active=True, t0=None, open=[], closed=[], noise=[], result=None, said=set())
             cal_n = int(reply.get("calibrate", 0))
             if cal_n != cond["calibrate"]:
                 cond["calibrate"] = cal_n
@@ -394,6 +399,8 @@ def main():
                     el = t - ac["t0"]
                     if 4 <= el < 20:
                         ac["open"].append(dict(zip([MONTAGE[i] for i in post], ah)))
+                        xa = X8[post] - X8[post].mean(1, keepdims=True)
+                        ac["noise"].append(float(np.min(sosfiltfilt(ALPHA_BAND_SOS, xa, axis=1)[:, FS // 2:-FS // 2].std(1))))   # quietest posterior channel
                     elif el >= 20 and "close" not in ac["said"]:
                         ac["said"].add("close"); speak("Close your eyes.")
                     if 24 <= el < 40:
@@ -407,17 +414,26 @@ def main():
                                 delta = float(np.median(c_) - np.median(o))
                                 if best is None or delta > best[1]:
                                     best = (ch, delta, float(np.median(o)), float(np.median(c_)))
+                        noise = float(np.median(ac["noise"])) if ac["noise"] else float("nan")
                         if best is None:
                             ac["result"] = dict(ok=False, text="not enough live posterior windows")
+                        elif not (noise <= ALPHA_NOISE_MAX_UV):
+                            ac["result"] = dict(ok=False, untestable=True, noise_uv=round(noise, 1),
+                                                text=f"TOO NOISY TO TEST: eyes-open alpha-band noise {noise:.0f} uV at the quietest posterior channel; "
+                                                     f"lab alpha is about 7 uV, so the check needs under {ALPHA_NOISE_MAX_UV:.0f} uV. Improve Pz/O1 contact and retry")
                         else:
                             # PASS rule from the 8 Nov null test: rise >= 3 dB AND eyes-closed peak >= +3 dB; pure noise on
                             # his 16 recordings passes this 0.9 percent of the time (a 2 dB rise alone: 15 to 20 percent)
                             ok = best[1] >= 3.0 and best[3] >= 3.0
-                            ac["result"] = dict(ok=ok, ch=best[0], delta=round(best[1], 1), open_db=round(best[2], 1), closed_db=round(best[3], 1),
-                                                text=f"{'PASS' if ok else 'FAIL'}: alpha at {best[0]} {best[2]:+.1f} dB eyes open, {best[3]:+.1f} dB eyes closed (rise {best[1]:+.1f}; pass needs +3 and +3)")
+                            ac["result"] = dict(ok=ok, ch=best[0], delta=round(best[1], 1), open_db=round(best[2], 1), closed_db=round(best[3], 1), noise_uv=round(noise, 1),
+                                                text=(f"PASS: alpha at {best[0]} {best[2]:+.1f} dB eyes open, {best[3]:+.1f} dB eyes closed (rise {best[1]:+.1f}; noise {noise:.0f} uV)" if ok else
+                                                      f"FAIL: alpha at {best[0]} {best[2]:+.1f} dB eyes open, {best[3]:+.1f} dB eyes closed (rise {best[1]:+.1f}; pass needs +3 and +3; noise {noise:.0f} uV). "
+                                                      f"At this noise a real brain passes only about half the time: repeat once before changing anything"))
                         ac["active"] = False
                         print(f"t={t:6.1f} ALPHA CHECK {ac['result']['text']}", flush=True)
-                        speak("Open your eyes. " + ("Brain signal confirmed." if ac["result"]["ok"] else "No alpha change. Fix the contact."))
+                        speak("Open your eyes. " + ("Alpha rhythm found." if ac["result"]["ok"] else
+                                                    "Too noisy to test. Improve the back electrodes." if ac["result"].get("untestable") else
+                                                    "No alpha change found."))
             live = [i for i in IDX if not dead[i]] or list(IDX)
             live_n = int(sum(not dead[i] for i in IDX))
             contact = live_n == len(IDX) or a.fake                    # every model channel live (was >= 6 of a 5-channel model, CRITIQUE gauge-1)
