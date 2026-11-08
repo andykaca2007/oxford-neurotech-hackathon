@@ -10,8 +10,8 @@ Ranking: severity as re-rated by the adversary, then grouped so that issues with
 |---|---|---|---|---|---|
 | 1 | critical | fatigue-1 | confirmed | Flat or railed baseline makes ASR zero every later window; zeros pass the clean gate and drive fatigue to 0 'Recovering' instead of 'Held' | done (0c25f19) |
 | 2 | high | alpha-adv1 | ADDED | Alpha check passes with NO alpha when eye closure changes the 1/f fit bands (muscle relax or blinks stop) | open |
-| 3 | high | claims-1 | confirmed | Headline pitch numbers belong to a model that does not run live, and 'shows it live' has no evidence on a real head | open |
-| 4 | high | claims-2 | confirmed | Replay fallback shows 'live' on the page; the claimed REPLAY label does not exist | open |
+| 3 | high | claims-1 | confirmed | Headline pitch numbers belong to a model that does not run live, and 'shows it live' has no evidence on a real head | done (ae1fc8d) |
+| 4 | high | claims-2 | confirmed | Replay fallback shows 'live' on the page; the claimed REPLAY label does not exist | done (ae1fc8d) |
 | 5 | high | dsp-1 | confirmed | A dead model channel is turned into a copy of the negated reference and still scored, adding about +0.29 to p | done (0c25f19) |
 | 6 | high | dsp-2 | confirmed | Partially railed windows are never detected, and the rail test in clean_window is dead code | done (0c25f19) |
 | 7 | high | dsp-3 | confirmed | ASR and the baseline mean are fitted on windows with rail steps, which inflates the ASR threshold up to 22x | done (0c25f19) |
@@ -22,9 +22,9 @@ Ranking: severity as re-rated by the adversary, then grouped so that issues with
 | 12 | high | gauge-adv1 | ADDED | ASR fitted on a dead baseline deletes every later window, and the zeroed channels count as clean | done (0c25f19) |
 | 13 | high | ops-1 | confirmed | Headset data stop freezes the whole demo silently; page keeps saying live | open |
 | 14 | high | ops-2 | confirmed | Ctrl-C cannot stop a stalled run, and the stale gauge attaches to the next session's stream and page | open |
-| 15 | high | ops-4 | confirmed | The replay fallback needs author-only steps, is not labelled on the page, and shows a flat gauge | open |
+| 15 | high | ops-4 | confirmed | The replay fallback needs author-only steps, is not labelled on the page, and shows a flat gauge | done (ae1fc8d): launcher, VS Code task and label; the recordings themselves show no clear effect, say so on stage |
 | 16 | high | ops-adv1 | ADDED | Gauge and connect check take any 'Unicorn' LSL stream on the network, not this laptop's | open |
-| 17 | high | serverpage-1 | confirmed | Replay mode is not shown on the page: a recorded session reads as live | open |
+| 17 | high | serverpage-1 | confirmed | Replay mode is not shown on the page: a recorded session reads as live | done (ae1fc8d) |
 | 18 | high | serverpage-2 | confirmed | The debrief's confidence gate passes on noise; alpha-check and calibration results are never sent to the LLM | open |
 | 19 | medium | alpha-1 | confirmed | Pass rule was set from the null only; on real alpha at last night's noise it passes 1 check in 5 | open |
 | 20 | medium | calib-1 | confirmed | Once the personal model is on, rest no longer reads 0: nothing anchors it to rest, the output is close to on/off, and the alarm sits on the LDA boundary | open |
@@ -49,7 +49,7 @@ Ranking: severity as re-rated by the adversary, then grouped so that issues with
 | 39 | medium | model-adv1 | ADDED | A dead or railed model channel is not removed: after the common reference it becomes a copy of the negated reference and is scored as if it were real EEG | done (0c25f19) |
 | 40 | medium | ops-3 | confirmed | The 'whichever amplifier answers' task still forces U8-2025.10.14, and the serial flip broke 1 in 5 launches | open |
 | 41 | medium | ops-5 | confirmed | Manual VS Code tasks run different alarm settings and unpaired file names from run_all.sh | open |
-| 42 | medium | ops-adv2 | ADDED | Page label and debrief still use alarm 70 while the live alarm is 50 | open |
+| 42 | medium | ops-adv2 | ADDED | Page label and debrief still use alarm 70 while the live alarm is 50 | done (ae1fc8d) |
 | 43 | medium | ops-adv3 | ADDED | Restarting the page server mid-session re-fires Rebaseline, Alpha check or Calibrate | open |
 | 44 | medium | serverpage-3 | confirmed | CONTEXT prompt claims are stale after the overnight changes | open |
 | 45 | medium | serverpage-4 | confirmed | Hardcoded thresholds disagree with the launched gauge: debrief uses 70 while the alarm is 50; held subtitle says 'of 8' and '3 or more' | open |

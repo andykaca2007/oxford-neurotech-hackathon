@@ -155,3 +155,9 @@ Rules for every change: it must be tested on recorded data with a split that is 
   - Now: rails detected per sample on the raw window; dead channels zeroed after referencing; the load is held (CHANNEL LOST) whenever any model channel is dead; baseline and ASR fit skip such windows; --strict compares with the model's 5 channels (it could never pass before); a channel zeroed by ASR is not counted clean; ASR has a reference floor.
   - Evidence: lab features unchanged (max difference 0.0, so no retrain); scored seconds with a dead model channel in the window: 154 windows before, 1 of 1826 after (window-edge alignment); 571 seconds now held. Four recordings never get 30 clean baseline seconds and are now held throughout instead of scored on invented channels; replay_all counts that as correct.
   - Checks: smoke ALL PASS, 16 replays 0 failed.
+
+### Critique iteration 2, 06:48
+
+- CRITIQUE #3 claims-1: PLAN.md's claim line ("75%, AUC 0.84, and shows it live") described an older model and a live result we do not have. Replaced with the live model's lab numbers (AUC 0.76, balanced accuracy 68%, at chance for about 1 in 6 people) and the honest limits (no alpha on the cap, no reliable task separation on his recordings); HANDOFF.md and RESULTS.md carry a superseded note.
+- CRITIQUE #4 claims-2, #17 serverpage-1, #15 ops-4, ops-adv2: the replay fallback was shown as "live". The page now shows a REPLAY pill and a fixed banner with the recording's file name (checked in the browser on port 8799); the debrief and coach get replay and are told to say it is a recording; `./run_all.sh replay <file>` and a VS Code task start it at real time with the live alarm settings. The alarm label in the load panel now follows the gauge (it said 70 while the gauge alarms at 50). The LLM context number for arithmetic was 45 (old model), now 31.
+- Checks: smoke ALL PASS, 16 replays 0 failed; the replay launcher refuses a missing file before touching any running process.
