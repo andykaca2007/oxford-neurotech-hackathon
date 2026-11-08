@@ -207,7 +207,13 @@ def main():
     markers = open(a.log.replace(".csv", "") + "_markers.csv", "w") if a.log else None
     if markers:
         markers.write("t,condition\n")
-    cond = {"now": "none", "rebaseline": 0, "redo": False, "alpha_check": 0}
+    cond = {"now": "none", "rebaseline": 0, "redo": False, "alpha_check": 0, "calibrate": 0}
+    # interleaved personal calibration: 8 blocks of 20 s, rest / silent subtraction alternating, so slow drift hits both
+    # classes equally (the block-design personal model of 8 Nov learned drift: recovery read 77). Leave-one-pair-out
+    # AUC decides: the personal model replaces the generic one only if it reaches CAL_MIN_AUC on held-out blocks.
+    cal = dict(active=False, t0=None, blocks={}, result=None, said=set())
+    # 0.80 from the 8 Nov null test: 81 calibrations on recordings with no real alternation, median 0.46, 99th pct 0.75, none >= 0.80
+    CAL_BLOCKS, CAL_BLOCK_S, CAL_SKIP_S, CAL_MIN_AUC = 8, 20, 5, 0.80
     # eyes-closed alpha check: 20 s eyes open, 20 s eyes closed; PASS when posterior alpha rises 3 dB to a peak of +3 dB or more
     ac = dict(active=False, t0=None, open=[], closed=[], result=None, said=set())
     alpha_now = None
@@ -252,7 +258,9 @@ def main():
             sig = [[int(v) for v in row] for row in Xs]
         except Exception:
             pass
-        body = json.dumps(dict(t=round(t_now, 1), state=state, load=round(load_pct, 1), fatigue=round(fatigue_pct, 1), clean=int(clean_n), fatigue_held=bool(clean_n < 3 and not a.fake), load_held=bool(clean_n < a.load_min_clean and not a.fake), contact=bool(contact or not a.strict), alarm=bool(alarmed), alarm_at=a.alarm, hold_s=a.hold, n_model_ch=len(IDX), alpha_now=None if alpha_now is None else round(alpha_now, 1),
+        body = json.dumps(dict(t=round(t_now, 1), state=state, load=round(load_pct, 1), fatigue=round(fatigue_pct, 1), clean=int(clean_n), fatigue_held=bool(clean_n < 3 and not a.fake), load_held=bool(clean_n < a.load_min_clean and not a.fake), contact=bool(contact or not a.strict), alarm=bool(alarmed), alarm_at=a.alarm, hold_s=a.hold, n_model_ch=len(IDX),
+                               calibration=dict(active=cal["active"], block=None if (not cal["active"] or cal["t0"] is None) else int((t_now - cal["t0"]) // CAL_BLOCK_S) + 1,
+                                                blocks=CAL_BLOCKS, result=cal["result"]), alpha_now=None if alpha_now is None else round(alpha_now, 1),
                                alpha_check=dict(active=ac["active"], elapsed=None if (not ac["active"] or ac["t0"] is None) else round(t_now - ac["t0"]), result=ac["result"]), personal=personal is not None, calib=len(calib_task), calib_s=a.calib_s, replay=bool(a.replay), channels=chans, sig=sig,
                                baseline_done=base is not None, baseline_s=a.baseline,
                                baseline_progress=min(1.0, len(base_feats) / a.baseline) if base is None else 1.0,
@@ -282,6 +290,10 @@ def main():
             if ac_n != cond["alpha_check"]:
                 cond["alpha_check"] = ac_n
                 ac.update(active=True, t0=None, open=[], closed=[], result=None, said=set())
+            cal_n = int(reply.get("calibrate", 0))
+            if cal_n != cond["calibrate"]:
+                cond["calibrate"] = cal_n
+                cal.update(active=True, t0=None, blocks={}, result=None, said=set())
             if new != cond["now"]:
                 cond["now"] = new
                 print(f"t={t_now:6.1f} CONDITION {new}", flush=True)
@@ -408,7 +420,7 @@ def main():
                 cond["redo"] = False
                 base, chan_base, fat_ema, fatigue_pct, alarmed, above_since, ema = None, None, None, 0.0, False, None, None
                 base_feats.clear(); base_chan.clear(); base_fat.clear(); base_covs.clear(); amp_hist.clear(); asr_cal.clear(); p_recent.clear()
-                personal = None; calib_task.clear()
+                personal = None; calib_task.clear(); cal.update(active=False, t0=None, blocks={}, result=None, said=set())
                 if asr is not None:
                     asr.V = None
                 print(f"t={t:6.1f} REBASELINE requested from the page", flush=True)
@@ -502,6 +514,52 @@ def main():
             else:
                 state = "monitoring"
                 xf = (f - base)[None, :]
+                if cal["active"]:
+                    if cal["t0"] is None:
+                        cal["t0"] = t
+                        print(f"t={t:6.1f} CALIBRATION started: {CAL_BLOCKS} blocks of {CAL_BLOCK_S} s, rest and silent subtraction alternating", flush=True)
+                    el = t - cal["t0"]
+                    blk = int(el // CAL_BLOCK_S)
+                    if blk < CAL_BLOCKS:
+                        if blk not in cal["said"]:
+                            cal["said"].add(blk)
+                            start_n = 4000 - 137 * (blk // 2)
+                            speak("Rest. Eyes on the point." if blk % 2 == 0 else f"Count down from {start_n} in sevens, silently.")
+                        if el - blk * CAL_BLOCK_S >= CAL_SKIP_S:          # skip the first seconds: the 4 s window still holds the last block
+                            cal["blocks"].setdefault(blk, []).append(xf[0].copy())
+                        state = f"CALIBRATING: block {blk + 1}/{CAL_BLOCKS} {'rest' if blk % 2 == 0 else 'subtract'}"
+                    else:
+                        from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+                        from sklearn.metrics import roc_auc_score
+                        from sklearn.pipeline import make_pipeline
+                        from sklearn.preprocessing import StandardScaler
+
+                        def mk():
+                            return make_pipeline(StandardScaler(), LinearDiscriminantAnalysis(solver="lsqr", shrinkage="auto"))
+                        aucs = []
+                        pairs = CAL_BLOCKS // 2
+                        for hp in range(pairs):                                # hold out one rest block and the task block after it
+                            tr = [b for b in range(CAL_BLOCKS) if b // 2 != hp and b in cal["blocks"]]
+                            te = [b for b in (2 * hp, 2 * hp + 1) if b in cal["blocks"]]
+                            if len(te) < 2 or len({b % 2 for b in tr}) < 2:
+                                continue
+                            Xtr = np.vstack([np.array(cal["blocks"][b]) for b in tr]); ytr = np.concatenate([[b % 2] * len(cal["blocks"][b]) for b in tr])
+                            Xte = np.vstack([np.array(cal["blocks"][b]) for b in te]); yte = np.concatenate([[b % 2] * len(cal["blocks"][b]) for b in te])
+                            aucs.append(float(roc_auc_score(yte, mk().fit(Xtr, ytr).predict_proba(Xte)[:, 1])))
+                        auc = float(np.mean(aucs)) if aucs else float("nan")
+                        ok = bool(aucs) and auc >= CAL_MIN_AUC
+                        if ok:
+                            Xall = np.vstack([np.array(v) for v in cal["blocks"].values()])
+                            yall = np.concatenate([[b % 2] * len(v) for b, v in cal["blocks"].items()])
+                            personal = mk().fit(Xall, yall)
+                            ema = None
+                            p_recent.clear()
+                        cal["result"] = dict(ok=ok, auc=None if not aucs else round(auc, 2), folds=[round(v, 2) for v in aucs],
+                                             text=(f"personal model ON: held-out AUC {auc:.2f} over {len(aucs)} block pairs" if ok else
+                                                   f"personal model OFF: held-out AUC {auc:.2f} (needs {CAL_MIN_AUC}); keeping the generic model"))
+                        cal["active"] = False
+                        print(f"t={t:6.1f} CALIBRATION {cal['result']['text']}; folds {cal['result']['folds']}", flush=True)
+                        speak("Calibration done. " + ("Personal model on." if ok else "Not separable, keeping the general model."))
                 if personal is None and a.calib_s > 0 and cond["now"] == "mental":
                     calib_task.append(xf[0])
                     state = f"CALIBRATING: {len(calib_task)}/{a.calib_s} s of mental"

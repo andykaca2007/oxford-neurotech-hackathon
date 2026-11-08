@@ -173,6 +173,7 @@
       <div><span>dead</span><b id="m_dead">—</b></div>
       <div><span>clean (under 100 µV after cleaning)</span><b id="m_clean">—</b></div>
       <div><span>alpha at Pz/O1 (lab eyes closed ≈ +6 dB)</span><b id="m_alpha_chk">—</b></div>
+      <div><span>personal calibration</span><b id="m_calib">not run (generic model)</b></div>
       <div><span>model</span><b>GB robust 5 ch · AUC 0.76</b></div>
     </div>
     <div class="chalcard" style="margin-top:14px">
@@ -180,7 +181,7 @@
       <div class="score"><span>answers <b id="n_ans">0</b></span><span>errors <b id="n_err">0</b></span><span><b id="n_time">0 s</b></span></div>
     </div>
     <div style="margin-top:auto; padding-top:14px; display:flex; flex-direction:column; min-height:0">
-      <div><button class="btn" id="debrief">Debrief</button> <button class="btn" id="rebase" title="Redo the 30 s baseline without restarting">Rebaseline</button> <button class="btn" id="alphachk" title="20 s eyes open, 20 s eyes closed: proves the electrodes see brain">Alpha check</button></div>
+      <div><button class="btn" id="debrief">Debrief</button> <button class="btn" id="rebase" title="Redo the 30 s baseline without restarting">Rebaseline</button> <button class="btn" id="alphachk" title="20 s eyes open, 20 s eyes closed: proves the electrodes see brain">Alpha check</button> <button class="btn" id="calib" title="160 s: 20 s rest and 20 s silent subtraction, alternating, spoken prompts; trains a personal model only if held-out blocks separate">Calibrate</button></div>
       <div class="debrief" id="coach" title="one line from Claude every 60 s, from load + answers + signal quality"></div>
       <div class="debrief" id="dtext"></div>
       <div class="src" id="dsrc"></div>
@@ -244,6 +245,9 @@ document.getElementById('debrief').onclick = async () => {
   try { const r = await (await fetch('/debrief', {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'})).json();
         document.getElementById('dtext').textContent = r.text; document.getElementById('dsrc').textContent = 'written by ' + r.source; }
   catch(e) { document.getElementById('dtext').textContent = 'debrief failed'; }
+};
+document.getElementById('calib').onclick = () => {
+  fetch('/event', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({kind:'calibrate', t:lastT})});
 };
 document.getElementById('alphachk').onclick = () => {
   fetch('/event', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({kind:'alpha_check', t:lastT})});
@@ -354,6 +358,9 @@ async function tick(){
       if (ac.active) el.textContent = now + (ac.elapsed === null ? ' · starting' : ac.elapsed < 20 ? ' · eyes OPEN ' + (20 - ac.elapsed) + ' s' : ' · eyes CLOSED ' + Math.max(0, 40 - ac.elapsed) + ' s');
       else if (ac.result) el.textContent = ac.result.text;
       else el.textContent = now; }
+    { const c = s.calibration || {}, el = document.getElementById('m_calib');
+      if (c.active) el.textContent = c.block === null ? 'starting' : 'block ' + c.block + ' of ' + c.blocks + (c.block % 2 ? ' · rest' : ' · subtract silently');
+      else if (c.result) el.textContent = c.result.text; }
     const fz = (s.channels||[]).find(c=>c.name==='Fz'), pz = (s.channels||[]).find(c=>c.name==='Pz');
     document.getElementById('m_theta').innerHTML = (fz && s.baseline_done ? (fz.theta_db>0?'+':'')+fz.theta_db.toFixed(1)+'<small>dB</small>' : '—');
     document.getElementById('m_alpha').innerHTML = (pz && s.baseline_done ? (pz.alpha_db>0?'+':'')+pz.alpha_db.toFixed(1)+'<small>dB</small>' : '—');

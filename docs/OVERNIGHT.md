@@ -72,3 +72,12 @@ Rules for every change: it must be tested on recorded data with a split that is 
   - Median rho: muscle share -0.43, raw amplitude +0.22, ASR removals +0.04. Supported: muscle leaks into the 13 to 30 Hz beta denominator, so tensing reads as "recovering"; larger raw amplitude reads as "tiring".
   - Candidate fixes on the same data: beta 13 to 20 Hz gives muscle -0.38, amplitude +0.19, per-window sd 0.33 (current 0.40); a muscle gate (skip windows with 30 to 45 Hz over half of 4 to 30 Hz) keeps 80 percent of windows and makes the amplitude coupling worse (+0.37).
 - Decision: no change. The 13 to 20 Hz gain is small and would leave the published (theta+alpha)/beta definition the page cites; the gate is worse. Fatigue on this cap carries artefact under every variant tested; the honest fix is contact. Checks: smoke ALL PASS, 16 replays 0 failed.
+
+### Iteration 7, 03:30 to 03:50
+
+- Problem: every labelled recording is a block design (all mental, then all rest), so any slow drift looks like a condition difference; that is what fooled the 01:50 personal model. No existing recording can test load separation without this confound.
+- Built: **Calibrate** button. 8 blocks of 20 s, rest and silent subtraction alternating (spoken prompts, a new start number each task block), first 5 s of each block skipped for the 4 s window lag. Leave-one-pair-out: train on three rest/task pairs, score the held-out pair, average over the four pairs. The personal model (shrinkage LDA on the live features) replaces the generic one only if that held-out AUC clears the bar; the page shows the score either way. Rebaseline clears it.
+- Null test, as for the alpha check: the identical calibration run at every possible start on his recordings, where he never alternated (81 positions): median AUC 0.46, 95th percentile 0.70, 99th 0.75, none at 0.80 or above. The first single null run (01:03 recording from 40 s) gave 0.69, which is why the bar is not 0.75. Bar set to 0.80.
+- Mechanics: fake data completes and reports OFF (0.40); null replay reports OFF (0.69).
+- Protocol: Calibrate added as optional step 1b after a passing Alpha check.
+- Checks: smoke ALL PASS, 16 replays 0 failed.

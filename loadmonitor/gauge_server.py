@@ -146,7 +146,7 @@ class H(BaseHTTPRequestHandler):
                 STATE.update(data)
                 if data.get("baseline_done"):
                     LOADLOG.append((float(data.get("t", 0)), float(data.get("load", 0)), int(data.get("clean", 0)), float(data.get("fatigue", 50)), STATE.get("condition", "none")))
-            self._send(200, json.dumps({"condition": cond, "rebaseline": STATE.get("rebaseline", 0), "alpha_check": STATE.get("alpha_check_n", 0)}).encode(), "application/json")
+            self._send(200, json.dumps({"condition": cond, "rebaseline": STATE.get("rebaseline", 0), "alpha_check": STATE.get("alpha_check_n", 0), "calibrate": STATE.get("calibrate_n", 0)}).encode(), "application/json")
         elif self.path.startswith("/event"):
             with LOCK:
                 data.setdefault("t", STATE.get("t", 0))
@@ -160,6 +160,8 @@ class H(BaseHTTPRequestHandler):
                     STATE["rebaseline"] = STATE.get("rebaseline", 0) + 1
                 if data.get("kind") == "alpha_check":
                     STATE["alpha_check_n"] = STATE.get("alpha_check_n", 0) + 1
+                if data.get("kind") == "calibrate":
+                    STATE["calibrate_n"] = STATE.get("calibrate_n", 0) + 1
             self._send(200, b"ok", "text/plain")
         elif self.path.startswith("/debrief"):
             s = summary()

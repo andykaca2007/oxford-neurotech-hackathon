@@ -25,6 +25,7 @@ tight, two minutes to settle.
 |---|---|---|---|
 | 0 | | 40 s | after the baseline: press **Alpha check** on the page, follow the spoken prompts (20 s eyes open, 20 s eyes closed). FAIL means fix contact before anything else |
 | 1 | baseline | 30 s | sits still, eyes open, looks at a blank wall |
+| 1b | | 160 s | optional, after the Alpha check passes: press **Calibrate**. Spoken prompts alternate 20 s rest and 20 s silent counting down in sevens, 4 times each. The page shows the held-out score; the personal model switches on only at 0.80 or above, otherwise the generic model stays |
 | 2 | mental | 3 min | **silent serial subtraction**: eyes on one fixed point, count down from 4000 in 7s in your head, no typing, no talking; say the last number at the end. (Changed 8 Nov: Zetamac's typing and gaze shifts make ASR fire on every window, so it measures movement, not effort; the model was trained on silent subtraction) |
 | 3 | recovery | 2 min | sits quietly, eyes open |
 | 4 | none | 2 to 3 min | cap OFF; running or stairs, enough to breathe hard |
