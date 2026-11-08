@@ -72,9 +72,12 @@ live channels; the cap rarely gave that. Measured per whole second over every ra
 | original: any of the 8 channels on the rail or above 150 uV RMS (1 to 40 Hz, 50 Hz notched) | 93% |
 | same rule on the 5 model channels only (Fz C3 Cz Pz O1) | 72% |
 
-What the gauge actually applies is looser than both. It holds a second when any model channel is on the rail, or
-when fewer than 2 model channels are under 100 uV after its cleaning chain (detrend, notch, reference, band-pass,
-burst mask, ASR). It scored 67% of its post-baseline rows in the replays (47% to 100% per session). So every load
+What the gauge applied that morning was looser than both: it held a second when any model channel was on the rail,
+or when fewer than 2 model channels were under 100 uV after its cleaning chain, and it scored 67% of its
+post-baseline rows in the replays. From later on 8 Nov (CRITIQUE dsp-adv1, dsp-adv2) it scores a second only when
+ALL 5 model channels are under 100 uV both before the reference and burst mask (4 to 30 Hz) and after the full chain:
+one noisy channel moved the model's output by a median 0.19. Under that rule it scores 24% of the same rows (0% to
+72% per session). So every load
 number from the 7 and 8 Nov recordings falls outside the original exclusion rule, and must be reported that way.
 From 8 Nov the exclusion rule is the gauge's hold rule. Report, per session, the share excluded under the original
 rule and under the gauge's rule; the script prints both.

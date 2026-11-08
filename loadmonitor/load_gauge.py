@@ -52,6 +52,7 @@ CONTACT_GOOD_UV, CONTACT_FAIR_UV = 40.0, 100.0
 from scipy.signal import iirnotch as _iirnotch, tf2sos as _tf2sos  # noqa: E402
 NOTCH_SOS = _tf2sos(*_iirnotch(50.0, 30.0, fs=FS))
 HUM_SOS = _butter(4, [48, 52], btype="band", fs=FS, output="sos")
+PRE_Q_SOS = _butter(4, [4, 30], btype="band", fs=FS, output="sos")      # quality before the reference and burst mask
 
 
 def contact_metrics(x):
@@ -222,8 +223,8 @@ def main():
     ap.add_argument("--stall-after", type=float, default=None, help="test only, with --fake: stop sending data after this many seconds")
     ap.add_argument("--replay-markers", default=None, help="markers CSV (t,condition) to replay; default: the matching _gauge_markers.csv")
     ap.add_argument("--calib-s", type=int, default=0, help="seconds of mental to train a personal model; OFF by default: on 8 Nov replay it learned session drift, not effort (recovery read 77)")
-    ap.add_argument("--load-min-clean", type=int, default=2, help="hold the load (label Held, noisy) when fewer channels than this are clean after the chain")
-    ap.add_argument("--quality-uv", type=float, default=100.0, help="a channel counts as clean when its RMS AFTER the cleaning chain is under this (uV); fatigue needs 3 clean")
+    ap.add_argument("--load-min-clean", type=int, default=None, help="hold the load (label Held, noisy) when fewer model channels than this are clean; default: all of them (8 Nov, CRITIQUE dsp-adv2: one noisy channel moves p by a median 0.19, tests/noisy_channel_shift.py)")
+    ap.add_argument("--quality-uv", type=float, default=100.0, help="a channel counts as clean when its RMS is under this (uV) both BEFORE the reference and burst mask (4 to 30 Hz, notched) and AFTER the full chain; fatigue needs 3 clean")
     ap.add_argument("--log")
     ap.add_argument("--no-ui", action="store_true")
     ap.add_argument("--web", action="store_true", help="post state to gauge_server.py (http://localhost:8765) every second")
@@ -251,6 +252,8 @@ def main():
     _ms.CH[:] = model_ch
     global IDX
     IDX = [MONTAGE.index(c) for c in model_ch]
+    if a.load_min_clean is None:
+        a.load_min_clean = len(IDX)                    # score only when every model channel is clean (CRITIQUE dsp-adv2)
     print(f"# model channels {model_ch} -> stream slots {IDX}", flush=True)
     feat_cfg = m.get("feat_cfg")
     if feat_cfg:
@@ -568,7 +571,12 @@ def main():
             else:
                 Xc = sosfiltfilt(SIG_SOS, Xc - Xc.mean(1, keepdims=True), axis=1)
             rms_c = Xc.std(1)
-            clean = [i for k, i in enumerate(IDX) if (not dead[i]) and 0.5 < rms_c[k] < a.quality_uv]   # zeroed by ASR is not clean
+            # quality is also judged BEFORE the reference and burst mask (CRITIQUE dsp-adv1): the mask zeroes the loud
+            # samples, so after the chain 30 percent of channels carrying his real noise looked clean, and those moved p
+            # by a median 0.31 (tests/noisy_channel_shift.py, lab EEG plus his recorded noise)
+            xq = X8[IDX] - X8[IDX].mean(1, keepdims=True)
+            pre_c = sosfiltfilt(PRE_Q_SOS, sosfiltfilt(NOTCH_SOS, xq, axis=1), axis=1)[:, FS // 2:-FS // 2].std(1)
+            clean = [i for k, i in enumerate(IDX) if (not dead[i]) and 0.5 < rms_c[k] < a.quality_uv and pre_c[k] < a.quality_uv]   # zeroed by ASR is not clean
             clean_n = len(clean)
             # fatigue ratio from Hilbert band envelopes: band-pass theta, alpha, beta, take the analytic-signal envelope,
             # and use its MEDIAN over the window as the band amplitude (a burst cannot set it); median over clean channels

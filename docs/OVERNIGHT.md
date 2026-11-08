@@ -312,3 +312,13 @@ Rules for every change: it must be tested on recorded data with a split that is 
 - Replayed through the gauge: rest load 0 throughout; mental median 57, peak 88, alarm at 139 s; recovery median 23, back to 0 by 190 s. Page checked in the browser (port 8797): load 88 during mental, trace over the 50 line, contact view green (8 to 14 uV), model row now comes from the gauge ("this copy trained without person 09").
 - Checks: smoke ALL PASS and 16 replays 0 failed, run side by side.
 
+### Critique iteration 21 (8 Nov, late morning)
+
+- CRITIQUE #31 dsp-adv1 and #32 dsp-adv2 DONE, with evidence.
+  - Rail part already fixed: in the replays, 0 of 1,610 scored windows had a railed sample on a model channel (the critic counted 255 before 0c25f19).
+  - Effect measured (tests/noisy_channel_shift.py): clean lab EEG with ONE model channel given a real noise segment from Paing's recordings (live, over 100 uV before the mask) moved p by a median 0.19 (over 0.10 in 67 percent of 168 windows). The old gate (RMS after the chain) called that channel clean in 30 percent, and those moved p by a median 0.31. A 0.10 shift can be 40 load points.
+  - Fix: a channel counts as clean only when it is under 100 uV both before the reference and burst mask (4 to 30 Hz, notched) and after the full chain; the load is held unless all 5 model channels are clean (--load-min-clean now defaults to all model channels).
+- Alternatives measured at Paing's question ("if one electrode fails there are others"): rebuilding a bad electrode from its layout-A neighbours (tests/interp_shift.py, lab EEG, 840 cases) still moves p by a median 0.085 with steady biases (Pz rebuilt +0.07 on average), so it is not used. Per-electrode backup models would rescue only the windows with exactly one noisy electrode: 130 of 587 noisy scored windows; 205 had all 5 noisy at once. Not built.
+- Consequence, stated plainly: on the 7 and 8 Nov recordings the gauge now scores 24 percent of post-baseline seconds (was 67), 0 to 72 percent per session, and their load means drop toward 0 (01:03 session, mental: 16 to 5). The lab demo is unchanged (0 held; rest 0, mental peak 88, recovery back to 0). PROTOCOL.md amendment updated with these numbers.
+- Checks: smoke ALL PASS and 16 replays 0 failed, run side by side.
+
