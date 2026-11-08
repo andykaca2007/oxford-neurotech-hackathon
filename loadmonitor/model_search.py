@@ -76,6 +76,12 @@ def clean_window(x, fs, cfg):
         env = np.abs(_hilbert(x, axis=1))
         thr = cfg["burst"] * np.median(env, axis=1, keepdims=True) + 1e-9
         bad = env > thr
+        # do not flag the first and last 0.5 s: there the order-8 band-pass's own edge transient lifts the envelope, so on a
+        # dry cap the mask zeroed 30 and 24 percent of the edges (5.8 percent in the middle), lab EEG under 1 percent (CRITIQUE dsp-4)
+        edge = int(0.5 * fs)
+        if bad.shape[1] > 4 * edge:
+            bad[:, :edge] = False
+            bad[:, -edge:] = False
         if bad.any():
             k = max(3, int(fs * 0.05))
             w = np.ones(k) / k
