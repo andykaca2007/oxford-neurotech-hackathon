@@ -167,8 +167,10 @@ def src_fake(seed=0, stall_after=None):
             time.sleep(0.2 / 1.0 * 1.0 / 1.0 * 0.2)   # ~5x real time for a quick test
 
 
-def src_replay(path, speed):
-    """Stream a recorded raw CSV (recordings/*_raw*.csv) through the live pipeline at real time x speed."""
+def src_replay(path, speed, gaps=()):
+    """Stream a recorded raw CSV (recordings/*_raw*.csv) through the live pipeline at real time x speed.
+    gaps: [(raw_time_s, gap_s)] Bluetooth outages the live gauge logged as gap= markers; the raw file has no samples
+    for them, so the replayed clock jumps by gap_s at each one and the loop clears its window (CRITIQUE ops-7)."""
     rows = []
     for line in open(path):
         if line.startswith("#"):
@@ -178,8 +180,11 @@ def src_replay(path, speed):
         except ValueError:
             continue
     print(f"# REPLAY {os.path.basename(path)}: {len(rows) / FS:.0f} s at {speed:g}x", flush=True)
+    gaps = sorted(gaps); gi, cum = 0, 0.0
     for n, r in enumerate(rows):
-        yield n / FS, np.array(r)
+        while gi < len(gaps) and gaps[gi][0] <= n / FS:
+            cum += gaps[gi][1]; gi += 1
+        yield n / FS + cum, np.array(r)
         if n % 50 == 49:
             time.sleep(0.2 / speed)
 
@@ -310,7 +315,7 @@ def main():
     FAT_MIN_BASE, FAT_SHOW_S = 15, a.fatigue_show_s
     fat_ok, t_mon0 = False, None
     personal, calib_task, pers_anchor = None, [], None
-    replay_marks = []
+    replay_marks, replay_gaps = [], []
     if a.replay:
         mpath = a.replay_markers or re.sub(r"_raw.*\.csv$", "_gauge_markers.csv", a.replay)
         if mpath != a.replay and os.path.exists(mpath):          # a raw file without "_raw" in its name has no markers file
@@ -323,11 +328,21 @@ def main():
                     off = float(line.split("=")[1]); continue
                 parts = line.split(",")
                 try:
-                    if parts[1].strip() not in PHASES:              # phases are logged, not replayed as conditions
-                        replay_marks.append((float(parts[0]), parts[1].strip()))
+                    lab = parts[1].strip()
+                    if lab.startswith("gap="):                       # an outage the live gauge saw: LSL time jumped, raw file did not
+                        replay_gaps.append((float(parts[0]), float(lab[4:])))
+                    elif lab not in PHASES:                          # phases are logged, not replayed as conditions
+                        replay_marks.append((float(parts[0]), lab))
                 except (ValueError, IndexError):
                     continue
             replay_marks = [(tm + off, c) for tm, c in replay_marks]
+            # gap markers are in gauge (LSL) time, which already contains the earlier gaps; raw-file time removes them
+            cum, g_raw = 0.0, []
+            for tg, gs in sorted(replay_gaps):
+                g_raw.append((tg + off - cum - gs, gs)); cum += gs     # the marker is written after the jump: raw position = before it
+            replay_gaps = g_raw
+            if replay_gaps:
+                print(f"# {len(replay_gaps)} outage(s) in the markers: the replay clock jumps {', '.join(f'{gs:.1f} s at raw {tr:.1f} s' for tr, gs in replay_gaps)}", flush=True)
             print(f"# replaying {len(replay_marks)} condition markers from {os.path.basename(mpath)} (shifted by {off:.2f} s to raw-file time)", flush=True)
     p_recent = deque(maxlen=5)
     fat_recent = deque(maxlen=5)
@@ -364,6 +379,7 @@ def main():
     # skip 7 s per block: the 4 s window still holds the last block, plus the spoken prompt (both prompts about 1.9 s,
     # measured with say -o) and its start-up latency (CRITIQUE calib-adv3; was 5 s with a 2.9 s task prompt)
     CAL_BLOCKS, CAL_BLOCK_S, CAL_SKIP_S, CAL_MIN_AUC = 8, 20, 7, 0.80
+    GAP_S = 1.5                     # a jump in sample time over this is an outage: the window restarts (CRITIQUE ops-7)
     CAL_MIN_WIN = 10                                   # of the 15 windows each block can keep (CRITIQUE calib-3)
     # eyes-closed alpha check: 20 s eyes open, 20 s eyes closed; PASS when posterior alpha rises 3 dB to a peak of +3 dB or more
     ac = dict(active=False, t0=None, open=[], closed=[], open8=[], closed8=[], noise=[], result=None, said=set())
@@ -477,12 +493,13 @@ def main():
                 cond["web_err"] = repr(e)[:60]
                 print(f"# web page not reachable: {cond['web_err']}", flush=True)
     next_eval = 0.0
+    prev_t = None                                     # sample time of the previous sample, for outage detection
     load_pct = 0.0
     t = 0.0
     print(f"# {state}", flush=True)
     try:
         last_t, nodata_since, nodata_said = 0.0, None, False
-        for t, x in (src_fake(stall_after=a.stall_after) if a.fake else src_replay(a.replay, a.speed) if a.replay else src_lsl(a.stream)):
+        for t, x in (src_fake(stall_after=a.stall_after) if a.fake else src_replay(a.replay, a.speed, replay_gaps) if a.replay else src_lsl(a.stream)):
             if t is None:
                 # no sample for 1 s from the headset stream
                 nodata_since = nodata_since or time.time()
@@ -503,6 +520,14 @@ def main():
                 print(f"# data back after {time.time() - nodata_since:.0f} s", flush=True)
                 nodata_since, nodata_said = None, False
                 state = "monitoring" if base is not None else state
+            if prev_t is not None and t - prev_t > GAP_S:
+                # the clock jumped: a Bluetooth outage (live, LSL time runs on while no samples arrive) or a replayed one.
+                # A 4 s window must not straddle the splice, so start the window again; log it so a replay can realign
+                # its markers (CRITIQUE ops-7)
+                print(f"# GAP {t - prev_t:.1f} s at t={t:.1f}: window restarted", flush=True)
+                mark(t, f"gap={t - prev_t:.1f}")
+                buf.clear(); next_eval = t + 1.0
+            prev_t = t
             last_t = t
             if a.seconds and t > a.seconds:
                 break
