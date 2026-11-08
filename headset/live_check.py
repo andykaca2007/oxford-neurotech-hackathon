@@ -41,13 +41,22 @@ def tail_rows(path, n):
     return np.array(rows).T if rows else None
 
 
+def newest():
+    files = glob.glob(os.path.join(ROOT, "recordings", "*_raw*.csv"))
+    return max(files, key=os.path.getmtime) if files else None
+
+
 def main():
-    files = sorted(glob.glob(os.path.join(ROOT, "recordings", "*_raw*.csv")), key=os.path.getmtime)
-    if not files:
-        sys.exit("no raw recording yet: start ./run_all.sh first")
-    path = files[-1]
-    print(f"watching {os.path.basename(path)}  (model electrodes marked *; all 5 must be under 100 for a load number)")
+    path = None
     while True:
+        p = newest()
+        if p is None or time.time() - os.path.getmtime(p) > 3:
+            # nothing has written a recording in the last 3 s: run_all.sh is stopped, or its bridge died
+            print(time.strftime("%H:%M:%S") + "  NOT RECORDING: start ./run_all.sh in the other tab (this check follows it automatically)", flush=True)
+            time.sleep(2); continue
+        if p != path:
+            path = p
+            print(f"watching {os.path.basename(path)}  (model electrodes marked *; all 5 must be under 100 for a load number)", flush=True)
         x = tail_rows(path, 2 * FS)
         if x is None or x.shape[1] < FS:
             print("waiting for data ..."); time.sleep(2); continue
