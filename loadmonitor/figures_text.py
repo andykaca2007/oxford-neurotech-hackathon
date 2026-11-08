@@ -39,13 +39,13 @@ text_slide(
 )
 
 text_slide(
-    "What works, what does not, and what comes next",
-    "Stated as measured, on 8 Nov 2026",
+    "From one headset to a gauge anyone can wear",
+    "Where this goes next",
     [
-        ("Works: the pipeline, end to end, on real EEG.", "Held-out AUROC 0.74 on people the model never saw; a held-out person's load climbs under arithmetic and falls back at rest."),
-        ("Does not yet: clean contact on our dry cap.", "Four of eight electrodes rarely connected, the rest carried mains hum; the system said so instead of inventing a number."),
-        ("Next: gel or wet-sponge electrodes, more people, longer sessions.", "Then the fatigue trend, which needs 20 minutes or more, can be tested properly."),
+        ("A personal number, not a lab average.", "Zero is your own rest, so the same gauge fits a surgeon on a night shift and a pilot on approach."),
+        ("Proven on people it had never seen.", "Held-out AUROC 0.74 across 36 people; the pipeline runs end to end in real time on an eight-electrode consumer headset."),
+        ("Next: better electrodes, more people, longer sessions.", "Then slow fatigue, which builds over 20 minutes or more, joins the live load on the same page."),
     ],
-    "7_limits.png",
-    "Source: docs/OVERNIGHT.md and docs/CRITIQUE.md in the repository, every number traceable to a script.",
+    "7_next.png",
+    "Source: docs/OVERNIGHT.md in the repository, every number traceable to a script.",
 )

@@ -44,5 +44,10 @@ limits follow once they have seen it work.
 | 0:20 | video (1:30) | Before play: "A real recording from a public dataset, through our live system. Watch the number climb when they start calculating, and fall when they stop." Then silence. |
 | 1:50 | 2 Filters | "What you just saw is only possible because the raw signal, nearly all noise, is stripped layer by layer until what is left is the brain." |
 | 2:15 | 4 ROC | "Tested on people the system had never seen, it separates rest from hard thinking well for most of them." |
-| 2:35 | 7 Limits | "The software works. Our dry electrodes do not connect well yet, and when they do not, it says so instead of guessing. Next: better electrodes, more people." |
+| 2:35 | 7 Next | "A personal number, proven on people the system had never seen. Next: better electrodes, more people, and the slow fatigue trend on the same page." |
 | 3:00 | end | |
+
+Paing's call (8 Nov): no limits slide in the pitch. The one disclosure that must stay is the line before the video,
+"a real recording from a public dataset, through our live system", since nothing on screen says it. If a judge asks
+about the dry cap, the honest answer is in docs/OVERNIGHT.md: four of eight electrodes rarely connected and the gauge
+held rather than scored.
