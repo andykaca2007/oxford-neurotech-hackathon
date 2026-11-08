@@ -24,7 +24,7 @@ m = joblib.load('models/readiness.joblib'); assert all(c in MONTAGE for c in m['
 EOF
 
 step "model file loads, has the expected fields"
-if $PY -c "import joblib; m=joblib.load('models/readiness.joblib'); assert m['epoch_s']>0 and 'model' in m and m.get('loso_auc',0)>0.6" 2>/dev/null; then ok; else bad "models/readiness.joblib missing or odd: run loadmonitor/model_search.py --fit-best"; fi
+if $PY -c "import joblib; m=joblib.load('models/readiness.joblib'); assert m['epoch_s']>0 and 'model' in m and m.get('loso_auc',0)>0.6" 2>/dev/null; then ok; else bad "models/readiness.joblib missing or odd: rebuild with .venv/bin/python loadmonitor/model_search.py --fit-best --robust --invariant --channels Fz,C3,Cz,Pz,O1 --out models/readiness.joblib"; fi
 
 step "web server starts and serves the page"
 $PY loadmonitor/gauge_server.py $PORT >/tmp/smoke_server.log 2>&1 & SRV=$!

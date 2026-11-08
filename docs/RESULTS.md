@@ -56,7 +56,7 @@ Rich features add delta/gamma/low- and high-beta, relative powers, spectral entr
 theta gradient and blink-band power on Fz. Chance is 0.5 / 50%. The MLP memorises the training
 set and loses on strangers. Loss curves and the search: figures/model_figures.png,
 figures/model_search.png. The gauge uses the gradient-boosting model (models/readiness.joblib,
-rebuild with `loadmonitor/model_search.py --fit-best`).
+rebuild the current live model with `.venv/bin/python loadmonitor/model_search.py --fit-best --robust --invariant --channels Fz,C3,Cz,Pz,O1 --out models/readiness.joblib`; see docs/OPTIMIZE.md).
 
 ## Electrode layouts (Andy's proposal, docs/ELECTRODE_LAYOUT.md), same pipeline
 

@@ -217,10 +217,16 @@ def main():
     ap.add_argument("--fit-best", action="store_true", help="skip the search: fit the known winner (4 s, overlap, rich, gradient boosting) and save it")
     ap.add_argument("--robust", action="store_true", help="with --fit-best: 50 Hz notch, 3 Hz high-pass, no delta band (ROBUST_CFG), for dry electrodes")
     ap.add_argument("--invariant", action="store_true", help="with --fit-best: drop the absolute log band powers and the blink band, keep only amplitude-invariant features (relative powers, ratios, entropy, gradient)")
+    ap.add_argument("--channels", default=None, help="with --fit-best: comma-separated channels, e.g. Fz,C3,Cz,Pz,O1 (the live model); default: readiness_model.CH (8)")
+    ap.add_argument("--out", default="models/readiness_candidate.joblib", help="with --fit-best: where to save; the live gauge reads models/readiness.joblib, so pass that explicitly to replace it")
+    ap.add_argument("--skip-loso", action="store_true", help="with --fit-best: fit only, no leave-one-subject-out scoring (for reproducibility checks)")
     a = ap.parse_args()
     if a.fit_best:
         import joblib
         from sklearn.base import clone
+        import readiness_model as _rm
+        if a.channels:
+            _rm.CH[:] = [c.strip() for c in a.channels.split(",") if c.strip()]    # CH here is the same list object
         cfg = ROBUST_CFG if a.robust else FEAT_CFG
         X, y, subj = build(4.0, True, True, cfg)
         mask = None
@@ -229,14 +235,18 @@ def main():
             nb = 6 - int(bool(cfg.get("drop_delta"))) - int(bool(cfg.get("drop_gamma")))
             mask = np.ones(X.shape[1], bool); mask[:nb * len(CH)] = False; mask[-1] = False
             X = X[:, mask]
-        acc, sd, auc, tr = loso(dict(models())["grad boosting"], X, y, subj)
+        if a.skip_loso:
+            acc = sd = auc = tr = float("nan")
+        else:
+            acc, sd, auc, tr = loso(dict(models())["grad boosting"], X, y, subj)
         clf = clone(dict(models())["grad boosting"]).fit(X, y)
-        os.makedirs("models", exist_ok=True)
-        joblib.dump(dict(model=clf, channels=CH, epoch_s=4.0, rich=True, feature_fn="model_search.feats", feature_mask=mask, feat_cfg=cfg,
+        os.makedirs(os.path.dirname(a.out) or ".", exist_ok=True)
+        joblib.dump(dict(model=clf, channels=list(CH), epoch_s=4.0, rich=True, feature_fn="model_search.feats", feature_mask=mask, feat_cfg=cfg,
                          loso_bal_acc=float(acc), loso_auc=float(auc), n_subjects=36,
+                         rebuild=" ".join(["loadmonitor/model_search.py"] + sys.argv[1:]),
                          config=dict(win=4.0, overlap=True, rich=True, invariant=bool(a.invariant), robust=bool(a.robust),
-                                     model="grad boosting" + (" invariant" if a.invariant else "") + (" robust" if a.robust else ""))), "models/readiness.joblib")
-        print(f"saved models/readiness.joblib: grad boosting, rich{' invariant' if a.invariant else ''}{' robust' if a.robust else ''}, 4 s, {X.shape[1]} features; LOSO bal acc {acc:.3f} +/- {sd:.3f}, AUC {auc:.3f}, train {tr:.3f}")
+                                     model="grad boosting" + (" invariant" if a.invariant else "") + (" robust" if a.robust else "") + (f" {len(CH)}ch" if a.channels else ""))), a.out)
+        print(f"saved {a.out}: grad boosting, channels {' '.join(CH)}, rich{' invariant' if a.invariant else ''}{' robust' if a.robust else ''}, 4 s, {X.shape[1]} features; LOSO bal acc {acc:.3f} +/- {sd:.3f}, AUC {auc:.3f}, train {tr:.3f}")
         return
     rows = []
     wins = [4.0] if a.quick else [2.0, 4.0, 6.0]

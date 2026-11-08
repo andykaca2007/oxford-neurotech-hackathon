@@ -21,7 +21,7 @@ The dry Unicorn on hair gives 1 to 40 Hz amplitudes of 300 to 4000 uV that chang
 | all 109 (log band powers + relative + ratios + entropy + gradient + blink) | 0.841 | 0.719 |
 | 60 amplitude-invariant (relative powers, ratios, entropy, Fz-Pz theta gradient) | 0.807 | 0.807 |
 
-Live model = gradient boosting on the 60 invariant features (`model_search.py --fit-best --invariant`, `feature_mask` in the joblib). Costs 0.034 AUC on clean data, immune to gain changes. The stack (0.867 strict AUC) is parked in models/readiness_stack.joblib; it also uses absolute power and has the same weakness on this headset.
+(Superseded, see the end of this file.) Gradient boosting on the 60 invariant features (`--fit-best --invariant`, 8 channels). Costs 0.034 AUC on clean data, immune to gain changes. The stack (0.867 strict AUC) is parked in models/readiness_stack.joblib; it also uses absolute power and has the same weakness on this headset.
 
 ## Final live processing (8 Nov 00:30): robust chain
 
@@ -35,3 +35,14 @@ Common average reference (dead channels excluded), 50 Hz notch, 3 to 30 Hz order
 | robust chain above, rest-calibrated (LIVE) | 0.763 | 23 and 17 / 0.00 |
 
 Trade: 0.08 AUC on clean data for a gauge that sits low at rest on a dry headset with heavy mains and drift. The fatigue ratio uses Hilbert band envelopes (median over time, median over channels under 300 uV) with the 36-subject rested reference computed the same way.
+
+
+## Live model and how to rebuild it exactly (8 Nov)
+
+5 channels (Fz C3 Cz Pz O1), robust chain (detrend, notch comb, median reference, 4 to 30 Hz order 8, burst mask with protected edges, ASR, median Welch), 29 amplitude-invariant features, gradient boosting. LOSO AUC 0.760, balanced accuracy 0.679 (lab only). Rebuild, about 5 minutes:
+
+```
+.venv/bin/python loadmonitor/model_search.py --fit-best --robust --invariant --channels Fz,C3,Cz,Pz,O1 --out models/readiness.joblib
+```
+
+Without `--out` it writes models/readiness_candidate.joblib and leaves the live model alone. The command is stored in the joblib under `rebuild`. Checked 8 Nov: a rebuild with this command matches the live model exactly (max probability difference 0 over all 2,083 lab windows).
