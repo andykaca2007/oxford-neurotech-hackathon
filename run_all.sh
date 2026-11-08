@@ -15,7 +15,8 @@
 set -u
 cd "$(dirname "$0")"
 PY=.venv/bin/python
-SERIAL="${1:-U8-2025.10.14}"
+SERIAL="${1-U8-2025.10.14}"          # no colon: an explicit '' means "whichever amplifier answers" (CRITIQUE ops-3)
+ALLOW="U8-2025.10.14 U8-2025.11.14"   # our two amplifiers; other teams' Unicorns in the room are never picked
 WHO="${2:-anon}"                      # ./run_all.sh U8-2025.10.14 paing  -> files named with the wearer
 REPLAY_FILE=""
 if [ "$SERIAL" = "replay" ]; then
@@ -45,15 +46,28 @@ if curl -s -o /dev/null http://127.0.0.1:8765/state; then echo "web page started
 if [ "$SERIAL" != "fake" ] && [ "$SERIAL" != "replay" ]; then
   # 2. headset bridge (its scope window must stay open; minimise it)
   pkill -f unicorn_gpype.py 2>/dev/null
-  $PY headset/unicorn_gpype.py --serial "$SERIAL" --csv "${SESSION}_raw.csv" > logs/bridge_$STAMP.log 2>&1 &
-  BRIDGE_PID=$!
-  PIDS+=($BRIDGE_PID)
-  echo "connecting to $SERIAL ..."
-  for i in $(seq 1 40); do
+  start_bridge() {
+    $PY headset/unicorn_gpype.py ${SERIAL:+--serial "$SERIAL"} --csv "${SESSION}_raw.csv" > logs/bridge_$STAMP.log 2>&1 &
+    BRIDGE_PID=$!
+    PIDS+=($BRIDGE_PID)
+    echo "connecting to ${SERIAL:-whichever amplifier answers} ..."
+  }
+  start_bridge
+  SWITCHED=0
+  for i in $(seq 1 60); do
     if $PY -c "from pylsl import resolve_byprop; import sys; sys.exit(0 if resolve_byprop('name','Unicorn',timeout=1) else 1)" 2>/dev/null; then
-      echo "headset streaming"; break
+      echo "headset streaming${SERIAL:+ from $SERIAL}"; break
     fi
-    if ! kill -0 "$BRIDGE_PID" 2>/dev/null; then echo "bridge died, see logs/bridge_$STAMP.log:"; tail -3 logs/bridge_$STAMP.log; cleanup; fi
+    if ! kill -0 "$BRIDGE_PID" 2>/dev/null; then
+      # the scan heard the OTHER one of our amplifiers: switch to it once (last night 5 of 25 launches died this way)
+      HEARD=$(grep -o "heard \['U8-[0-9.]*'" logs/bridge_$STAMP.log | head -1 | grep -o "U8-[0-9.]*")
+      if [ "$SWITCHED" = 0 ] && [ -n "$HEARD" ] && [ "$HEARD" != "$SERIAL" ] && echo " $ALLOW " | grep -q " $HEARD "; then
+        echo "$SERIAL not found; the scan heard $HEARD, our other amplifier: switching to it."
+        echo "CHECK it is the one on the head: run the Alpha check before trusting any number."
+        SERIAL="$HEARD"; SWITCHED=1; sleep 1; start_bridge; continue
+      fi
+      echo "bridge died, see logs/bridge_$STAMP.log:"; tail -3 logs/bridge_$STAMP.log; cleanup
+    fi
     sleep 1
   done
 fi

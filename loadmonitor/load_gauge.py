@@ -211,10 +211,13 @@ def main():
     replay_marks = []
     if a.replay:
         mpath = a.replay_markers or re.sub(r"_raw.*\.csv$", "_gauge_markers.csv", a.replay)
-        if os.path.exists(mpath):
+        if mpath != a.replay and os.path.exists(mpath):          # a raw file without "_raw" in its name has no markers file
             for line in open(mpath).read().splitlines()[1:]:
-                tm, c = line.split(",")[:2]
-                replay_marks.append((float(tm), c.strip()))
+                parts = line.split(",")
+                try:
+                    replay_marks.append((float(parts[0]), parts[1].strip()))
+                except (ValueError, IndexError):
+                    continue
             print(f"# replaying {len(replay_marks)} condition markers from {os.path.basename(mpath)}", flush=True)
     p_recent = deque(maxlen=5)
     fat_recent = deque(maxlen=5)

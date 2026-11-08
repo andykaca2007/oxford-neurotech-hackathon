@@ -98,7 +98,7 @@
     {
       "label": "1 headset bridge (10.14)",
       "type": "shell",
-      "command": "${workspaceFolder}/.venv/bin/python headset/unicorn_gpype.py --serial U8-2025.10.14",
+      "command": "${workspaceFolder}/.venv/bin/python headset/unicorn_gpype.py --serial U8-2025.10.14 --csv recordings/manual_$(date +%Y%m%d_%H%M%S)_raw.csv",
       "options": {
         "cwd": "${workspaceFolder}"
       },
@@ -112,7 +112,7 @@
     {
       "label": "1b headset bridge (11.14)",
       "type": "shell",
-      "command": "${workspaceFolder}/.venv/bin/python headset/unicorn_gpype.py --serial U8-2025.11.14",
+      "command": "${workspaceFolder}/.venv/bin/python headset/unicorn_gpype.py --serial U8-2025.11.14 --csv recordings/manual_$(date +%Y%m%d_%H%M%S)_raw.csv",
       "options": {
         "cwd": "${workspaceFolder}"
       },
@@ -140,7 +140,7 @@
     {
       "label": "3 gauge, real head",
       "type": "shell",
-      "command": "${workspaceFolder}/.venv/bin/python loadmonitor/load_gauge.py --lsl --web --no-ui --log recordings/session_$(date +%H%M).csv",
+      "command": "${workspaceFolder}/.venv/bin/python loadmonitor/load_gauge.py --lsl --web --no-ui --alarm 50 --hold 20 --smooth 12 --log recordings/manual_$(date +%Y%m%d_%H%M%S)_gauge.csv",
       "options": {
         "cwd": "${workspaceFolder}"
       },
@@ -154,7 +154,7 @@
     {
       "label": "3b gauge, fake data",
       "type": "shell",
-      "command": "${workspaceFolder}/.venv/bin/python loadmonitor/load_gauge.py --fake --web --no-ui",
+      "command": "${workspaceFolder}/.venv/bin/python loadmonitor/load_gauge.py --fake --web --no-ui --alarm 50 --hold 20 --smooth 12",
       "options": {
         "cwd": "${workspaceFolder}"
       },
