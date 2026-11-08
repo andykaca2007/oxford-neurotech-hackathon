@@ -224,6 +224,8 @@ def main():
     ap.add_argument("--replay-markers", default=None, help="markers CSV (t,condition) to replay; default: the matching _gauge_markers.csv")
     ap.add_argument("--calib-s", type=int, default=0, help="seconds of mental to train a personal model; OFF by default: on 8 Nov replay it learned session drift, not effort (recovery read 77)")
     ap.add_argument("--load-min-clean", type=int, default=None, help="hold the load (label Held, noisy) when fewer model channels than this are clean; default: all of them (8 Nov, CRITIQUE dsp-adv2: one channel carrying a foreign signal moves p by a median 0.18 to 0.21 at any level from 20 uV up, tests/threshold_sweep.py)")
+    ap.add_argument("--fatigue-show-s", type=float, default=1200, help="show the fatigue number this many seconds after the baseline (default 20 min, a slow trend; the lab demo uses 0 and the page says it builds over 20+ min)")
+    ap.add_argument("--show-noisy", action="store_true", help="score windows with too few clean channels as LOW CONFIDENCE instead of holding: the number keeps moving, greyed on the page, the alarm cannot fire and Calibrate skips them; a disconnected channel still holds")
     ap.add_argument("--quality-uv", type=float, default=100.0, help="a channel counts as clean when its RMS is under this (uV) both BEFORE the reference and burst mask (4 to 30 Hz, notched) and AFTER the full chain; fatigue needs 3 clean")
     ap.add_argument("--log")
     ap.add_argument("--no-ui", action="store_true")
@@ -286,7 +288,7 @@ def main():
     # fatigue: a baseline of at least 15 clean windows, and nothing shown before 20 min of monitoring. The ratio's
     # 180 s smoothing cannot reach 'Tiring' honestly in a short demo; what moves it in minutes is artefact and
     # baseline steps (CRITIQUE fatigue-3: lab rest stays 45 to 55, his sessions step 0.2 to 0.4 log10 with no task).
-    FAT_MIN_BASE, FAT_SHOW_S = 15, 1200
+    FAT_MIN_BASE, FAT_SHOW_S = 15, a.fatigue_show_s
     fat_ok, t_mon0 = False, None
     personal, calib_task, pers_anchor = None, [], None
     replay_marks = []
@@ -341,7 +343,7 @@ def main():
     def speak(txt):
         subprocess.Popen(["say", txt])
 
-    state = "BASELINE: sit still, eyes open, 30 s"
+    state = f"BASELINE: sit still, eyes open, {a.baseline:g} s"
     hist = deque(maxlen=600)
     import urllib.request
 
@@ -374,7 +376,7 @@ def main():
             pass
         body = json.dumps(dict(t=round(t_now, 1), state=state, load=round(load_pct, 1), fatigue=(round(fatigue_pct, 1) if (fat_ok and t_mon0 is not None and t_now - t_mon0 >= FAT_SHOW_S and np.isfinite(fatigue_pct)) or (a.fake and np.isfinite(fatigue_pct)) else None),
                                fatigue_note=("" if fat_ok else "no fatigue baseline (fewer than 15 clean seconds); press Rebaseline when clean") if base is not None else "",
-                               fatigue_wait_s=(max(0, int(FAT_SHOW_S - (t_now - t_mon0))) if (fat_ok and t_mon0 is not None) else None), clean=int(clean_n), fatigue_held=bool(clean_n < 3 and not a.fake), load_held=bool((clean_n < a.load_min_clean or bool(lost)) and not a.fake), contact=bool(contact or not a.strict), alarm=bool(alarmed), alarm_at=a.alarm, hold_s=a.hold, n_model_ch=len(IDX), load_min_clean=a.load_min_clean,
+                               fatigue_wait_s=(max(0, int(FAT_SHOW_S - (t_now - t_mon0))) if (fat_ok and t_mon0 is not None) else None), clean=int(clean_n), fatigue_held=bool(clean_n < 3 and not a.fake), load_held=bool((bool(lost) or (clean_n < a.load_min_clean and not a.show_noisy)) and not a.fake), low_conf=bool(clean_n < a.load_min_clean and not lost and a.show_noisy and not a.fake), contact=bool(contact or not a.strict), alarm=bool(alarmed), alarm_at=a.alarm, hold_s=a.hold, n_model_ch=len(IDX), load_min_clean=a.load_min_clean,
                                calibration=dict(active=cal["active"], block=None if (not cal["active"] or cal["t0"] is None) else int((t_now - cal["t0"]) // CAL_BLOCK_S) + 1,
                                                 blocks=CAL_BLOCKS, result=cal["result"]), alpha_now=None if alpha_now is None else round(alpha_now, 1),
                                alpha_check=dict(active=ac["active"], elapsed=None if (not ac["active"] or ac["t0"] is None) else round(t_now - ac["t0"]), result=ac["result"]), personal=personal is not None, calib=len(calib_task), calib_s=a.calib_s, replay=(os.path.basename(a.replay) if a.replay else False), channels=chans, sig=sig,
@@ -444,6 +446,9 @@ def main():
                         speak("No data from the headset.")
                         nodata_said = True
                     post_state(last_t)
+                if a.seconds and gap > max(10.0, a.seconds):        # a time-limited run (tests) must end even if the stream died
+                    print(f"# stopping: no data for {gap:.0f} s and --seconds {a.seconds:g} was set", flush=True)
+                    break
                 continue
             if nodata_since is not None:
                 print(f"# data back after {time.time() - nodata_since:.0f} s", flush=True)
@@ -462,7 +467,7 @@ def main():
                             raise KeyboardInterrupt
                         if e.key == ui["pygame"].K_b:
                             base_feats, base, ema, alarmed, above_since = [], None, None, False, None
-                            state = "BASELINE: sit still, eyes open, 30 s"
+                            state = f"BASELINE: sit still, eyes open, {a.baseline:g} s"
                             print("# re-baselining", flush=True)
             if len(buf) < win or t < next_eval:
                 if ui is not None and t >= next_eval - 0.9:
@@ -695,7 +700,7 @@ def main():
                     log.write(f"{t:.1f},{load_pct:.1f},{fatigue_pct:.1f},{int(alarmed)},{cond['now']},0," + ",".join("nan" for _ in f) + "\n")
                 hist.append(round(load_pct, 1))
                 post_state(t)
-            elif (clean_n < a.load_min_clean or lost) and not a.fake:
+            elif (lost or (clean_n < a.load_min_clean and not a.show_noisy)) and not a.fake:
                 # too few channels survive the cleaning chain, or a model channel is not connected: the model would be
                 # reading noise or an empty channel (a lost Fz moved p by +0.29, CRITIQUE dsp-1). Hold the load, say so.
                 state = (f"CHANNEL LOST: {' '.join(lost)}, load held" if lost else f"NOISY: {clean_n}/{len(IDX)} clean, load held")
@@ -709,7 +714,9 @@ def main():
                 hist.append(round(load_pct, 1))
                 post_state(t)
             else:
-                state = "monitoring"
+                # low confidence (--show-noisy): too few clean channels, but all connected; scored, shown greyed, no alarm
+                low_conf = bool(clean_n < a.load_min_clean and not a.fake)
+                state = f"LOW CONFIDENCE: {clean_n}/{len(IDX)} clean, alarm off" if low_conf else "monitoring"
                 xf = (f - base)[None, :]
                 if cal["active"]:
                     if cal["t0"] is None:
@@ -724,7 +731,7 @@ def main():
                             cal["said"].add(blk)
                             start_n = 4000 - 137 * (blk // 2)
                             speak("Rest. Eyes on the point." if blk % 2 == 0 else f"Count down from {start_n} in sevens, silently.")
-                        if el - blk * CAL_BLOCK_S >= CAL_SKIP_S:          # skip the first seconds: the 4 s window still holds the last block
+                        if el - blk * CAL_BLOCK_S >= CAL_SKIP_S and not low_conf:          # skip the first seconds: the 4 s window still holds the last block
                             cal["blocks"].setdefault(blk, []).append(xf[0].copy())
                         state = f"CALIBRATING: block {blk + 1}/{CAL_BLOCKS} {'rest' if blk % 2 == 0 else 'subtract'}"
                     else:
@@ -803,7 +810,7 @@ def main():
                     fatigue_pct = float(np.clip(fat_start + min(10 * z, (fat_ema - fat_base) / 0.301 * 25) if z > 0 else fat_start + 10 * z, 0, 100))
                 else:
                     fatigue_pct = float("nan")
-                if load_pct >= a.alarm:
+                if load_pct >= a.alarm and not low_conf:
                     above_since = above_since or t
                     if not alarmed and t - above_since >= a.hold:
                         alarmed = True
@@ -815,7 +822,7 @@ def main():
                     if not header_written[0]:
                         log.write("t,load_pct,fatigue_pct,alarm,condition,contact," + ",".join(f"f{i}" for i in range(len(f))) + "\n")
                         header_written[0] = True
-                    log.write(f"{t:.1f},{load_pct:.1f},{fatigue_pct:.1f},{int(alarmed)},{cond['now']},1," + ",".join(f"{v:.3f}" for v in f) + "\n")
+                    log.write(f"{t:.1f},{load_pct:.1f},{fatigue_pct:.1f},{int(alarmed)},{cond['now']},{2 if low_conf else 1}," + ",".join(f"{v:.3f}" for v in f) + "\n")   # contact 2 = low confidence
                     log.flush()
                 hist.append(round(load_pct, 1))
                 post_state(t)

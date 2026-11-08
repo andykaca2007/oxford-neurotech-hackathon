@@ -5,6 +5,7 @@
 #   ./run_all.sh U8-2025.11.14        # another amplifier
 #   ./run_all.sh fake                 # no headset: fake signal, for rehearsing
 #   ./run_all.sh replay recordings/<x>_raw_<y>.csv   # fallback: a recorded session through the live page, shown as REPLAY
+#   ./run_all.sh lab 3.5              # same at 3.5x speed: the whole 210 s fits a 60 s video
 #   ./run_all.sh lab                  # demo fallback: a held-out lab person (rest, arithmetic, rest) through the live page;
 #                                     #   build it once with .venv/bin/python loadmonitor/lab_demo.py
 #   ./run_all.sh U8-2025.10.14 andy   # second word = who is wearing it; names the recordings
@@ -22,6 +23,9 @@ SERIAL="${1-U8-2025.10.14}"          # no colon: an explicit '' means "whichever
 ALLOW="U8-2025.10.14 U8-2025.11.14"   # our two amplifiers; other teams' Unicorns in the room are never picked
 WHO="${2:-anon}"                      # ./run_all.sh U8-2025.10.14 paing  -> files named with the wearer
 REPLAY_FILE=""
+SPEED=1
+BASE=30
+FAT_ARG=""
 MODEL_ARG=""                          # plain string, not an array: bash 3.2 with set -u rejects an empty array
 if [ "${3-}" = "4ch" ]; then
   if [ ! -f models/readiness_4ch.joblib ]; then
@@ -33,7 +37,7 @@ if [ "$SERIAL" = "lab" ]; then
   REPLAY_FILE=$(ls -t demo/lab_eegmat_s*_raw.csv 2>/dev/null | head -1); WHO="lab"
   if [ -z "$REPLAY_FILE" ] || [ ! -f models/readiness_demo.joblib ]; then
     echo "lab demo files missing: run  .venv/bin/python loadmonitor/lab_demo.py  once (about 5 min)"; exit 1; fi
-  SERIAL="replay"; MODEL_ARG="--model models/readiness_demo.joblib"
+  SERIAL="replay"; MODEL_ARG="--model models/readiness_demo.joblib"; SPEED="${2:-1}"; BASE="${3:-30}"; FAT_ARG="--fatigue-show-s 0"   # lab demo: fatigue shown at once, labelled slow trend   # ./run_all.sh lab 2.33 20 = 90 s video, 20 s baseline (10 s or less: the alarm never fires on this person)
   echo "LAB DEMO: $REPLAY_FILE with models/readiness_demo.joblib (that person held out of training)"
 elif [ "$SERIAL" = "replay" ]; then
   REPLAY_FILE="${2:-}"; WHO="replay"
@@ -97,9 +101,10 @@ if [ "$SERIAL" = "fake" ]; then
   $PY loadmonitor/load_gauge.py --fake --web --no-ui
 elif [ "$SERIAL" = "replay" ]; then
   echo "REPLAY of $REPLAY_FILE at real time; the page shows a REPLAY banner"
-  $PY loadmonitor/load_gauge.py --replay "$REPLAY_FILE" $MODEL_ARG --speed 1 --web --no-ui --alarm 50 --hold 20 --smooth 12 --log "${SESSION}_gauge.csv"
+  $PY loadmonitor/load_gauge.py --replay "$REPLAY_FILE" $MODEL_ARG --show-noisy --speed $SPEED --baseline $BASE $FAT_ARG --web --no-ui --alarm 50 --hold 20 --smooth 12 --log "${SESSION}_gauge.csv"
 else
   # alarm at 50 held 20 s, 12 s smoothing: on this cap Zetamac reaches about 50 and rest wobbles 0 to 36
-  $PY loadmonitor/load_gauge.py --lsl --stream "$STREAM" $MODEL_ARG --web --no-ui --alarm 50 --hold 20 --smooth 12 --log "${SESSION}_gauge.csv"
+  # --show-noisy: keep the number moving when channels are noisy, greyed as LOW CONFIDENCE with the alarm off (Paing, 8 Nov)
+  $PY loadmonitor/load_gauge.py --lsl --stream "$STREAM" $MODEL_ARG --show-noisy --web --no-ui --alarm 50 --hold 20 --smooth 12 --log "${SESSION}_gauge.csv"
 fi
 cleanup

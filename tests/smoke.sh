@@ -58,7 +58,7 @@ if pgrep -f "unicorn_gpype.py --serial" >/dev/null; then
   step "headset bridge --sim and gauge --lsl"; echo "SKIP  (a live headset session is running; a second LSL stream named Unicorn would confuse it)"
 else
 step "headset bridge in --sim mode streams to LSL (no Bluetooth)"
-( sleep 12; echo ) | $PY headset/unicorn_gpype.py --sim --csv ${T}_raw.csv >${T}_bridge.log 2>&1 & BRP=$!
+( sleep 25; echo ) | $PY headset/unicorn_gpype.py --sim --csv ${T}_raw.csv >${T}_bridge.log 2>&1 & BRP=$!
 sleep 5
 if $PY -c "from pylsl import resolve_byprop; import sys; sys.exit(0 if resolve_byprop('name','Unicorn',timeout=5) else 1)" 2>/dev/null; then ok; else bad "no LSL stream from --sim"; fi
 
@@ -76,7 +76,8 @@ if $PY explored/ssvep/ssvep_decode.py --fake --seconds 6 2>/dev/null | grep -q "
 
 step "headset stall: NO DATA shown, page age grows, Ctrl-C stops the gauge"
 $PY -c "import signal,os,sys; signal.signal(signal.SIGINT, signal.SIG_DFL); os.execv(sys.argv[1], sys.argv[1:])" $PY loadmonitor/load_gauge.py --fake --stall-after 30 --web --web-port $PORT --no-ui --baseline 4 >${T}_stall.log 2>&1 & STP=$!
-sleep 12; kill -INT $STP 2>/dev/null; sleep 3
+for i in $(seq 1 40); do grep -q "NO DATA" ${T}_stall.log && break; sleep 1; done   # wait for the stall (start-up is slower under load)
+sleep 2; kill -INT $STP 2>/dev/null; sleep 3
 STALL_ALIVE=0; kill -0 $STP 2>/dev/null && STALL_ALIVE=1 && kill $STP 2>/dev/null
 sleep 2
 AGE=$(curl -s http://127.0.0.1:$PORT/state | $PY -c "import json,sys; print(int(json.load(sys.stdin).get('age_s') or 0))" 2>/dev/null)

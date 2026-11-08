@@ -354,25 +354,25 @@ async function tick(){
     const val = document.getElementById('val'), label = document.getElementById('label'), sub = document.getElementById('sub');
     if (s.baseline_done) {
       const v = Math.max(0, Math.min(100, s.load));
-      val.textContent = Math.round(v); val.className = 'n' + (v >= ALARM-20 ? ' hot' : '');
-      label.textContent = lost ? 'Contact lost' : s.load_held ? 'Held · noisy' : s.alarm ? 'High load' : v >= ALARM ? 'Load rising' : v >= ALARM-30 ? 'Working' : 'Calm';
-      sub.textContent = lost ? (s.state||'').replace('CONTACT LOST: ','') + ' · frozen until the cap is back' : s.load_held ? (s.clean||0) + ' of ' + (s.n_model_ch || 5) + ' channels clean · fix the cap, load resumes at ' + (s.load_min_clean || 2) + ' clean and no channel lost' : 'alarm after ' + HOLD + ' s above ' + ALARM;
+      val.textContent = Math.round(v); val.className = 'n' + (s.low_conf ? ' dim' : v >= ALARM-20 ? ' hot' : '');
+      label.textContent = lost ? 'Contact lost' : s.load_held ? 'Held · noisy' : s.low_conf ? 'Low confidence' : s.alarm ? 'High load' : v >= ALARM ? 'Load rising' : v >= ALARM-30 ? 'Working' : 'Calm';
+      sub.textContent = lost ? (s.state||'').replace('CONTACT LOST: ','') + ' · frozen until the cap is back' : s.load_held ? (s.clean||0) + ' of ' + (s.n_model_ch || 5) + ' channels clean · fix the cap, load resumes at ' + (s.load_min_clean || 2) + ' clean and no channel lost' : s.low_conf ? (s.clean||0) + ' of ' + (s.n_model_ch || 5) + ' channels clean · noisy signal, treat as a rough trend · alarm off' : 'alarm after ' + HOLD + ' s above ' + ALARM;
       document.getElementById('basebar').style.display='none';
     } else {
       const waiting = (s.state||'').startsWith('WAITING') || (s.state||'').startsWith('SETTLING');
       val.textContent='—'; val.className = 'n dim';
       label.textContent = (s.state||'').startsWith('SETTLING') ? 'Settling' : waiting ? 'No contact' : 'Baseline';
-      sub.textContent = waiting ? s.state.replace('WAITING FOR CONTACT: ','') + ' · baseline starts by itself' : 'sit still, eyes open · 30 s';
+      sub.textContent = waiting ? s.state.replace('WAITING FOR CONTACT: ','') + ' · baseline starts by itself' : 'sit still, eyes open · ' + (s.baseline_s || 30) + ' s';
       document.getElementById('basebar').style.display='block'; document.getElementById('basefill').style.width=(100*s.baseline_progress)+'%';
     }
     const fv = document.getElementById('fval'), fl = document.getElementById('flabel');
     if (s.baseline_done && s.fatigue !== undefined && s.fatigue !== null) {
       const f = Math.round(s.fatigue); fv.textContent = f; fv.className = 'n' + (f >= 60 ? ' hot' : '');
-      fl.textContent = s.fatigue_held ? 'Held · noisy' : f >= 70 ? 'above start' : f >= 40 ? 'near start' : 'below start';
+      fl.textContent = (s.fatigue_held ? 'Held · noisy' : f >= 70 ? 'above start' : f >= 40 ? 'near start' : 'below start') + ' · slow trend, builds over 20+ min';
     } else if (s.baseline_done) {
       fv.textContent='—'; fv.className='n dim';
       fl.textContent = s.fatigue_note ? s.fatigue_note
-        : (s.fatigue_wait_s !== null && s.fatigue_wait_s !== undefined) ? 'trend needs 20 min of monitoring · ' + Math.ceil(s.fatigue_wait_s / 60) + ' min to go'
+        : (s.fatigue_wait_s !== null && s.fatigue_wait_s !== undefined) ? 'slow trend · shown after 20 min of monitoring'
         : 'not available';
     } else { fv.textContent='—'; fv.className='n dim'; fl.textContent='Baseline'; }
     let top=null, dead=[];
