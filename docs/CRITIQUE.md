@@ -15,8 +15,8 @@ Ranking: severity as re-rated by the adversary, then grouped so that issues with
 | 5 | high | dsp-1 | confirmed | A dead model channel is turned into a copy of the negated reference and still scored, adding about +0.29 to p | done (0c25f19) |
 | 6 | high | dsp-2 | confirmed | Partially railed windows are never detected, and the rail test in clean_window is dead code | done (0c25f19) |
 | 7 | high | dsp-3 | confirmed | ASR and the baseline mean are fitted on windows with rail steps, which inflates the ASR threshold up to 22x | done (0c25f19) |
-| 8 | high | fatigue-2 | confirmed | Too few clean baseline windows: falls back to the lab mean or a 1 to 4 window median with a hard-coded sd of 0.1, giving false 'Tiring' and 'Recovering' | open |
-| 9 | high | fatigue-3 | confirmed | In a 3-minute demo the index cannot show fatigue: it stays flat on clean EEG and moves with artefact or baseline steps on the dry cap | open |
+| 8 | high | fatigue-2 | confirmed | Too few clean baseline windows: falls back to the lab mean or a 1 to 4 window median with a hard-coded sd of 0.1, giving false 'Tiring' and 'Recovering' | done (9deb14d) |
+| 9 | high | fatigue-3 | confirmed | In a 3-minute demo the index cannot show fatigue: it stays flat on clean EEG and moves with artefact or baseline steps on the dry cap | done (9deb14d) |
 | 10 | high | fatigue-adv1 | ADDED | The contact gate that would block a flat baseline can never pass with the 5-channel model, and run_all.sh never turns it on | done (0c25f19) |
 | 11 | high | gauge-1 | confirmed | The baseline accepts dead or rail windows, and --strict, the only gate that would stop that, can never pass with the 5-channel model | done (0c25f19) |
 | 12 | high | gauge-adv1 | ADDED | ASR fitted on a dead baseline deletes every later window, and the zeroed channels count as clean | done (0c25f19) |
