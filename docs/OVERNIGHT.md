@@ -34,3 +34,12 @@ Rules for every change: it must be tested on recorded data with a split that is 
   - His 16 recordings pooled: Pz 0.0 dB (432 windows), O1 -0.3 dB (365), Cz -0.3, C3 -0.2; control band +0.6 to +2.0 dB, i.e. above the alpha band. Best single runs: 21:17 Pz +2.2 / Cz +2.4; 01:15 O1 +1.3.
   - Reading: no detectable alpha anywhere tonight and a flat spectrum with high-frequency excess (muscle or electrode noise). He had his eyes open, which weakens alpha, so this does not prove there is no brain signal; it means nothing recorded so far proves there is one.
 - Decision: no code change from this. It explains why no model (generic or personal) separates Zetamac from rest on these recordings. Next iteration: add a live alpha check to the gauge and page (eyes-closed test with a pass/fail), so a session can prove brain signal in 40 s before any number is trusted.
+
+### Iteration 3, 02:10 to 02:25
+
+- Built from iteration 2's finding: a live **Alpha check** (page button, spoken prompts). 20 s eyes open, then 20 s eyes closed; alpha height above 1/f measured each second on the live posterior channels (Pz, O1, P3, P4); result on the page and in the Terminal. The page also shows the live alpha height.
+- Detector validation: lab EEG resampled to 250 Hz reads +5.9 dB at Pz and +6.7 dB at O1 (12 people).
+- Pass rule set from data, not guessed. Null test: every possible 40 s check position on his 16 recordings (531 positions, eyes never closed). A 2 dB rise alone passes noise 15 to 20 percent of the time; rise >= 3 dB AND eyes-closed peak >= +3 dB passes noise 0.9 percent of the time. That rule is live.
+- End-to-end tests through the live gauge: synthetic replay (his 01:15 noise plus 15 uV of 10.2 Hz at Pz and O1 from 60 s) gives PASS, Pz -0.8 to +6.0 dB; the unmodified 01:15 recording gives FAIL, rise +1.7.
+- Checks: smoke ALL PASS, 16 replays 0 failed.
+- Decision: keep. First thing on a head tomorrow: baseline, then Alpha check. If it FAILS, no load or fatigue number is trustworthy and the fix is contact, not code.

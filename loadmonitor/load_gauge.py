@@ -37,6 +37,31 @@ SIG_SOS = _butter(4, [1, 40], btype="band", fs=FS, output="sos")
 FAT_SOS_TH = _butter(4, [4, 8], btype="band", fs=FS, output="sos")
 FAT_SOS_AL = _butter(4, [8, 13], btype="band", fs=FS, output="sos")
 FAT_SOS_BE = _butter(4, [13, 30], btype="band", fs=FS, output="sos")
+ALPHA_SOS = _butter(4, [2, 40], btype="band", fs=FS, output="sos")
+POSTERIOR = ["Pz", "O1", "P3", "P4"]
+
+
+def alpha_height(x):
+    """Alpha peak height in dB per channel: mean of 8 to 13 Hz above a 1/f line fitted on 3 to 7 and 15 to 30 Hz.
+    About +6 dB at Pz/O1 for lab-cap EEG at rest with eyes closed, about 0 for flat noise (overnight test, 8 Nov)."""
+    from scipy.signal import iirnotch, tf2sos, welch
+    x = x - x.mean(1, keepdims=True)
+    t = np.linspace(-1, 1, x.shape[1])
+    V = np.vander(t, 4)
+    c, *_ = np.linalg.lstsq(V, x.T, rcond=None)
+    x = x - (V @ c).T
+    b, a_ = iirnotch(50.0, 30.0, fs=FS)
+    x = sosfiltfilt(ALPHA_SOS, sosfiltfilt(tf2sos(b, a_), x, axis=1), axis=1)
+    f, p = welch(x, fs=FS, nperseg=2 * FS, axis=1)
+    fit = ((f >= 3) & (f < 7)) | ((f >= 15) & (f < 30))
+    al = (f >= 8) & (f <= 13)
+    lf = np.log10(f[1:])
+    out = []
+    for row in p:
+        lp = np.log10(row[1:] + 1e-20)
+        k = np.polyfit(lf[fit[1:]], lp[fit[1:]], 1)
+        out.append(float(10 * (lp - np.polyval(k, lf))[al[1:]].mean()))
+    return np.array(out)
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'headset'))
 from montage import MONTAGE  # noqa: E402
 IDX = [MONTAGE.index(c) for c in CH]   # model channels -> stream slots, from headset/montage.py
@@ -182,7 +207,10 @@ def main():
     markers = open(a.log.replace(".csv", "") + "_markers.csv", "w") if a.log else None
     if markers:
         markers.write("t,condition\n")
-    cond = {"now": "none", "rebaseline": 0, "redo": False}
+    cond = {"now": "none", "rebaseline": 0, "redo": False, "alpha_check": 0}
+    # eyes-closed alpha check: 20 s eyes open, 20 s eyes closed; PASS when posterior alpha rises 3 dB to a peak of +3 dB or more
+    ac = dict(active=False, t0=None, open=[], closed=[], result=None, said=set())
+    alpha_now = None
 
     ui = None
     if not a.no_ui:
@@ -224,7 +252,8 @@ def main():
             sig = [[int(v) for v in row] for row in Xs]
         except Exception:
             pass
-        body = json.dumps(dict(t=round(t_now, 1), state=state, load=round(load_pct, 1), fatigue=round(fatigue_pct, 1), clean=int(clean_n), fatigue_held=bool(clean_n < 3 and not a.fake), load_held=bool(clean_n < a.load_min_clean and not a.fake), contact=bool(contact or not a.strict), alarm=bool(alarmed), alarm_at=a.alarm, hold_s=a.hold, personal=personal is not None, calib=len(calib_task), calib_s=a.calib_s, replay=bool(a.replay), channels=chans, sig=sig,
+        body = json.dumps(dict(t=round(t_now, 1), state=state, load=round(load_pct, 1), fatigue=round(fatigue_pct, 1), clean=int(clean_n), fatigue_held=bool(clean_n < 3 and not a.fake), load_held=bool(clean_n < a.load_min_clean and not a.fake), contact=bool(contact or not a.strict), alarm=bool(alarmed), alarm_at=a.alarm, hold_s=a.hold, alpha_now=None if alpha_now is None else round(alpha_now, 1),
+                               alpha_check=dict(active=ac["active"], elapsed=None if (not ac["active"] or ac["t0"] is None) else round(t_now - ac["t0"]), result=ac["result"]), personal=personal is not None, calib=len(calib_task), calib_s=a.calib_s, replay=bool(a.replay), channels=chans, sig=sig,
                                baseline_done=base is not None, baseline_s=a.baseline,
                                baseline_progress=min(1.0, len(base_feats) / a.baseline) if base is None else 1.0,
                                hist=list(hist))).encode()
@@ -249,6 +278,10 @@ def main():
             if rb != cond["rebaseline"]:
                 cond["rebaseline"] = rb
                 cond["redo"] = True
+            ac_n = int(reply.get("alpha_check", 0))
+            if ac_n != cond["alpha_check"]:
+                cond["alpha_check"] = ac_n
+                ac.update(active=True, t0=None, open=[], closed=[], result=None, said=set())
             if new != cond["now"]:
                 cond["now"] = new
                 print(f"t={t_now:6.1f} CONDITION {new}", flush=True)
@@ -301,6 +334,42 @@ def main():
             rail = np.abs(np.abs(X8.mean(1)) - 200000) < 1          # +/-200 mV = open input
             dead = dead | rail
             chan_now["dead"] = dead
+            post = [MONTAGE.index(c) for c in POSTERIOR if c in MONTAGE and not dead[MONTAGE.index(c)]]
+            if post:
+                ah = alpha_height(X8[post])
+                alpha_now = float(np.max(ah))
+                if ac["active"]:
+                    if ac["t0"] is None:
+                        ac["t0"] = t
+                        speak("Alpha check. Eyes open, look at one point.")
+                        print(f"t={t:6.1f} ALPHA CHECK started: 20 s eyes open, then 20 s eyes closed", flush=True)
+                    el = t - ac["t0"]
+                    if 4 <= el < 20:
+                        ac["open"].append(dict(zip([MONTAGE[i] for i in post], ah)))
+                    elif el >= 20 and "close" not in ac["said"]:
+                        ac["said"].add("close"); speak("Close your eyes.")
+                    if 24 <= el < 40:
+                        ac["closed"].append(dict(zip([MONTAGE[i] for i in post], ah)))
+                    if el >= 40:
+                        best = None
+                        for ch in POSTERIOR:
+                            o = [d[ch] for d in ac["open"] if ch in d]
+                            c_ = [d[ch] for d in ac["closed"] if ch in d]
+                            if len(o) >= 5 and len(c_) >= 5:
+                                delta = float(np.median(c_) - np.median(o))
+                                if best is None or delta > best[1]:
+                                    best = (ch, delta, float(np.median(o)), float(np.median(c_)))
+                        if best is None:
+                            ac["result"] = dict(ok=False, text="not enough live posterior windows")
+                        else:
+                            # PASS rule from the 8 Nov null test: rise >= 3 dB AND eyes-closed peak >= +3 dB; pure noise on
+                            # his 16 recordings passes this 0.9 percent of the time (a 2 dB rise alone: 15 to 20 percent)
+                            ok = best[1] >= 3.0 and best[3] >= 3.0
+                            ac["result"] = dict(ok=ok, ch=best[0], delta=round(best[1], 1), open_db=round(best[2], 1), closed_db=round(best[3], 1),
+                                                text=f"{'PASS' if ok else 'FAIL'}: alpha at {best[0]} {best[2]:+.1f} dB eyes open, {best[3]:+.1f} dB eyes closed (rise {best[1]:+.1f}; pass needs +3 and +3)")
+                        ac["active"] = False
+                        print(f"t={t:6.1f} ALPHA CHECK {ac['result']['text']}", flush=True)
+                        speak("Open your eyes. " + ("Brain signal confirmed." if ac["result"]["ok"] else "No alpha change. Fix the contact."))
             live = [i for i in IDX if not dead[i]] or list(IDX)
             live_n = int(sum(not dead[i] for i in IDX))
             contact = live_n >= 6 or a.fake

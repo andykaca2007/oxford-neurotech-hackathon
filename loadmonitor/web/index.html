@@ -172,6 +172,7 @@
       <div><span>most active</span><b id="m_top">—</b></div>
       <div><span>dead</span><b id="m_dead">—</b></div>
       <div><span>clean (under 100 µV after cleaning)</span><b id="m_clean">—</b></div>
+      <div><span>alpha at Pz/O1 (lab eyes closed ≈ +6 dB)</span><b id="m_alpha_chk">—</b></div>
       <div><span>model</span><b>GB robust · AUC 0.76</b></div>
     </div>
     <div class="chalcard" style="margin-top:14px">
@@ -179,7 +180,7 @@
       <div class="score"><span>answers <b id="n_ans">0</b></span><span>errors <b id="n_err">0</b></span><span><b id="n_time">0 s</b></span></div>
     </div>
     <div style="margin-top:auto; padding-top:14px; display:flex; flex-direction:column; min-height:0">
-      <div><button class="btn" id="debrief">Debrief</button> <button class="btn" id="rebase" title="Redo the 30 s baseline without restarting">Rebaseline</button></div>
+      <div><button class="btn" id="debrief">Debrief</button> <button class="btn" id="rebase" title="Redo the 30 s baseline without restarting">Rebaseline</button> <button class="btn" id="alphachk" title="20 s eyes open, 20 s eyes closed: proves the electrodes see brain">Alpha check</button></div>
       <div class="debrief" id="coach" title="one line from Claude every 60 s, from load + answers + signal quality"></div>
       <div class="debrief" id="dtext"></div>
       <div class="src" id="dsrc"></div>
@@ -243,6 +244,9 @@ document.getElementById('debrief').onclick = async () => {
   try { const r = await (await fetch('/debrief', {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'})).json();
         document.getElementById('dtext').textContent = r.text; document.getElementById('dsrc').textContent = 'written by ' + r.source; }
   catch(e) { document.getElementById('dtext').textContent = 'debrief failed'; }
+};
+document.getElementById('alphachk').onclick = () => {
+  fetch('/event', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({kind:'alpha_check', t:lastT})});
 };
 document.getElementById('rebase').onclick = () => {
   fetch('/event', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({kind:'rebaseline', t:lastT})});
@@ -345,6 +349,11 @@ async function tick(){
     document.getElementById('m_top').textContent = top ? `${top.name} +${top.db.toFixed(1)} dB` : '—';
     document.getElementById('m_dead').textContent = dead.length ? dead.join(' ') : 'none';
     document.getElementById('m_clean').textContent = s.clean === undefined ? '—' : s.clean + ' / 8';
+    { const ac = s.alpha_check || {}, el = document.getElementById('m_alpha_chk');
+      const now = (s.alpha_now === null || s.alpha_now === undefined) ? '—' : (s.alpha_now > 0 ? '+' : '') + s.alpha_now + ' dB';
+      if (ac.active) el.textContent = now + (ac.elapsed === null ? ' · starting' : ac.elapsed < 20 ? ' · eyes OPEN ' + (20 - ac.elapsed) + ' s' : ' · eyes CLOSED ' + Math.max(0, 40 - ac.elapsed) + ' s');
+      else if (ac.result) el.textContent = ac.result.text;
+      else el.textContent = now; }
     const fz = (s.channels||[]).find(c=>c.name==='Fz'), pz = (s.channels||[]).find(c=>c.name==='Pz');
     document.getElementById('m_theta').innerHTML = (fz && s.baseline_done ? (fz.theta_db>0?'+':'')+fz.theta_db.toFixed(1)+'<small>dB</small>' : '—');
     document.getElementById('m_alpha').innerHTML = (pz && s.baseline_done ? (pz.alpha_db>0?'+':'')+pz.alpha_db.toFixed(1)+'<small>dB</small>' : '—');
