@@ -326,6 +326,7 @@ def main():
     # rest/arithmetic difference reaches it in 29 of 35 lab subjects (optimistic). A pass means "rest and task blocks were
     # separable for this person", not "load is measured". (The earlier "none of 81 reach 0.80" counted overlapping positions.)
     CAL_BLOCKS, CAL_BLOCK_S, CAL_SKIP_S, CAL_MIN_AUC = 8, 20, 5, 0.80
+    CAL_MIN_WIN = 10                                   # of the 15 windows each block can keep (CRITIQUE calib-3)
     # eyes-closed alpha check: 20 s eyes open, 20 s eyes closed; PASS when posterior alpha rises 3 dB to a peak of +3 dB or more
     ac = dict(active=False, t0=None, open=[], closed=[], open8=[], closed8=[], noise=[], result=None, said=set())
     alpha_now = None
@@ -743,9 +744,14 @@ def main():
                         state = f"CALIBRATING: block {blk + 1}/{CAL_BLOCKS} {'rest' if blk % 2 == 0 else 'subtract'}"
                     else:
                         from calibration import leave_one_pair_out, make_lda as mk     # one implementation, shared with tests/calib_null.py
-                        res_cal = leave_one_pair_out(cal["blocks"], CAL_BLOCKS)
+                        # complete only if every block kept CAL_MIN_WIN of its windows (CRITIQUE calib-3): with dropped noisy
+                        # windows the test could shrink to one fold of one window, and single folds pass the null about 10x
+                        # more often (4.4 vs 0.4 percent); an incomplete calibration leaves the generic model on
+                        counts = [len(cal["blocks"].get(b, [])) for b in range(CAL_BLOCKS)]
+                        complete = min(counts) >= CAL_MIN_WIN
+                        res_cal = leave_one_pair_out(cal["blocks"], CAL_BLOCKS) if complete else dict(folds=[], oof_rest=[], auc=float("nan"))
                         aucs, oof_rest, auc = res_cal["folds"], res_cal["oof_rest"], res_cal["auc"]
-                        ok = bool(aucs) and auc >= CAL_MIN_AUC
+                        ok = complete and len(aucs) == CAL_BLOCKS // 2 and auc >= CAL_MIN_AUC
                         if ok:
                             Xall = np.vstack([np.array(v) for v in cal["blocks"].values()])
                             yall = np.concatenate([[b % 2] * len(v) for b, v in cal["blocks"].items()])
@@ -757,6 +763,7 @@ def main():
                             p_recent.clear()
                         cal["result"] = dict(ok=ok, auc=None if not aucs else round(auc, 2), folds=[round(v, 2) for v in aucs],
                                              text=(f"personal model ON: held-out AUC {auc:.2f} over {len(aucs)} block pairs (rest and task blocks separable; chance passes this about 1 time in 10)" if ok else
+                                                   f"calibration incomplete: clean windows per block {counts} (each needs {CAL_MIN_WIN} of 15); keeping the generic model, redo with better contact" if not complete else
                                                    f"personal model OFF: held-out AUC {auc:.2f} (needs {CAL_MIN_AUC}); keeping the generic model"))
                         cal["active"] = False
                         print(f"t={t:6.1f} CALIBRATION {cal['result']['text']}; folds {cal['result']['folds']}", flush=True)
