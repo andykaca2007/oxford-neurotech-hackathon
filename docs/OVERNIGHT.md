@@ -86,6 +86,7 @@ Rules for every change: it must be tested on recorded data with a split that is 
 
 - Hypothesis: the 0.80 calibration bar is so strict that a real effect cannot pass it. Positive control: interleaved sessions built from the lab data, alternating each subject's real rest (20 s blocks from 30 s on) with their real mental arithmetic (20 s blocks), 3 pairs, the same leave-one-pair-out LDA on the live 5-channel features, baseline from the first 25 s of rest.
   - 35 subjects (1 skipped, arithmetic recording under 60 s): median held-out AUC 0.95, 25th to 75th percentile 0.88 to 0.99; 91 percent reach 0.80.
+  - (Corrected 8 Nov, CRITIQUE calib-5: superseded. Re-measured with tests/calib_null.py through the live function: 29 of 35 (83 percent) reach 0.80. That control uses 3 pairs from two separate recordings, while live Calibrate uses 4 interleaved pairs from one; it is an optimistic upper bound, not the live pass rate.)
   - Against the null from iteration 7 (his non-alternating recordings: 0 of 81 reach 0.80), the bar separates real effects from chance well.
   - Caveat: rest and arithmetic come from two separate recordings of one session, so recording-to-recording differences may add to the separation; treat 91 percent as optimistic.
 - Decision: no change. Bar stays at 0.80.
@@ -400,3 +401,10 @@ Rules for every change: it must be tested on recorded data with a split that is 
 ### Iteration 33 (8 Nov, about 13:05)
 
 - Paing recorded the demo video (lab replay through the live page). Full checks on the current code (2e76bfd plus docs): smoke ALL PASS, 16 replays 0 failed, unit tests 14 passed.
+
+### Iteration 34 (8 Nov, about 13:30)
+
+- Slides: loadmonitor/slide_figures.py writes six 16:9 figures to figures/slides/ from real data (dry-cap window before/after the chain, its spectrum, the chain stage by stage in time and frequency, held-out AUC per lab person, the lab demo load with posterior alpha). The stage-by-stage chain is asserted identical to model_search.clean_window.
+- CRITIQUE #58 calib-5 DONE (claims): the old "91 percent" positive-control figure in this log now carries a correction: re-measured 29 of 35 (83 percent) with the live function, an optimistic upper bound (3 pairs, two recordings) rather than the live 4-pair pass rate. No eyes-open interleaved dataset was available to run the matching control.
+- No gauge code changed; last full checks passed on 2e76bfd (smoke ALL PASS, 16 replays 0 failed).
+
