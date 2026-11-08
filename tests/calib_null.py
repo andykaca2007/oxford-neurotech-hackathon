@@ -5,7 +5,7 @@
 Uses loadmonitor/calibration.leave_one_pair_out, the function the gauge runs, and the live model's cleaning chain and
 feature mask. Three measurements:
   1. his recordings, where he never alternated rest and task (null): NON-OVERLAPPING 160 s runs after a 30 s baseline,
-     8 blocks of 20 s, first 5 s of each block skipped, windows with a dead model channel skipped (the gauge holds them)
+     8 blocks of 20 s, first 7 s of each block skipped (as the gauge, CAL_SKIP_S), windows with a dead model channel skipped (the gauge holds them)
   2. lab rest only (null): each eegmat subject's rest file cut into 6 fake blocks of 20 s from 30 s
   3. lab rest vs arithmetic (positive control): 3 pairs, rest blocks from the rest file, task blocks from the task file
      (two separate recordings of one session, so this is an optimistic sensitivity)
@@ -56,7 +56,7 @@ def featurise(x, fs, starts_s, base_s=(0, 28)):
     return out
 
 
-def blocks_from(F, t0, n_blocks, block_s=20, skip_s=5):
+def blocks_from(F, t0, n_blocks, block_s=20, skip_s=7):
     return {b: [F[a] for a in range(t0 + b * block_s + skip_s, t0 + (b + 1) * block_s) if F.get(a) is not None] for b in range(n_blocks)}
 
 

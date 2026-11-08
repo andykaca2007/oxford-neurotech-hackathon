@@ -408,3 +408,8 @@ Rules for every change: it must be tested on recorded data with a split that is 
 - CRITIQUE #58 calib-5 DONE (claims): the old "91 percent" positive-control figure in this log now carries a correction: re-measured 29 of 35 (83 percent) with the live function, an optimistic upper bound (3 pairs, two recordings) rather than the live 4-pair pass rate. No eyes-open interleaved dataset was available to run the matching control.
 - No gauge code changed; last full checks passed on 2e76bfd (smoke ALL PASS, 16 replays 0 failed).
 
+
+### Critique iteration 35 (8 Nov, about 14:10)
+
+- Gates on ecd195a: smoke ALL PASS, 16 replays 0 failed.
+- CRITIQUE #60 calib-adv3 DONE. Spoken prompt lengths measured with `say -o`: the rest prompt was 1.83 s, the task prompt 2.87 s (3.5 s with later numbers), so task blocks began with about 1 s more listening than rest blocks inside the collected windows. Now both prompts are 1.83 and 1.89 s ("Rest. Eyes on the point." / "Count down in sevens, silently."), the starting number is announced once at calibration start, and the per-block skip is 7 s (4 s window plus prompt and latency). tests/calib_null.py uses the same skip: null 0 of 7 (his) and 2 of 35 (lab), positive control 29 of 35, all unchanged. Lab replay Calibrate still completes all 8 blocks. Prompts still fire from the first clean window of a block, not from the clock.

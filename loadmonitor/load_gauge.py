@@ -325,7 +325,9 @@ def main():
     # his recordings and 2 of 35 lab rest-only runs (about 6 to 12 percent; 95 percent upper bounds 47 and 17 percent); a real
     # rest/arithmetic difference reaches it in 29 of 35 lab subjects (optimistic). A pass means "rest and task blocks were
     # separable for this person", not "load is measured". (The earlier "none of 81 reach 0.80" counted overlapping positions.)
-    CAL_BLOCKS, CAL_BLOCK_S, CAL_SKIP_S, CAL_MIN_AUC = 8, 20, 5, 0.80
+    # skip 7 s per block: the 4 s window still holds the last block, plus the spoken prompt (both prompts about 1.9 s,
+    # measured with say -o) and its start-up latency (CRITIQUE calib-adv3; was 5 s with a 2.9 s task prompt)
+    CAL_BLOCKS, CAL_BLOCK_S, CAL_SKIP_S, CAL_MIN_AUC = 8, 20, 7, 0.80
     CAL_MIN_WIN = 10                                   # of the 15 windows each block can keep (CRITIQUE calib-3)
     # eyes-closed alpha check: 20 s eyes open, 20 s eyes closed; PASS when posterior alpha rises 3 dB to a peak of +3 dB or more
     ac = dict(active=False, t0=None, open=[], closed=[], open8=[], closed8=[], noise=[], result=None, said=set())
@@ -732,13 +734,15 @@ def main():
                         personal, ema, pers_anchor = None, None, None       # a new calibration starts from the generic model (CRITIQUE calib-2)
                         p_recent.clear()
                         print(f"t={t:6.1f} CALIBRATION started: {CAL_BLOCKS} blocks of {CAL_BLOCK_S} s, rest and silent subtraction alternating", flush=True)
+                        speak("Calibration. When asked to count, start from four thousand and keep going.")
                     el = t - cal["t0"]
                     blk = int(el // CAL_BLOCK_S)
                     if blk < CAL_BLOCKS:
                         if blk not in cal["said"]:
                             cal["said"].add(blk)
-                            start_n = 4000 - 137 * (blk // 2)
-                            speak("Rest. Eyes on the point." if blk % 2 == 0 else f"Count down from {start_n} in sevens, silently.")
+                            # prompts of equal spoken length for both classes (1.83 s and 1.89 s); the starting number is
+                            # given once at the start of the calibration, so the task prompt does not carry extra speech
+                            speak("Rest. Eyes on the point." if blk % 2 == 0 else "Count down in sevens, silently.")
                         if el - blk * CAL_BLOCK_S >= CAL_SKIP_S and not low_conf:          # skip the first seconds: the 4 s window still holds the last block
                             cal["blocks"].setdefault(blk, []).append(xf[0].copy())
                         state = f"CALIBRATING: block {blk + 1}/{CAL_BLOCKS} {'rest' if blk % 2 == 0 else 'subtract'}"
