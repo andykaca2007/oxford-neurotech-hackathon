@@ -1,8 +1,12 @@
 # Recording protocol: mental load vs physical fatigue, one person, one cap
 
-Written Sat 7 Nov 2026, 21:30, before any of these sessions were recorded. Fixed now so the
-judges can see the test was decided before the data. Change it only by editing this file and
-noting why.
+Written Sat 7 Nov 2026 and committed at 20:35 (git 44c919d), before the first protocol recording (20:51).
+Change it only by editing this file and noting why.
+
+**Amended 8 Nov at 01:58 and 02:31, after seeing the data** (git 861b97f, bf367e4): the mental task
+became silent serial subtraction (Zetamac's typing and gaze shifts were artefact), step 0 (Alpha check)
+and step 1b (Calibrate) were added, and the alarm line is now 50 held 20 s. Results from sessions run
+under the amended protocol are not pre-registered in the original sense; say so.
 
 ## What we are testing
 - **Validated:** the mental-load model (`loadmonitor/readiness_model.py`), trained on public
@@ -42,12 +46,12 @@ One session per person. Target three people: three sessions of about 15 minutes 
 ## What to report
 Per person, from the gauge CSV:
 - mean load in each of mental, recovery and physical, and the peak during mental
-- fraction of mental seconds above the 70 alarm line, and whether the alarm fired
+- fraction of mental seconds above the alarm line (50 held 20 s since 8 Nov), and whether the alarm fired
 - the raw markers per segment, relative to baseline: Fz theta (dB), Pz alpha (dB), and muscle
   power 30 to 40 Hz at C3 and C4 (dB)
 
 One figure per person, and one with all three overlaid: time on x, load on y, the four
-segments shaded, a second row with the muscle marker. Mental should peak during Zetamac and fall
+segments shaded, a second row with the muscle marker. Mental should peak during silent subtraction and fall
 in recovery; after running, muscle power and alpha are the things expected to move, and the load
 number does whatever it does. Report it either way.
 
@@ -60,7 +64,8 @@ number does whatever it does. Report it either way.
 
 ## Claims we may make
 - The trained model raises a personal load number during mental arithmetic and lowers it in
-  recovery on N of 3 of us, with these numbers.
+  recovery on N of the people tested, with these numbers. Report N honestly: as of 8 Nov it is 0 of 1
+  (Paing's recordings, no reliable separation, no detectable alpha).
 - After exercise the cap shows the following measured changes (markers), which differ from the
   mental signature in this way.
 - Not: that load equals accident risk; that exercise fatigue was classified; anything about

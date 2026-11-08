@@ -1,14 +1,23 @@
 # Oxford Neurotech Hackathon 2026: team Avengers, AI stream (Tobii)
 
-A personal SSVEP brain decoder used as a hands-free communication aid. The user looks at one of
-four flickering tiles; two looks say one of 16 fixed phrases, which appears on the carer bar and
-buzzes the carer's wristband. The science claim: how much per-person calibration the decoder
-needs (personal TRCA against generic CCA, held-out blocks, public data, replicated live).
+A live mental-load monitor on a dry 8-electrode headset (g.tec Unicorn BCI Core-8). A model trained on
+public lab EEG (PhysioNet eegmat, 36 people, rest vs mental arithmetic) scores each 4 s window against the
+wearer's own 30 s baseline and shows a load number, an alarm line, a head map, an eyes-closed Alpha check,
+an optional personal Calibrate step, and a Claude-written debrief.
+
+What is and is not shown (8 Nov):
+- Lab only: leave-one-subject-out AUC 0.76, balanced accuracy 68%, at chance for about 1 in 6 people.
+- The live model is the generic one; a personal model replaces it only if an interleaved calibration
+  clears a held-out AUC of 0.80.
+- Not shown on the cap yet: last night's recordings contain no detectable alpha, and the gauge did not
+  reliably separate task from rest on them.
+
+**Start with the morning summary at the end of [docs/OVERNIGHT.md](docs/OVERNIGHT.md)**, then
+[docs/CRITIQUE.md](docs/CRITIQUE.md) (independent review, ranked) and [docs/PROTOCOL.md](docs/PROTOCOL.md).
+Earlier state: [docs/HANDOFF.md](docs/HANDOFF.md), [docs/RESULTS.md](docs/RESULTS.md) (numbers there are
+lab-only and partly superseded). The SSVEP communication aid we explored first is under `explored/`.
 
 Branches and pull requests, never direct to main: see [CONTRIBUTING.md](CONTRIBUTING.md).
-
-**Start with [HANDOFF.md](HANDOFF.md)** (state of the build, headset checklist, honest pitch
-lines), then [RESULTS.md](RESULTS.md) (numbers and limits).
 
 ## Layout
 | path | what |
@@ -55,10 +64,10 @@ python explored/ssvep/replay_demo.py --subject 3 --say "Water, please;Call the n
 ```
 
 ## Rules we must meet (AI stream)
-- AI central: we train a model per person (TRCA). Neural data is the core input.
+- AI central: a model trained on public EEG scores the wearer's brain data live; a personal model is used only if its held-out calibration clears 0.80; Claude writes the debrief. (The explored SSVEP aid used per-person TRCA.)
 - Evaluation: held-out blocks, CCA baseline, accuracy and ITR (and false selections per minute).
 - No covert recording; no inferring health conditions or other protected traits from people here.
-- All code in `unicorn/` and `tests/` written during the event; credit libraries and datasets.
+- All code in `loadmonitor/`, `headset/`, `explored/` and `tests/` written during the event; credit libraries and datasets.
 
 ## Credits
 - Nakanishi et al. 2015, PLoS ONE 10(10):e0140703 (12-target SSVEP dataset).

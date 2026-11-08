@@ -49,14 +49,16 @@ Personalisation beats a universal model.
    probability is smoothed and shown as 0 to 100.
 3. The head map shows each electrode's activity change from baseline in dB, so bad contact is
    visible. Markers: frontal theta up and parietal alpha down are the fatigue signature.
-4. Above 70 for 20 s: alarm. Red strip on the page, a spoken "take a break".
+4. Above the alarm line (50 since 8 Nov) for 20 s: alarm. Red strip on the page, spoken "load above the line" (no advice).
 5. Page is a local website; it can be open on a phone across the room as the supervisor view.
 
 ## The demo (the wow)
 1. Cap on a judge. 30 s baseline. The room sees their head map and a calm blue page.
-2. Maths challenge on the projector: 4000 minus 7, out loud, against a clock, a teammate types
-   the answers. The load climbs, the frontal electrode lights up, the page turns to alarm.
-3. Wrong answers appear as red ticks on the load trace: strain shows before the mistakes.
+2. (Amended 8 Nov) Alpha check first. Then silent subtraction: 4000 minus 7 in their head, eyes on one
+   point, no talking or typing; they say the last number at the end. If the cap and the person allow it,
+   the load climbs; we show whatever it does.
+3. (Removed: "wrong answers as red ticks, strain shows before the mistakes". Spoken or typed answers add
+   artefact, and we have no data for that claim.)
 4. They stop. The number falls. Blue again.
 5. A three-line debrief appears, written by Claude (claude-opus-5-5) from the session numbers:
    when load peaked, how long above the line, where the errors fell, one recommendation.

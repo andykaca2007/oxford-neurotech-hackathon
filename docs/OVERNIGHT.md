@@ -102,7 +102,7 @@ Rules for every change: it must be tested on recorded data with a split that is 
 
 ## Morning summary for Paing
 
-1. Nothing on the software side is blocking a session. Every check passes; all 16 of last night's recordings replay through the live gauge with no crash, no NaN, and no false alarm.
+1. Nothing on the software side is blocking a session. Every check passes; all 16 of last night's recordings replay through the live gauge with no crash and no NaN. On these recordings, which the chain was tuned on, it never alarms, at rest or during his task: that shows it no longer drifts upward, not that it detects load. False-alarm rates will be reported only from sessions recorded after the chain is frozen (CRITIQUE claims-5).
 2. The blocker is the signal. Last night's recordings contain no detectable alpha (Pz 0.0 dB, O1 -0.3 dB above background; lab eyes closed +6 to +7 dB), and the spectrum is noise-like. Zetamac adds typing and gaze artefact on top (ASR fires on every Zetamac window).
 3. Session order, all on the page: Rebaseline when settled, then **Alpha check**. FAIL means fix contact (mastoid stickers on wiped skin, amplifier pressed and strapped, hair parted, 2 min still), not code. PASS means the electrodes see brain.
 4. After a PASS: **Calibrate** (160 s, spoken prompts). The personal model switches on only at held-out AUC 0.80 or above (chance on his data never reached 0.80; 91 percent of lab subjects do).
