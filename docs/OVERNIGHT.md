@@ -483,3 +483,7 @@ Rules for every change: it must be tested on recorded data with a split that is 
 
 - Gates on 2faa9d7: smoke ALL PASS, 16 replays 0 failed.
 - CRITIQUE #80 stats-3 and #82 stats-6 DONE as wording, no code change. The positive-control line now carries the adversary's within-file control (3 of 35 pass on early-vs-late rest, 1 of 35 interleaved) beside the 83 percent upper bound, and the gain-sweep decision line carries the alarm-second arithmetic (about 5 / 32 / 63 s out of 5,300, one or two episodes each) and the exact CI, with "six times" withdrawn. Neither control was re-run here; the 4-pair 15 s positive control stays open. Next: #83 (alpha pass rule can FAIL a channel that meets both criteria) is a code change with a null-rate recheck, for the next iteration.
+
+### Critique iteration 48 (8 Nov, about 22:30)
+
+- CRITIQUE #83 stats-adv2 DONE, no code change. The critic read the older height rule. Since the alpha-adv1 rework, alpha_rule scores every posterior channel on rise, margin over both flanks and separation, and keeps the best by (ok, margin), so a channel that meets every criterion always beats a flaky slot with a bigger rise that fails the margin; there is no absolute closed-peak test any more. New tests/test_alpha_rule.py: Pz at +3.5 dB with flat flanks beats P4 at +6 dB with +5 dB flanks (PASS reported at Pz); a +1 dB rise fails; fewer than 5 windows is untestable. 3 passed. The rule is unchanged, so the chance, injected-alpha and flank-attack rates in the log stand.
