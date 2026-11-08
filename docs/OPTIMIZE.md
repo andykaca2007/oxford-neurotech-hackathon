@@ -22,3 +22,16 @@ The dry Unicorn on hair gives 1 to 40 Hz amplitudes of 300 to 4000 uV that chang
 | 60 amplitude-invariant (relative powers, ratios, entropy, Fz-Pz theta gradient) | 0.807 | 0.807 |
 
 Live model = gradient boosting on the 60 invariant features (`model_search.py --fit-best --invariant`, `feature_mask` in the joblib). Costs 0.034 AUC on clean data, immune to gain changes. The stack (0.867 strict AUC) is parked in models/readiness_stack.joblib; it also uses absolute power and has the same weakness on this headset.
+
+## Final live processing (8 Nov 00:30): robust chain
+
+Common average reference (dead channels excluded), 50 Hz notch, 3 to 30 Hz order-6 band-pass, Hilbert-envelope burst masking (samples over 4x the window median blanked), median-averaged Welch over 1 s segments, bands theta/alpha/low beta/high beta only, 44 amplitude-invariant features, gradient boosting. Load shown = 15 + 20 z against the wearer's own rest (model output mean and spread measured during the baseline).
+
+| model | LOSO AUC (clean lab data) | wearer's recordings, idle: median load / share above 70 |
+|---|---|---|
+| all features, 1 to 40 Hz (first version) | 0.841 | 89 / 0.85 |
+| invariant, 1 to 40 Hz | 0.807 | 59 / 0.39 (no rest calibration) |
+| invariant + notch + 3 Hz HP + no delta | 0.811 | 59 / 0.22 |
+| robust chain above, rest-calibrated (LIVE) | 0.763 | 23 and 17 / 0.00 |
+
+Trade: 0.08 AUC on clean data for a gauge that sits low at rest on a dry headset with heavy mains and drift. The fatigue ratio uses Hilbert band envelopes (median over time, median over channels under 300 uV) with the 36-subject rested reference computed the same way.

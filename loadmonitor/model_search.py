@@ -37,7 +37,7 @@ BANDS_RICH = {"delta": (1, 4), "theta": (4, 8), "alpha": (8, 13), "lbeta": (13, 
 # 50 Hz mains hum and sub-4 Hz drift that together can be 90 percent of the power; a notch, a steeper 3 Hz high-pass
 # and no delta band keep the features on the bands the model is about.
 FEAT_CFG = dict(lo=1.0, hi=40.0, notch=False, order=4, drop_delta=False)
-ROBUST_CFG = dict(lo=3.0, hi=40.0, notch=True, order=6, drop_delta=True, median=True)
+ROBUST_CFG = dict(lo=3.0, hi=30.0, notch=True, order=6, drop_delta=True, median=True, car=True, burst=4.0, drop_gamma=True)
 
 
 def feats(x, fs, rich, cfg=None):
@@ -47,8 +47,26 @@ def feats(x, fs, rich, cfg=None):
     if cfg.get("notch"):
         b, a_ = iirnotch(50.0, 30.0, fs=fs)
         x = sosfiltfilt(tf2sos(b, a_), x, axis=1)
+    if cfg.get("car"):
+        # common average reference: noise shared by all electrodes (mains through a poor ground, body drift) cancels;
+        # dead or railed channels are left out of the average so they cannot pollute the others
+        ok = (x.std(1) > 1e-6) & (np.abs(np.abs(x.mean(1)) - 200000) > 1)
+        if ok.sum() >= 2:
+            x = x - x[ok].mean(0, keepdims=True)
     sos = butter(cfg.get("order", 4), [cfg["lo"], cfg["hi"]], btype="band", fs=fs, output="sos")
     x = sosfiltfilt(sos, x, axis=1)
+    if cfg.get("burst"):
+        # burst masking: samples whose Hilbert broadband envelope exceeds k x the window median are zeroed with a
+        # short taper, so a movement spike never reaches the band powers
+        from scipy.signal import hilbert as _hilbert
+        env = np.abs(_hilbert(x, axis=1))
+        thr = cfg["burst"] * np.median(env, axis=1, keepdims=True) + 1e-9
+        bad = env > thr
+        if bad.any():
+            k = max(3, int(fs * 0.05))
+            w = np.ones(k) / k
+            soft = np.array([np.convolve(b.astype(float), w, mode="same") for b in bad])
+            x = x * np.clip(1.0 - soft * 1.5, 0.0, 1.0)
     # median-averaged Welch: the PSD is the median over 1 s segments instead of the mean, so one artefact burst inside
     # the 4 s window does not set the band power (Welch is FFT-based; median averaging is the robust estimator)
     f, p = welch(x, fs=fs, nperseg=int(fs * 1) if cfg.get("median") else int(fs * 2), noverlap=int(fs * 0.5) if cfg.get("median") else None,
@@ -56,6 +74,8 @@ def feats(x, fs, rich, cfg=None):
     bands = BANDS_RICH if rich else BANDS_BASIC
     if cfg.get("drop_delta"):
         bands = {k: v for k, v in bands.items() if k != "delta"}
+    if cfg.get("drop_gamma"):
+        bands = {k: v for k, v in bands.items() if k != "gamma"}
     bp = {b: p[:, (f >= lo) & (f < hi)].mean(1) for b, (lo, hi) in bands.items()}
     out = [np.log(bp[b] + 1e-12) for b in bands]
     fz, pz, cz = CH.index("Fz"), CH.index("Pz"), CH.index("Cz")
@@ -138,7 +158,7 @@ def main():
         mask = None
         if a.invariant:
             # feats() layout: [nb bands x n_ch log power][2 ratios][nb x n_ch relative][n_ch entropy][2 gradient][1 blink]
-            nb = 5 if cfg.get("drop_delta") else 6
+            nb = 6 - int(bool(cfg.get("drop_delta"))) - int(bool(cfg.get("drop_gamma")))
             mask = np.ones(X.shape[1], bool); mask[:nb * len(CH)] = False; mask[-1] = False
             X = X[:, mask]
         acc, sd, auc, tr = loso(dict(models())["grad boosting"], X, y, subj)
