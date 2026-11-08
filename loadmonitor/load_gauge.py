@@ -233,10 +233,12 @@ def main():
                                                               headers={"Content-Type": "application/json"}), timeout=0.3)
             reply = json.loads(r.read() or b"{}")
             new = reply.get("condition", cond["now"])
-            if replay_marks:
+            if a.replay:
+                # in a replay the recording's own markers are the truth; before the first one the condition is "none"
                 due = [c for tm, c in replay_marks if tm <= t_now]
-                if due and due[-1] != new:
-                    new = due[-1]
+                want = due[-1] if due else "none"
+                if want != new:
+                    new = want
                     try:
                         urllib.request.urlopen(urllib.request.Request(f"http://127.0.0.1:{a.web_port}/event",
                                                data=json.dumps({"kind": "condition", "value": new, "t": t_now}).encode(),

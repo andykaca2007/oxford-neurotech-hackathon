@@ -4,7 +4,7 @@
 # Prints PASS/FAIL per step and exits non-zero if anything failed.
 cd "$(dirname "$0")/.."
 PY=.venv/bin/python
-PORT=8765
+PORT=8799   # never the live page port 8765
 fails=0
 step() { printf '%-58s' "$1"; }
 ok()   { echo "PASS"; }
@@ -27,14 +27,12 @@ step "model file loads, has the expected fields"
 if $PY -c "import joblib; m=joblib.load('models/readiness.joblib'); assert m['epoch_s']>0 and 'model' in m and m.get('loso_auc',0)>0.6" 2>/dev/null; then ok; else bad "models/readiness.joblib missing or odd: run loadmonitor/model_search.py --fit-best"; fi
 
 step "web server starts and serves the page"
-pkill -f gauge_server.py 2>/dev/null; sleep 0.5
-$PY loadmonitor/gauge_server.py >/tmp/smoke_server.log 2>&1 & SRV=$!
+$PY loadmonitor/gauge_server.py $PORT >/tmp/smoke_server.log 2>&1 & SRV=$!
 sleep 1.5
 if [ "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:$PORT/)" = "200" ]; then ok; else bad "no page on $PORT"; fi
 
 step "gauge on fake data: baseline, load rises, alarm fires"
-pkill -f load_gauge.py 2>/dev/null; sleep 0.5
-$PY loadmonitor/load_gauge.py --fake --web --no-ui --baseline 8 --hold 10 --seconds 110 --log /tmp/smoke_gauge.csv >/tmp/smoke_gauge.log 2>&1 &
+$PY loadmonitor/load_gauge.py --fake --web --web-port $PORT --no-ui --baseline 8 --hold 10 --seconds 110 --log /tmp/smoke_gauge.csv >/tmp/smoke_gauge.log 2>&1 &
 GPID=$!
 sleep 7
 curl -s -X POST http://127.0.0.1:$PORT/event -d '{"kind":"condition","value":"mental"}' >/dev/null
@@ -52,27 +50,34 @@ curl -s -X POST http://127.0.0.1:$PORT/event -d '{"kind":"challenge_start"}' >/d
 curl -s -X POST http://127.0.0.1:$PORT/event -d '{"kind":"error","value":1,"expected":3993}' >/dev/null
 if curl -s -X POST http://127.0.0.1:$PORT/debrief -d '{}' | $PY -c "import json,sys; d=json.load(sys.stdin); assert len(d['text'])>40; print('   debrief by', d['source'])" ; then ok; else bad "debrief"; fi
 
+if pgrep -f "unicorn_gpype.py --serial" >/dev/null; then
+  step "headset bridge --sim and gauge --lsl"; echo "SKIP  (a live headset session is running; a second LSL stream named Unicorn would confuse it)"
+else
 step "headset bridge in --sim mode streams to LSL (no Bluetooth)"
-pkill -f unicorn_gpype.py 2>/dev/null; sleep 0.5
-( sleep 12; echo ) | $PY headset/unicorn_gpype.py --sim --csv /tmp/smoke_raw.csv >/tmp/smoke_bridge.log 2>&1 &
+( sleep 12; echo ) | $PY headset/unicorn_gpype.py --sim --csv /tmp/smoke_raw.csv >/tmp/smoke_bridge.log 2>&1 & BRP=$!
 sleep 5
 if $PY -c "from pylsl import resolve_byprop; import sys; sys.exit(0 if resolve_byprop('name','Unicorn',timeout=5) else 1)" 2>/dev/null; then ok; else bad "no LSL stream from --sim"; fi
 
 step "gauge --lsl reads the sim stream and posts state"
-timeout_s=8; $PY loadmonitor/load_gauge.py --lsl --web --no-ui --baseline 3 --seconds 6 >/tmp/smoke_lsl.log 2>&1
+$PY loadmonitor/load_gauge.py --lsl --web --web-port $PORT --no-ui --baseline 3 --seconds 6 >/tmp/smoke_lsl.log 2>&1
 if grep -q "baseline done" /tmp/smoke_lsl.log; then ok; else bad "see /tmp/smoke_lsl.log"; fi
 sleep 8
+fi
 
-step "raw recording CSV written by the bridge"
-if ls /tmp/smoke_raw*.csv >/dev/null 2>&1 && [ "$(wc -l < $(ls /tmp/smoke_raw*.csv | head -1))" -gt 500 ]; then ok; else bad "no raw csv"; fi
+step "raw recording CSV written by the bridge (sim)"
+if [ -z "$BRP" ]; then echo "SKIP"; elif ls -t /tmp/smoke_raw*.csv >/dev/null 2>&1 && [ "$(wc -l < $(ls -t /tmp/smoke_raw*.csv | head -1))" -gt 500 ]; then ok; else bad "no raw csv"; fi
 
 step "SSVEP decoder on fake data (explored path still runs)"
 if $PY explored/ssvep/ssvep_decode.py --fake --seconds 6 2>/dev/null | grep -q "pick=0"; then ok; else bad "ssvep decode"; fi
 
+step "replay of a real recording through the gauge"
+R=$(ls recordings/paing_20261108_011525_raw*.csv 2>/dev/null | head -1)
+if [ -z "$R" ]; then echo "SKIP"; elif $PY loadmonitor/load_gauge.py --replay "$R" --speed 40 --seconds 120 --web --web-port $PORT --no-ui >/tmp/smoke_replay.log 2>&1 && grep -q "baseline done" /tmp/smoke_replay.log && ! grep -q Traceback /tmp/smoke_replay.log; then ok; else bad "see /tmp/smoke_replay.log"; fi
+
 step "run_all.sh parses (bash 3.2 safe)"
 if bash -n run_all.sh; then ok; else bad "run_all.sh syntax"; fi
 
-kill $SRV 2>/dev/null; pkill -f unicorn_gpype.py 2>/dev/null
+kill $SRV 2>/dev/null; [ -n "$BRP" ] && kill $BRP 2>/dev/null
 echo
 if [ $fails -eq 0 ]; then echo "ALL PASS"; else echo "$fails FAILED"; fi
 exit $fails

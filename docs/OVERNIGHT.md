@@ -16,3 +16,11 @@ Rules for every change: it must be tested on recorded data with a split that is 
 - Labelled data available: 01:15 run (mental 77 to 155 s, recovery 155 to 232 s), 01:03 run (physical 291 to 413 s, mental 413 to 660 s, rest before that unlabelled).
 
 ## Iterations
+
+### Iteration 1, 01:35 to 01:50
+
+- New `tests/replay_all.py`: replays every recording over 60 s (16 files, about 65 min of signal) through the live gauge on port 8799. Result: 0 crashes, 0 NaN rows.
+- Bug found and fixed: in a replay the condition carried over from the previous recording (most runs showed "baseline" or "recovery" for their whole length). The gauge now uses the recording's own markers and "none" before the first one; the replay script starts a fresh page server per file.
+- `tests/smoke.sh` moved to port 8799, no longer kills processes it did not start, skips the simulated bridge while a live headset session runs, and gained a replay step. ALL PASS. (Paing's 01:21 live run was still running on 8765 and was not touched.)
+- True numbers with the live generic model, correct labels: 01:03 run mental 8, physical 4, unlabelled rest 1; 01:15 run mental 10, recovery 23. The generic model does not separate his Zetamac from rest on the 01:15 run.
+- Next hypothesis: is there an alpha peak at Pz/O1 at all in his recordings (the only cheap proof that the cleaned signal contains brain).
