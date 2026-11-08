@@ -362,3 +362,9 @@ Rules for every change: it must be tested on recorded data with a split that is 
 - Fatigue: `--fatigue-show-s` (default 1200 s, unchanged for live); the lab demo uses 0, and the page adds "slow trend, builds over 20+ min". On the lab replay it stays 48 to 52, as a slow measure should over 3.5 minutes. The old countdown "N min to go" is replaced by a static line.
 - Fixes found by the tests: a time-limited gauge (--seconds) hung forever after its LSL stream died; it now stops after max(10 s, --seconds) without data. Smoke: the simulated bridge runs 25 s (startup took 6 s and starved the 12 s run), and the stall step waits for the NO DATA line instead of a fixed 12 s.
 - Checks: 16 replays 0 failed; smoke ALL PASS.
+
+### Critique iteration 28 (8 Nov, about 11:45)
+
+- Andy merged his load model v2 work into the branch (PR 8: andy_model.py, compare_models.py, rest_markers.py, ANDY_MODEL.md); my commits were rebased on top, nothing of his changed; his files parse; the live gauge does not use them.
+- CRITIQUE #54 alpha-6 DONE. The live "alpha at Pz/O1" readout was the max of up to four posterior heights in one 4 s window; on his eyes-open recordings (3,483 s) it read +3 dB or more in 14.6 percent of seconds and +5 dB in 3.5 percent. It is now the 8 s median of the mean of Pz and O1: +3 dB or more in 1.5 percent, +5 dB in 0.2 percent. On the lab replay at rest it reads +6.3 dB (lab expectation about +6). The Alpha check keeps its own rule. Page label says "8 s median".
+- Checks: smoke ALL PASS and 16 replays 0 failed.

@@ -279,6 +279,7 @@ def main():
     ema, above_since, alarmed = None, None, False
     base_fat, fat_base, fat_ema, fatigue_pct, contact = [], 0.0, None, 0.0, False
     amp_hist = deque(maxlen=40)
+    alpha_hist = deque(maxlen=8)            # live alpha readout, see alpha-6
     contact_hist = deque(maxlen=5)          # last 5 s of contact_metrics, for the contact view
     fat_start = 0.0
     fat_sd = 0.1
@@ -503,7 +504,13 @@ def main():
                 rec8 = {MONTAGE[i]: (ah8[j], ab8[j]) for j, i in enumerate(live8)}   # posterior-only call
             ah = np.array([rec8[MONTAGE[i]][0] for i in post]) if post else None
             abands = np.array([rec8[MONTAGE[i]][1] for i in post]) if post else None
-            alpha_now = float(np.max(ah)) if post else None
+            # live readout (CRITIQUE alpha-6): 8 s median of the mean of Pz and O1, not the max of up to four noisy
+            # channels in one window. On his eyes-open recordings the old max read +3 dB or more in 14.6 percent of
+            # seconds, this reads it in 1.5 percent. The Alpha check keeps its own rule.
+            pz_o1 = [rec8[c][0] for c in ("Pz", "O1") if c in rec8]
+            if pz_o1:
+                alpha_hist.append(float(np.mean(pz_o1)))
+            alpha_now = float(np.median(alpha_hist)) if alpha_hist else None
             # the check's clock, prompts and verdict run whether or not a posterior channel is live, so a dead back
             # row gets an answer instead of a check that starts minutes later (CRITIQUE alpha-2)
             if True:

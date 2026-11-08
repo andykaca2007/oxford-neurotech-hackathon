@@ -61,7 +61,7 @@ Ranking: severity as re-rated by the adversary, then grouped so that issues with
 | 51 | low | alpha-2 | confirmed | Check never starts and hangs at 'starting' when every posterior channel is dead | done (4177a08) |
 | 52 | low | alpha-3 | confirmed | Synthetic PASS test was one lucky position; the same sine fails at 3 of 4 positions | done (4177a08) |
 | 53 | low | alpha-4 | confirmed | About 1 in 12 real brains fails even with a gel cap and perfect contact | done (iteration 24): a testable FAIL (noise under the gate) now says it is not a contact verdict and that 3 of 36 lab people show little alpha; it already said repeat once, not fix contact |
-| 54 | low | alpha-6 | confirmed | Live alpha readout is the max of up to four noisy channels and often looks like alpha on eyes-open noise | open |
+| 54 | low | alpha-6 | confirmed | Live alpha readout is the max of up to four noisy channels and often looks like alpha on eyes-open noise | done (iteration 28): readout is now the 8 s median of mean(Pz, O1); on his eyes-open recordings +3 dB or more in 1.5 percent of seconds (was 14.6); lab rest still reads +6.3 dB |
 | 55 | low | alpha-adv2 | ADDED | Closed-phase windows start before the eyes can be closed | open |
 | 56 | low | calib-3 | confirmed | No minimum folds or windows per block: dropped noisy windows can turn the 4-fold test into a 1-fold test, which passes the null about 10x more often | open |
 | 57 | low | calib-4 | confirmed | Leave-one-pair-out is biased below chance because each held-out block sits next to a training block of the opposite class | open |
