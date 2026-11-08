@@ -37,22 +37,25 @@ BANDS_RICH = {"delta": (1, 4), "theta": (4, 8), "alpha": (8, 13), "lbeta": (13, 
 # 50 Hz mains hum and sub-4 Hz drift that together can be 90 percent of the power; a notch, a steeper 3 Hz high-pass
 # and no delta band keep the features on the bands the model is about.
 FEAT_CFG = dict(lo=1.0, hi=40.0, notch=False, order=4, drop_delta=False)
-ROBUST_CFG = dict(lo=3.0, hi=30.0, notch=True, order=6, drop_delta=True, median=True, car=True, burst=4.0, drop_gamma=True)
+ROBUST_CFG = dict(lo=3.0, hi=30.0, notch=True, order=6, drop_delta=True, median=True, car="median", burst=4.0, drop_gamma=True, asr=5.0)
 
 
-def feats(x, fs, rich, cfg=None):
+def clean_window(x, fs, cfg):
+    """Everything before the spectrum: re-reference, notch comb, band-pass, burst masking. Shared by feats() and ASR."""
     from scipy.signal import iirnotch, tf2sos
-    cfg = cfg or FEAT_CFG
     x = x - x.mean(1, keepdims=True)
     if cfg.get("notch"):
-        b, a_ = iirnotch(50.0, 30.0, fs=fs)
-        x = sosfiltfilt(tf2sos(b, a_), x, axis=1)
+        for f0 in (50.0, 100.0):
+            if f0 < fs / 2:
+                b, a_ = iirnotch(f0, 30.0, fs=fs)
+                x = sosfiltfilt(tf2sos(b, a_), x, axis=1)
     if cfg.get("car"):
-        # common average reference: noise shared by all electrodes (mains through a poor ground, body drift) cancels;
-        # dead or railed channels are left out of the average so they cannot pollute the others
+        # common reference: noise shared by all electrodes (mains through a poor ground, body drift) cancels;
+        # median across channels resists one bad electrode; dead or railed channels are left out
         ok = (x.std(1) > 1e-6) & (np.abs(np.abs(x.mean(1)) - 200000) > 1)
         if ok.sum() >= 2:
-            x = x - x[ok].mean(0, keepdims=True)
+            ref = np.median(x[ok], axis=0, keepdims=True) if cfg["car"] == "median" else x[ok].mean(0, keepdims=True)
+            x = x - ref
     sos = butter(cfg.get("order", 4), [cfg["lo"], cfg["hi"]], btype="band", fs=fs, output="sos")
     x = sosfiltfilt(sos, x, axis=1)
     if cfg.get("burst"):
@@ -67,6 +70,46 @@ def feats(x, fs, rich, cfg=None):
             w = np.ones(k) / k
             soft = np.array([np.convolve(b.astype(float), w, mode="same") for b in bad])
             x = x * np.clip(1.0 - soft * 1.5, 0.0, 1.0)
+    return x
+
+
+class ASR:
+    """Artefact subspace reconstruction, the simple form: learn the principal components of the wearer's clean
+    resting signal; in each window, drop any component whose RMS exceeds k x its resting RMS and rebuild the window
+    from the rest. Calibrated per person from the baseline, so it needs no training data."""
+
+    def __init__(self, k=5.0):
+        self.k, self.V, self.ref = k, None, None
+
+    def fit(self, windows):
+        X = np.concatenate(windows, axis=1)                      # (ch, t)
+        C = np.cov(X)
+        w, V = np.linalg.eigh(C)
+        self.V = V
+        proj = V.T @ X
+        self.ref = proj.std(1) + 1e-9
+
+    def __call__(self, x):
+        if self.V is None:
+            return x
+        proj = self.V.T @ x
+        bad = proj.std(1) > self.k * self.ref
+        if bad.any():
+            proj[bad] = 0.0
+            x = self.V @ proj
+        return x
+
+
+def feats(x, fs, rich, cfg=None, asr=None):
+    cfg = cfg or FEAT_CFG
+    if cfg is FEAT_CFG or not (cfg.get("notch") or cfg.get("car") or cfg.get("burst")):
+        x = x - x.mean(1, keepdims=True)
+        sos = butter(cfg.get("order", 4), [cfg["lo"], cfg["hi"]], btype="band", fs=fs, output="sos")
+        x = sosfiltfilt(sos, x, axis=1)
+    else:
+        x = clean_window(x, fs, cfg)
+        if asr is not None:
+            x = asr(x)
     # median-averaged Welch: the PSD is the median over 1 s segments instead of the mean, so one artefact burst inside
     # the 4 s window does not set the band power (Welch is FFT-based; median averaging is the robust estimator)
     f, p = welch(x, fs=fs, nperseg=int(fs * 1) if cfg.get("median") else int(fs * 2), noverlap=int(fs * 0.5) if cfg.get("median") else None,
@@ -100,9 +143,14 @@ def build(win_s, overlap, rich, cfg=None):
         xr, fs = load_edf(rest_path)
         xt, _ = load_edf(rest_path.replace("_1.edf", "_2.edf"))
         n = int(win_s * fs); step = n // 2 if overlap else n
+        asr = None
+        if cfg and cfg.get("asr"):
+            asr = ASR(cfg["asr"])
+            asr.fit([clean_window(xr[:, i:i + n], fs, cfg) for i in range(0, int(28 * fs) - n + 1, step)])
+
         def ep(x, start_s, end_s):
             a, b = int(start_s * fs), int(end_s * fs)
-            return [feats(x[:, i:i + n], fs, rich, cfg) for i in range(a, min(b, x.shape[1]) - n + 1, step)]
+            return [feats(x[:, i:i + n], fs, rich, cfg, asr) for i in range(a, min(b, x.shape[1]) - n + 1, step)]
         base = np.mean(ep(xr, 0, 28), axis=0)
         er = [e - base for e in ep(xr, 30, 90)]
         et = [e - base for e in ep(xt, 0, 60)]

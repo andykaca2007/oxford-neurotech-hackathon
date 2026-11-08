@@ -117,7 +117,13 @@ def main():
     feat_cfg = m.get("feat_cfg")
     if feat_cfg:
         print(f"# processing: {feat_cfg['lo']:.0f} to {feat_cfg['hi']:.0f} Hz order {feat_cfg.get('order', 4)}{', 50 Hz notch' if feat_cfg.get('notch') else ''}{', common average reference' if feat_cfg.get('car') else ''}{', burst masking' if feat_cfg.get('burst') else ''}{', median Welch' if feat_cfg.get('median') else ''}{', no delta' if feat_cfg.get('drop_delta') else ''}{', no gamma' if feat_cfg.get('drop_gamma') else ''}", flush=True)
-    features = (lambda x, fs: features_rich(x, fs, True, feat_cfg)) if rich else features_basic
+    asr = None
+    if feat_cfg and feat_cfg.get("asr"):
+        from model_search import ASR, clean_window
+        asr = ASR(feat_cfg["asr"])
+        print(f"# artefact subspace reconstruction: components over {feat_cfg['asr']:.0f}x their resting power are removed (calibrated on your baseline)", flush=True)
+    asr_cal = []
+    features = (lambda x, fs: features_rich(x, fs, True, feat_cfg, asr)) if rich else features_basic
     print(f"# model: {m.get('config', {}).get('model', 'logreg')}, {'rich' if rich else 'basic'} features, held-out AUC {m.get('loso_auc', 0):.2f}", flush=True)
     win = int(m["epoch_s"] * FS)
     buf = deque(maxlen=win)
@@ -129,6 +135,7 @@ def main():
     amp_hist = deque(maxlen=40)
     fat_start = 0.0
     rest_mean, rest_sd = 0.3, 0.2
+    p_recent = deque(maxlen=5)
     fat_recent = deque(maxlen=5)
     clean_n = 0
     try:
@@ -273,7 +280,9 @@ def main():
             if cond.get("redo"):
                 cond["redo"] = False
                 base, chan_base, fat_ema, fatigue_pct, alarmed, above_since, ema = None, None, None, 0.0, False, None, None
-                base_feats.clear(); base_chan.clear(); base_fat.clear(); base_covs.clear(); amp_hist.clear()
+                base_feats.clear(); base_chan.clear(); base_fat.clear(); base_covs.clear(); amp_hist.clear(); asr_cal.clear(); p_recent.clear()
+                if asr is not None:
+                    asr.V = None
                 print(f"t={t:6.1f} REBASELINE requested from the page", flush=True)
                 speak("New baseline")
             if base is None:
@@ -298,12 +307,18 @@ def main():
                         post_state(t)
                         continue
                 base_feats.append(f)
+                if asr is not None:
+                    asr_cal.append(X8[IDX].copy())
                 if riem is not None:
                     base_covs.append(riem.covs(X8[IDX]))
                 base_chan.append(chan_now)
                 if fat_now is not None:
                     base_fat.append(fat_now)
                 if len(base_feats) * 1.0 >= a.baseline:
+                    if asr is not None and asr_cal:
+                        asr.fit([clean_window(w, FS, feat_cfg) for w in asr_cal])
+                        base_feats[:] = [np.nan_to_num(features(w, FS), nan=0.0, posinf=0.0, neginf=0.0)[fmask] if fmask is not None
+                                         else np.nan_to_num(features(w, FS), nan=0.0, posinf=0.0, neginf=0.0) for w in asr_cal]
                     base = np.mean(base_feats, axis=0)
                     # rest calibration: what the model says about THIS person's resting signal (mean and spread of p);
                     # the gauge reads how far above that rest the current output is, so sitting still reads low by construction
@@ -345,8 +360,10 @@ def main():
                 if riem is not None:
                     pr = float(riem_clf.predict_proba(riem.features(riem.covs(X8[IDX]))[None, :])[0, 1])
                     p = 0.5 * (p + pr)
+                p_recent.append(p)
+                p_med = float(np.median(p_recent))      # median of the last 5 outputs: a one-second glitch cannot move the gauge
                 ema = 0.2 if ema is None else ema   # start calm, let the evidence raise it
-                ema = ema + (p - ema) * (1.0 / a.smooth)
+                ema = ema + (p_med - ema) * (1.0 / a.smooth)
                 load_pct = float(np.clip(20 * (ema - rest_mean) / rest_sd, 0, 100))   # 0 at his own rest; 20 per spread above it; alarm at 3.5 spreads
                 # fatigue: slow EMA (about 2 min) of the ratio drift, starting AT the baseline; +0.5 log10 (ratio x3) reads as 100
                 if fat_now is not None:
