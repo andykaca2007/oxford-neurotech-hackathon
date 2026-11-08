@@ -20,8 +20,8 @@ Ranking: severity as re-rated by the adversary, then grouped so that issues with
 | 10 | high | fatigue-adv1 | ADDED | The contact gate that would block a flat baseline can never pass with the 5-channel model, and run_all.sh never turns it on | done (0c25f19) |
 | 11 | high | gauge-1 | confirmed | The baseline accepts dead or rail windows, and --strict, the only gate that would stop that, can never pass with the 5-channel model | done (0c25f19) |
 | 12 | high | gauge-adv1 | ADDED | ASR fitted on a dead baseline deletes every later window, and the zeroed channels count as clean | done (0c25f19) |
-| 13 | high | ops-1 | confirmed | Headset data stop freezes the whole demo silently; page keeps saying live | open |
-| 14 | high | ops-2 | confirmed | Ctrl-C cannot stop a stalled run, and the stale gauge attaches to the next session's stream and page | open |
+| 13 | high | ops-1 | confirmed | Headset data stop freezes the whole demo silently; page keeps saying live | done (98c5ed8) |
+| 14 | high | ops-2 | confirmed | Ctrl-C cannot stop a stalled run, and the stale gauge attaches to the next session's stream and page | done (98c5ed8) |
 | 15 | high | ops-4 | confirmed | The replay fallback needs author-only steps, is not labelled on the page, and shows a flat gauge | done (ae1fc8d): launcher, VS Code task and label; the recordings themselves show no clear effect, say so on stage |
 | 16 | high | ops-adv1 | ADDED | Gauge and connect check take any 'Unicorn' LSL stream on the network, not this laptop's | open |
 | 17 | high | serverpage-1 | confirmed | Replay mode is not shown on the page: a recorded session reads as live | done (ae1fc8d) |

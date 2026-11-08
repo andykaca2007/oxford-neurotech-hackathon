@@ -168,3 +168,11 @@ Rules for every change: it must be tested on recorded data with a split that is 
 - CRITIQUE #9 fatigue-3: with 180 s smoothing and baseline-spread scoring, nothing physiological moves the index in a 3-minute demo (lab rest stays 45 to 55; his sessions step 0.2 to 0.4 log10 between baseline and first minute with no task). The number is now hidden until 20 minutes of monitoring; the card says "trend needs 20 min of monitoring, N min to go". Rebaseline resets it.
 - Checks: smoke ALL PASS, 16 replays 0 failed.
 - Correction, 07:06: commit 9deb14d was pushed with two smoke failures (my commit command did not stop on them): the page server crashed when the gauge posted fatigue=None, so condition markers and the debrief failed. Fixed in the next commit; smoke ALL PASS, 16 replays 0 failed. From now on commits are gated on the smoke test's exit code.
+
+### Critique iteration 4, 07:15
+
+- CRITIQUE #13 ops-1 and #14 ops-2: when the headset stopped sending (gPype logs show 3 fatal and 4 transient dropouts last evening), the gauge blocked forever in an LSL read with no timeout, the page kept the last number, Ctrl-C could not reach Python, and a forgotten gauge would wake up on the next session's stream.
+  - Now: the read times out after 1 s; after 2 s without data the gauge posts, prints and speaks NO DATA; the server reports the age of the last update and the page shows a red NO DATA overlay and blanks the number when the age is over 3 s or the server does not answer; run_all.sh stops leftover gauges and launchers (not itself or its parent shell) before starting and cleans up on exit.
+  - Tested with a test-only --stall-after on the fake source (his stale bridge still owns the Unicorn stream name, so the live path was not used): NO DATA after 2 s, Ctrl-C stops the gauge within 2.5 s with no traceback, page age passes 3 s once the gauge stops. Added as a smoke step.
+  - Note for the morning: run_all.sh will now stop the 01:21 processes still running in his Terminal when he next launches; closing that Terminal first is still cleaner.
+- Checks: smoke ALL PASS (new stall step included), 16 replays 0 failed; commit gated on both exit codes.
