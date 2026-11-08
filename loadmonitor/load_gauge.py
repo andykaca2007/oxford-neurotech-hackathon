@@ -309,6 +309,13 @@ def main():
                                                headers={"Content-Type": "application/json"}), timeout=0.3)
                     except Exception:
                         pass
+            if not cond.get("synced"):
+                # first reply: adopt the server's counters instead of treating them as new requests (a gauge restarted
+                # against a running page server otherwise started an unrequested Alpha check or Calibrate; CRITIQUE serverpage-5)
+                cond["rebaseline"] = int(reply.get("rebaseline", 0))
+                cond["alpha_check"] = int(reply.get("alpha_check", 0))
+                cond["calibrate"] = int(reply.get("calibrate", 0))
+                cond["synced"] = True
             rb = int(reply.get("rebaseline", 0))
             if rb != cond["rebaseline"]:
                 cond["rebaseline"] = rb

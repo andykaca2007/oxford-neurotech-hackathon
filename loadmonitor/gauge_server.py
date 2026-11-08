@@ -35,6 +35,17 @@ def summary():
         personal = bool(STATE.get("personal"))
     if not loads:
         return None
+    held_seconds = sum(1 for r in loads if len(r) > 5 and r[5])
+    scored = [r for r in loads if not (len(r) > 5 and r[5])]      # held or frozen seconds are not measurements
+    if not scored:
+        return dict(evidence=dict(alpha_check=ac, brain_signal_shown=bool(ac and ac.get("ok")), calibration=cal, personal_model_on=personal),
+                    alarm_threshold=thr, replay=STATE.get("replay") or False, duration_s=round(loads[-1][0] - loads[0][0]),
+                    held_seconds=held_seconds, scored_seconds=0, peak=0, t_peak=0, seconds_above_alarm=0, mean_load=0,
+                    signal_quality=dict(mean_clean_channels=0, share_seconds_3plus_clean=0), fatigue_start=None, fatigue_now=None,
+                    load_by_condition={}, last_60s=dict(mean_load=0, max_load=0, mean_clean=0, answers=0, errors=0, condition="none"),
+                    answers=0, errors=0, errors_during_high_load=0, challenge_start=None, challenge_end=None,
+                    mean_load_before_challenge=None, mean_load_during_challenge=None)
+    loads = scored
     ts = [r[0] for r in loads]
     ls = [r[1] for r in loads]
     cleans = [r[2] for r in loads]
@@ -63,7 +74,7 @@ def summary():
     # what the EEG has been shown to contain: only a passed Alpha check is evidence of brain signal; the clean count
     # is amplitude only and is high on recordings that fail the alpha check (CRITIQUE serverpage-2)
     evidence = dict(alpha_check=ac, brain_signal_shown=bool(ac and ac.get("ok")), calibration=cal, personal_model_on=personal)
-    return dict(evidence=evidence, alarm_threshold=thr, replay=STATE.get("replay") or False, duration_s=round(ts[-1] - ts[0]), peak=round(peak), t_peak=round(t_peak),
+    return dict(evidence=evidence, alarm_threshold=thr, replay=STATE.get("replay") or False, held_seconds=held_seconds, scored_seconds=len(loads), duration_s=round(ts[-1] - ts[0]), peak=round(peak), t_peak=round(t_peak),
                 signal_quality=quality, fatigue_start=(round(fats[0]) if fats[0] == fats[0] else None), fatigue_now=(round(fats[-1]) if fats[-1] == fats[-1] else None), load_by_condition=per_cond,   # fatigue None = not shown yet or no baseline
                 last_60s=dict(mean_load=round(sum(l for _, l, _ in last) / max(1, len(last))), max_load=round(max([l for _, l, _ in last] or [0])),
                               mean_clean=round(sum(c for _, _, c in last) / max(1, len(last)), 1), answers=len(recent_ans), errors=len(recent_err), condition=conds[-1]),
@@ -105,8 +116,11 @@ CONTEXT = (
     "brain activity sits above their own 30-second resting baseline (model trained on public rest-versus-arithmetic data, "
     "cross-validated AUC 0.76 on lab EEG; on lab data rest reads 0 and arithmetic a median of 31; it has not yet been shown "
     "to separate task from rest on this dry cap). If 'replay' names a file, this is a RECORDED session replayed, not a "
-    "live person: say so in the first words. 'fatigue' is a published "
-    "(theta+alpha)/beta ratio, 50 = the person's own start, moving only slowly; it is not a trained model. "
+    "live person: say so in the first words. If 'evidence.personal_model_on' is true, load comes from a personal model trained "
+    "on this session's Calibrate blocks and anchored to its held-out rest, not from the lab model. 'held_seconds' are seconds "
+    "where load was held (noise, a lost channel, no data) and are not measurements. 'fatigue' is a published "
+    "(theta+alpha)/beta ratio, 50 = the person's own start, shown only after 20 minutes; it also moves with muscle tension "
+    "(on this cap it correlated -0.43 with muscle noise), so never call it tiredness. "
     "'evidence.brain_signal_shown' is true only if the eyes-closed Alpha check passed; if it is false or missing, say first "
     "that the EEG has not been shown to contain brain signal and the load numbers are unverified. "
     "'signal_quality' counts electrodes whose cleaned signal is under 100 microvolts; that is amplitude only, not proof of "
@@ -176,7 +190,14 @@ class H(BaseHTTPRequestHandler):
                 STATE.update(data)
                 STATE["_rx"] = time.time()
                 if data.get("baseline_done"):
-                    LOADLOG.append((float(data.get("t", 0)), float(data.get("load", 0)), int(data.get("clean", 0)), (float(data["fatigue"]) if data.get("fatigue") is not None else float("nan")), STATE.get("condition", "none")))
+                    t_in = float(data.get("t", 0))
+                    if LOADLOG and t_in < LOADLOG[-1][0] - 5:
+                        LOADLOG.clear()                     # a new gauge session against this server: start fresh statistics
+                    st = str(data.get("state", ""))
+                    held = bool(data.get("load_held")) or st.startswith(("NO DATA", "CONTACT LOST", "CHANNEL LOST", "NOISY", "HELD"))
+                    LOADLOG.append((t_in, float(data.get("load", 0)), int(data.get("clean", 0)),
+                                    (float(data["fatigue"]) if data.get("fatigue") is not None else float("nan")),
+                                    STATE.get("condition", "none"), held))
             self._send(200, json.dumps({"condition": cond, "rebaseline": STATE.get("rebaseline", 0), "alpha_check": STATE.get("alpha_check_n", 0), "calibrate": STATE.get("calibrate_n", 0)}).encode(), "application/json")
         elif self.path.startswith("/event"):
             with LOCK:
@@ -189,6 +210,8 @@ class H(BaseHTTPRequestHandler):
                     LOADLOG.clear()
                 if data.get("kind") == "rebaseline":
                     STATE["rebaseline"] = STATE.get("rebaseline", 0) + 1
+                    LOADLOG.clear()                         # loads scored against the old baseline are not mixed with the new one
+                    EVENTS[:] = [e for e in EVENTS if e.get("kind") == "rebaseline"]
                 if data.get("kind") == "alpha_check":
                     STATE["alpha_check_n"] = STATE.get("alpha_check_n", 0) + 1
                 if data.get("kind") == "calibrate":
