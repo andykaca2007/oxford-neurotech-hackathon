@@ -2,7 +2,7 @@
 
     .venv/bin/python tests/replay_all.py [--speed 40] [--min-s 60] [--extra "--calib-s 0"]
 
-Runs its own page server on port 8799 (never 8765), replays each recordings/paing_2026110[78]_*raw*.csv longer
+Runs its own page server on a free port from 8799 upward (tests/free_port.py; never 8765), replays each recordings/paing_2026110[78]_*raw*.csv longer
 than --min-s seconds with its markers, and prints one line per recording. Exit code = number of failures
 (crash, NaN or inf in the gauge log, or no rows written).
 """
@@ -14,6 +14,9 @@ import shlex
 import subprocess
 import sys
 import time
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import free_port  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PY = os.path.join(ROOT, ".venv", "bin", "python")
@@ -34,6 +37,8 @@ def main():
     os.chdir(ROOT)
     fails = 0
     srv = None
+    PORT = free_port.claim()
+    print(f"# test port {PORT}", flush=True)
     try:
         files = sorted(glob.glob("recordings/paing_2026110[78]_*raw*.csv"))
         for path in files:
@@ -43,12 +48,12 @@ def main():
             if srv:
                 srv.terminate(); srv.wait()
             # a fresh page server per recording, so no condition or event carries over from the previous one
-            srv = subprocess.Popen([PY, "loadmonitor/gauge_server.py", "8799"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            srv = subprocess.Popen([PY, "loadmonitor/gauge_server.py", str(PORT)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             time.sleep(1.2)
-            log = f"/tmp/replay_{os.path.basename(path)[:21]}.csv"
+            log = f"/tmp/replay{PORT}_{os.path.basename(path)[:21]}.csv"
             if os.path.exists(log):
                 os.remove(log)
-            cmd = [PY, "loadmonitor/load_gauge.py", "--replay", path, "--speed", str(a.speed), "--web", "--web-port", "8799",
+            cmd = [PY, "loadmonitor/load_gauge.py", "--replay", path, "--speed", str(a.speed), "--web", "--web-port", str(PORT),
                    "--no-ui", "--log", log] + shlex.split(a.extra)
             r = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
             out = r.stdout + r.stderr
@@ -81,6 +86,7 @@ def main():
     finally:
         if srv:
             srv.terminate()
+        free_port.release(PORT)
     print(f"{fails} failed")
     sys.exit(fails)
 

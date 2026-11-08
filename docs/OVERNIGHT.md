@@ -297,3 +297,7 @@ Rules for every change: it must be tested on recorded data with a split that is 
 - CRITIQUE #23 calib-adv2 REJECTED with evidence. Its failure (channel sets mixing inside calibration blocks) was removed by 0c25f19, which holds the load and collects no calibration windows while any model channel is dead. With that gate, an effect injected into the task blocks passes the 0.80 bar in 97 percent (0.5 SD) and 99 percent (1.0 SD) of 115 overlapping starts (about 12 independent runs); the null passes 0. The proposed all-5-clean gate leaves 103 of 115 starts untestable on this dry cap; a 4-fold minimum leaves 33 untestable; neither changed null or power here. Script kept as tests/calib_inject.py (its base features now drop infinities, which crashed the critic's version).
 - Honest scope: injected effects are a fixed shift in feature space, not real brain data; Calibrate is still untested on a head.
 
+### Test ports (8 Nov, morning)
+
+- Paing is letting a second agent (Antigravity) review the repo while this loop keeps running (his call). Both would have run the tests on port 8799 and the same /tmp log names. tests/free_port.py now claims a free port from 8799 upward (lock directory plus a bind check, never 8765); smoke.sh and replay_all.py use it and per-port log names, and release the claim on exit. Checked by running both at once: smoke on 8799 ALL PASS, replays on 8800 0 failed, no lock left behind. docs/REVIEW_BRIEF.md updated.
+

@@ -12,8 +12,9 @@ every 10 minutes, so do not edit tracked files in this checkout.
 
 1. **Never touch port 8765** (Paing's live page) and never kill his processes: `run_all.sh`, `gauge_server.py` (no
    port argument), `load_gauge.py --lsl ...`, `headset/unicorn_gpype.py`. Check `ps` before killing anything.
-2. Tests use port **8799**. Run `tests/smoke.sh` and `tests/replay_all.py` one at a time, never together, because
-   both use 8799. To look at the page, use a spare port such as 8797 (recipe below).
+2. `tests/smoke.sh` and `tests/replay_all.py` each claim a free port from 8799 upward (`tests/free_port.py`, never
+   8765) and write per-port log names, so your runs and Claude's loop can run at the same time. To look at the page,
+   use a spare port such as 8797 (recipe below).
 3. Do not start the headset bridge. Bluetooth only works from Paing's Terminal.app.
 4. Do not commit, push, force-push, merge, or touch `main`. If you want to try a code change, make your own branch in
    a separate worktree (`git worktree add ../oxn_review -b antigravity/review`) and never push it.
@@ -73,8 +74,8 @@ every 10 minutes, so do not edit tracked files in this checkout.
 ```bash
 cd ~/Documents/hackathons/oxneurotech_2026-11-07
 .venv/bin/python -m pytest -q tests                 # unit tests, seconds
-bash tests/smoke.sh                                  # end to end on port 8799, about 4 min, must print ALL PASS
-.venv/bin/python tests/replay_all.py                 # all recordings at 40x on port 8799, must end "0 failed"
+bash tests/smoke.sh                                  # end to end on a claimed port, about 4 min, must print ALL PASS
+.venv/bin/python tests/replay_all.py                 # all recordings at 40x on a claimed port, must end "0 failed"
 .venv/bin/python tests/alpha_check_eval.py           # Alpha check: chance, injected real alpha, flank attack (2 min)
 .venv/bin/python tests/calib_null.py                 # Calibrate null and lab positive control (5 min)
 .venv/bin/python tests/calib_inject.py               # Calibrate with an injected effect (2 min)
