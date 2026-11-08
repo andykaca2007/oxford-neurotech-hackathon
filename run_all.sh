@@ -25,12 +25,12 @@ cleanup() { echo; echo "stopping"; for p in "${PIDS[@]}"; do kill "$p" 2>/dev/nu
 trap cleanup INT TERM
 
 # 1. web page (reuse if already up)
-if ! curl -s -o /dev/null http://127.0.0.1:8765/state; then
-  $PY loadmonitor/gauge_server.py > logs/server_$STAMP.log 2>&1 &
-  PIDS+=($!); sleep 1; echo "web page started"
-else
-  echo "web page already running"
-fi
+# always a fresh web server: a leftover one (from another folder or a dead run) answers once and then refuses
+pkill -f gauge_server.py 2>/dev/null; sleep 0.5
+$PY loadmonitor/gauge_server.py > logs/server_$STAMP.log 2>&1 &
+PIDS+=($!)
+sleep 1.5
+if curl -s -o /dev/null http://127.0.0.1:8765/state; then echo "web page started"; else echo "web page FAILED, see logs/server_$STAMP.log"; fi
 
 if [ "$SERIAL" != "fake" ]; then
   # 2. headset bridge (its scope window must stay open; minimise it)

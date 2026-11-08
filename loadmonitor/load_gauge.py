@@ -86,7 +86,7 @@ def main():
     ap.add_argument("--smooth", type=float, default=8.0, help="s of smoothing on the gauge")
     ap.add_argument("--gain", type=float, default=40.0, help="load points per spread of the model output above the wearer's rest (36-subject sweep: 40 = task median 45, rest false alarm 2 percent)")
     ap.add_argument("--strict", action="store_true", help="contact gate + settle check before the baseline, and freeze on contact loss (off: the plain behaviour)")
-    ap.add_argument("--quality-uv", type=float, default=300.0, help="a channel counts as clean when its 1 to 40 Hz RMS is under this (uV); fatigue needs 3 clean")
+    ap.add_argument("--quality-uv", type=float, default=100.0, help="a channel counts as clean when its RMS AFTER the cleaning chain is under this (uV); fatigue needs 3 clean")
     ap.add_argument("--log")
     ap.add_argument("--no-ui", action="store_true")
     ap.add_argument("--web", action="store_true", help="post state to gauge_server.py (http://localhost:8765) every second")
@@ -262,8 +262,17 @@ def main():
             contact = live_n >= 6 or a.fake
             # signal quality: 1 to 40 Hz RMS per channel; dry electrodes on hair give hundreds to thousands of uV of
             # artefact, and the fatigue ratio reads artefact as theta. Fatigue uses clean channels only, else holds.
-            rms = sosfiltfilt(SIG_SOS, X8 - X8.mean(1, keepdims=True), axis=1).std(1)
-            clean = [i for i in IDX if (not dead[i]) and rms[i] < a.quality_uv]
+            # quality is judged on what survives the chain (detrend, notch, reference, band-pass, burst mask, ASR):
+            # that is the signal the model and the fatigue ratio actually see
+            Xc = X8[IDX]
+            if feat_cfg:
+                Xc = clean_window(Xc, FS, feat_cfg)
+                if asr is not None and asr.V is not None:
+                    Xc = asr(Xc)
+            else:
+                Xc = sosfiltfilt(SIG_SOS, Xc - Xc.mean(1, keepdims=True), axis=1)
+            rms_c = Xc.std(1)
+            clean = [i for k, i in enumerate(IDX) if (not dead[i]) and rms_c[k] < a.quality_uv]
             clean_n = len(clean)
             # fatigue ratio from Hilbert band envelopes: band-pass theta, alpha, beta, take the analytic-signal envelope,
             # and use its MEDIAN over the window as the band amplitude (a burst cannot set it); median over clean channels
@@ -272,11 +281,6 @@ def main():
                 idxs = clean if clean_n >= 3 else live
                 # the fatigue ratio runs on the SAME cleaned window as the model (detrend, notch, reference, band-pass,
                 # burst mask, artefact subspace reconstruction), so drift and hum cannot ramp it
-                Xc = X8[IDX]
-                if feat_cfg:
-                    Xc = clean_window(Xc, FS, feat_cfg)
-                    if asr is not None:
-                        Xc = asr(Xc)
                 rowsel = [IDX.index(i) for i in idxs]
                 env = []
                 for sos_b in (FAT_SOS_TH, FAT_SOS_AL, FAT_SOS_BE):
