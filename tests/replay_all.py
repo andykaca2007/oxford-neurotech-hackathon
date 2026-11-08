@@ -28,7 +28,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--speed", type=float, default=40)
     ap.add_argument("--min-s", type=float, default=60)
-    ap.add_argument("--extra", default="")
+    # same gauge settings as run_all.sh, so the replays test what is actually launched
+    ap.add_argument("--extra", default="--alarm 50 --hold 20 --smooth 12")
     a = ap.parse_args()
     os.chdir(ROOT)
     fails = 0
@@ -52,7 +53,7 @@ def main():
             r = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
             out = r.stdout + r.stderr
             crash = "Traceback" in out
-            rows, bad, by = 0, 0, {}
+            rows, bad, by, al = 0, 0, {}, {}
             if os.path.exists(log):
                 for line in open(log).read().splitlines()[1:]:
                     p = line.split(",")
@@ -66,9 +67,10 @@ def main():
                         bad += 1
                         continue
                     by.setdefault(p[4], []).append(load)
+                    al.setdefault(p[4], []).append(int(p[3]) if p[3].isdigit() else 0)
             ok = (not crash) and rows > 0 and bad == 0
             fails += 0 if ok else 1
-            conds = "  ".join(f"{k} {len(v)}s mean {sum(v) / len(v):.0f}" for k, v in sorted(by.items()))
+            conds = "  ".join(f"{k} {len(v)}s mean {sum(v) / len(v):.0f} alarm {sum(al[k])}s" for k, v in sorted(by.items()))
             reason = "" if ok else (" CRASH" if crash else "") + (" NO ROWS" if rows == 0 else "") + (f" {bad} BAD ROWS" if bad else "")
             print(f"{'ok  ' if ok else 'FAIL'} {os.path.basename(path)[:21]} {dur:5.0f} s  rows {rows:4d}  {conds}{reason}", flush=True)
             if crash:

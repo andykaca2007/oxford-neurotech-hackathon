@@ -63,3 +63,12 @@ Rules for every change: it must be tested on recorded data with a split that is 
 - Replays with the 5-channel model, labelled runs (8-channel in brackets): 01:03 mental 8 (8), rest 3 (1), physical 13 (4); 01:15 mental 4 (10), recovery 7 (23). Neither model separates his Zetamac from rest (iterations 2 and 4 explain why); the 5-channel one reads lower during recovery.
 - Bugs found by the replays and fixed: a recording with no live channels at all (23:03) wrote no CSV rows because the header was only written after a scored window (the 8-channel model had been scoring rail data there); held seconds are now logged, and fatigue shows its start value of 50 instead of 0 before the first scored window. Held message says N of 5, not N of 8.
 - Checks on the final code: smoke ALL PASS, 16 replays 0 failed (23:03 now logs 85 held rows).
+
+### Iteration 6, 03:10 to 03:25
+
+- Fixed: `tests/replay_all.py` ran the gauge with default settings (alarm 70, smoothing 8), not the ones `run_all.sh` launches (alarm 50, hold 20, smoothing 12). Replays now use the live settings and report alarm seconds per condition.
+- Live settings over all 16 recordings: 0 alarm seconds out of about 3,100 scored seconds (no false alarms at rest; also none during his Zetamac).
+- Hypothesis: the fatigue ratio tracks artefact. Test: per-window Spearman correlation, within each of 11 recordings over 90 s, between the gauge's fatigue ratio (computed exactly as the gauge does) and raw amplitude, ASR removals and muscle share (30 to 45 Hz over 4 to 30 Hz).
+  - Median rho: muscle share -0.43, raw amplitude +0.22, ASR removals +0.04. Supported: muscle leaks into the 13 to 30 Hz beta denominator, so tensing reads as "recovering"; larger raw amplitude reads as "tiring".
+  - Candidate fixes on the same data: beta 13 to 20 Hz gives muscle -0.38, amplitude +0.19, per-window sd 0.33 (current 0.40); a muscle gate (skip windows with 30 to 45 Hz over half of 4 to 30 Hz) keeps 80 percent of windows and makes the amplitude coupling worse (+0.37).
+- Decision: no change. The 13 to 20 Hz gain is small and would leave the published (theta+alpha)/beta definition the page cites; the gate is worse. Fatigue on this cap carries artefact under every variant tested; the honest fix is contact. Checks: smoke ALL PASS, 16 replays 0 failed.
