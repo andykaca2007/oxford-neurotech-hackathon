@@ -1,0 +1,33 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "RUN ALL (10.14): bridge + server + gauge",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "./run_all.sh U8-2025.10.14 paing",
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "name": "RUN ALL (11.14)",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "./run_all.sh U8-2025.11.14 paing",
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "name": "RUN ALL (whichever amplifier answers)",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "./run_all.sh '' paing",
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "name": "RUN ALL fake data (no headset)",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "./run_all.sh fake paing",
+      "cwd": "${workspaceFolder}"
+    }
+  ]
+}

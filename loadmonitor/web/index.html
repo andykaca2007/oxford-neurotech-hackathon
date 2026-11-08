@@ -1,0 +1,470 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mental Load</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@200;300;400&display=swap" rel="stylesheet">
+<style>
+  /* one typeface, true black, 1 px cell lines, zero radius, no shadow, no gradient */
+  :root {
+    --bg:#000; --fg:#e5e5e5; --dim:#767676; --mid:#b2b2b2; --accent:#f05a24;
+    --line:#2b2b2b; --line2:#1c1c1c;
+    --mono:"JetBrains Mono", ui-monospace, Menlo, monospace;
+  }
+  body.calm  { --bg:#00050f; --fg:#e4e9f2; --dim:#5f7390; --mid:#a9b7cc; --accent:#4f8fe8; --line:#192436; --line2:#0f1724; }
+  body.work  { --bg:#000; --fg:#e5e5e5; --dim:#767676; --mid:#b2b2b2; --accent:#fab413; --line:#2b2b2b; --line2:#1c1c1c; }
+  body.alarm { --bg:#0e0400; --fg:#f2e6df; --dim:#8c6652; --mid:#cfae9e; --accent:#f05a24; --line:#3a1d12; --line2:#24110a; }
+
+  * { box-sizing:border-box; margin:0; padding:0; border-radius:0; }
+  html, body { height:100%; }
+  body {
+    background:var(--bg); color:var(--fg); font:300 13px/1.4 var(--mono);
+    display:grid; grid-template-rows:auto 1fr; overflow:hidden;
+    transition:background 1s ease, color 1s ease;
+    font-variant-numeric:tabular-nums; -webkit-font-smoothing:antialiased;
+  }
+  body.alarm::before { content:""; position:fixed; inset:0 0 auto 0; height:3px; background:var(--accent); z-index:9; }
+
+  /* ---------- top rail ---------- */
+  .rail { display:grid; grid-template-columns:1fr auto 1fr; align-items:center; height:56px; padding:0 22px; border-bottom:1px solid var(--line); }
+  .rail .brand { display:flex; align-items:baseline; gap:18px; }
+  .rail .brand b { font-weight:400; font-size:13px; letter-spacing:.08em; text-transform:uppercase; }
+  .rail .brand span { font-size:11px; color:var(--dim); letter-spacing:.06em; }
+  .seg { display:flex; border:1px solid var(--line); }
+  .seg button { font:300 11px/1 var(--mono); letter-spacing:.1em; text-transform:uppercase; height:34px; padding:0 16px; background:none; border:0; border-right:1px solid var(--line); color:var(--dim); cursor:pointer; }
+  .seg button:last-child { border-right:0; }
+  .seg button:hover { color:var(--fg); }
+  .seg button.on { color:var(--bg); background:var(--fg); }
+  .rail .status { display:flex; justify-content:flex-end; align-items:center; gap:26px; font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--dim); }
+  .rail .status .st { display:flex; align-items:center; gap:8px; }
+  .rail .status .st i { width:7px; height:7px; background:var(--dim); display:inline-block; }
+  .rail .status .st.on { color:var(--accent); } .rail .status .st.on i { background:var(--accent); animation:blink 1s steps(2,start) infinite; }
+  @keyframes blink { to { visibility:hidden; } }
+  .rail .status .clock { color:var(--fg); }
+
+  /* ---------- main grid: cells separated by 1 px lines, the line is the gap ---------- */
+  .main { display:grid; grid-template-columns:5fr 4fr 3fr; grid-template-rows:minmax(0,1fr) 230px; gap:1px; background:var(--line); min-height:0; }
+  .cell { background:var(--bg); padding:18px 22px; min-height:0; display:flex; flex-direction:column; transition:background 1s ease; }
+  .lbl { font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--dim); display:flex; justify-content:space-between; gap:12px; margin-bottom:16px; }
+  .lbl span::before { content:attr(data-i) "  "; color:var(--fg); white-space:pre; }
+  .lbl em { font-style:normal; }
+
+  /* hero: load */
+  .hero { display:flex; flex-direction:column; flex:1; min-height:0; justify-content:center; }
+  .hero .n { font-size:clamp(96px, 13vw, 200px); font-weight:200; line-height:.9; letter-spacing:0; color:var(--fg); }
+  .hero .n.dim { color:var(--dim); }
+  .hero .n.hot { color:var(--accent); }
+  .hero .row { display:flex; align-items:baseline; gap:18px; margin-top:12px; }
+  .hero .row b { font-size:15px; font-weight:400; letter-spacing:.08em; text-transform:uppercase; }
+  .hero .row span { font-size:11px; color:var(--dim); }
+  .why { margin-top:10px; font-size:12px; letter-spacing:.04em; color:var(--mid); min-height:1.4em; }
+  .why b { font-weight:400; color:var(--fg); }
+  .bar { height:1px; background:var(--line); position:relative; margin-top:16px; }
+  .bar i { position:absolute; left:0; top:-1px; height:3px; width:0; background:var(--fg); transition:width .5s; }
+  .fat { margin-top:auto; padding-top:16px; border-top:1px solid var(--line2); display:grid; grid-template-columns:auto 1fr; gap:20px; align-items:baseline; }
+  .fat .n { font-size:48px; font-weight:200; line-height:1; }
+  .fat .n.hot { color:var(--accent); } .fat .n.dim { color:var(--dim); }
+  .fat b { font-size:12px; font-weight:400; letter-spacing:.08em; text-transform:uppercase; display:block; }
+  .fat span { font-size:10.5px; color:var(--dim); }
+
+  /* head */
+  .head { flex:1; min-height:0; display:flex; align-items:center; justify-content:center; }
+  .head svg { height:100%; max-width:100%; }
+  .ring { fill:none; stroke:var(--line); stroke-width:1; }
+  .el circle { stroke:var(--bg); stroke-width:1.5; transition:fill .6s; }
+  .el text { font-family:var(--mono); font-weight:400; fill:var(--fg); text-anchor:middle; dominant-baseline:central; font-size:6px; pointer-events:none; }
+  .el .v { font-size:5px; font-weight:300; fill:var(--mid); }
+  .el.dead circle { fill:none; stroke:var(--dim); stroke-dasharray:2 2; }
+  .el.dead text { fill:var(--dim); }
+  .lbl em.tog { cursor:pointer; color:var(--mid); border-bottom:1px dotted var(--dim); }
+  .lbl em.tog:hover { color:var(--fg); }
+  #headsvg.contact .el:not(.dead) text { fill:#000; }
+  #headsvg.contact .el:not(.dead) .v { fill:#000; font-weight:400; }
+  .contactline { font-size:10.5px; line-height:1.5; color:var(--dim); text-align:center; padding-top:8px; min-height:3em; }
+  .contactline b { font-weight:400; color:var(--fg); }
+  .alarmline { display:none; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent); text-align:center; padding-top:8px; }
+  body.alarm .alarmline { display:block; }
+
+  /* markers + debrief */
+  .kv { font-size:12px; display:grid; grid-template-columns:1fr auto; }
+  .kv div { display:contents; }
+  .kv span { padding:10px 0; border-bottom:1px solid var(--line2); color:var(--dim); }
+  .kv b { padding:10px 0; border-bottom:1px solid var(--line2); font-weight:400; text-align:right; color:var(--fg); }
+  .kv b small { color:var(--dim); margin-left:4px; font-size:inherit; }
+  .btn { font:300 11px/1 var(--mono); letter-spacing:.12em; text-transform:uppercase; height:34px; padding:0 16px; border:1px solid var(--fg); background:none; color:var(--fg); cursor:pointer; }
+  .btn:hover { background:var(--fg); color:var(--bg); }
+  .btn.primary { background:var(--fg); color:var(--bg); }
+  .debrief { font-size:12.5px; line-height:1.55; margin-top:12px; white-space:pre-wrap; color:var(--mid); overflow:auto; min-height:0; }
+  .src { font-size:10.5px; color:var(--dim); margin-top:8px; }
+  .chalcard { display:none; }   /* fatigue is induced on another screen; keep for the keyboard demo */
+  .chal { display:grid; grid-template-columns:auto 1fr auto; gap:12px; align-items:center; }
+  .chal .cur { font-size:34px; font-weight:200; }
+  .chal input { font:300 20px var(--mono); width:100%; height:34px; padding:0 12px; border:1px solid var(--line); background:none; color:var(--fg); outline:none; }
+  .score { font-size:11px; color:var(--dim); margin-top:8px; display:flex; gap:16px; }
+  .score b { color:var(--fg); font-weight:400; }
+
+  /* trace + signals */
+  .trace { grid-column:1 / span 2; }
+  .trace canvas, .sig canvas { display:block; width:100%; height:100%; }
+  .trace .plot { flex:1; min-height:0; position:relative; }
+  .trace .ax { position:absolute; right:0; font-size:10px; color:var(--accent); transform:translateY(-50%); }
+  #sigrows { flex:1; min-height:0; display:grid; grid-template-columns:1fr 1fr; column-gap:22px; row-gap:0; }
+  #sigrows .r { display:grid; grid-template-columns:48px 1fr; align-items:center; min-height:0; border-top:1px solid var(--line2); }
+  #sigrows .r .l { font-size:10px; line-height:1.3; color:var(--dim); }
+  #sigrows .r .l b { display:block; color:var(--fg); font-weight:400; }
+  #sigrows .r canvas { min-height:18px; height:100%; }
+
+  @media (max-width:980px) {
+    html, body { height:auto; }
+    body { display:block; overflow:auto; }
+    .rail { grid-template-columns:1fr; height:auto; gap:10px; padding:12px 16px; }
+    .seg { overflow-x:auto; }
+    .main { display:block; }
+    .cell { padding:16px; min-height:auto; border-bottom:1px solid var(--line); }
+    .cell:first-child { min-height:300px; }
+    .cell:nth-child(2) { height:380px; }
+    .trace { height:220px; } .sig { height:300px; }
+    .hero .n { font-size:96px; }
+  }
+</style>
+</head>
+<body>
+<header class="rail">
+  <div class="brand"><b>Mental load</b><span id="devline">unicorn bci core-8 · 8 ch · 250 hz</span></div>
+  <div class="seg" id="condbar">
+    <button data-c="baseline">baseline</button><button data-c="mental">mental</button>
+    <button data-c="physical">physical</button><button data-c="recovery">recovery</button><button data-c="none">none</button>
+  </div>
+  <div class="status">
+    <div class="st"><span id="cond">none</span></div>
+    <div class="st" id="statewrap"><i></i><span id="state">waiting</span></div>
+    <div class="clock" id="clock">00:00</div>
+  </div>
+</header>
+
+<main class="main">
+  <section class="cell">
+    <div class="lbl"><span data-i="[1]">Load · relative to your baseline</span><em id="lbl_rule">alarm &gt; 70 for 20 s</em></div>
+    <div class="hero">
+      <div class="n dim" id="val">—</div>
+      <div class="row"><b id="label">Baseline</b><span id="sub">sit still, eyes open</span></div>
+      <div class="why" id="why" title="Measured markers shown next to the load. The load itself comes from the trained model; these are what moved alongside it."></div>
+      <div class="bar" id="basebar"><i id="basefill"></i></div>
+      <div class="fat">
+        <div class="n dim" id="fval">—</div>
+        <div><b id="flabel">Baseline</b><span>fatigue · (θ+α)/β change this session · 50 = your start · published ratio, not a trained model</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cell">
+    <div class="lbl"><span data-i="[2]" id="hm_lbl">Electrodes · change from baseline</span><em id="hm_unit" class="tog" title="switch between contact noise and change from baseline">dB</em></div>
+    <div class="head">
+      <svg viewBox="0 0 200 220" id="headsvg">
+        <ellipse class="ring" cx="100" cy="110" rx="82" ry="95"/>
+        <path class="ring" d="M100 15 l-8 -10 l16 0 z"/>
+        <path class="ring" d="M18 95 q-10 15 0 30"/><path class="ring" d="M182 95 q10 15 0 30"/>
+        <line class="ring" x1="100" y1="22" x2="100" y2="198" stroke-dasharray="1 4"/>
+        <line class="ring" x1="24" y1="110" x2="176" y2="110" stroke-dasharray="1 4"/>
+      </svg>
+    </div>
+    <div class="contactline" id="contactline"></div>
+    <div class="alarmline">Load held above the alarm line</div>
+  </section>
+
+  <section class="cell">
+    <div class="lbl"><span data-i="[3]">Markers</span></div>
+    <div class="kv">
+      <div><span>Fz theta</span><b id="m_theta">—</b></div>
+      <div><span>Pz alpha</span><b id="m_alpha">—</b></div>
+      <div><span>most active</span><b id="m_top">—</b></div>
+      <div><span>dead</span><b id="m_dead">—</b></div>
+      <div><span>clean (under 100 µV after cleaning)</span><b id="m_clean">—</b></div>
+      <div><span>alpha at Pz/O1, 8 s median (lab rest ≈ +6 dB)</span><b id="m_alpha_chk">—</b></div>
+      <div style="display:none"><span>personal calibration</span><b id="m_calib">not run (generic model)</b></div>
+      <div><span>model</span><b id="m_model">lab AUC 0.76 (36 people) · not validated on this cap</b></div>
+    </div>
+    <div class="chalcard" style="margin-top:14px">
+      <div class="chal"><div class="cur" id="cur">4000</div><input id="ans" type="number" placeholder="next" disabled><button class="btn primary" id="go">Start</button></div>
+      <div class="score"><span>answers <b id="n_ans">0</b></span><span>errors <b id="n_err">0</b></span><span><b id="n_time">0 s</b></span></div>
+    </div>
+    <div style="margin-top:auto; padding-top:14px; display:flex; flex-direction:column; min-height:0">
+      <div><button class="btn" id="debrief">Debrief</button> <button class="btn" id="rebase" title="Redo the 30 s baseline without restarting">Rebaseline</button> <button class="btn" id="alphachk" title="20 s eyes open, 20 s eyes closed: proves the electrodes see brain">Alpha check</button> <button class="btn" id="calib" style="display:none" title="160 s: 20 s rest and 20 s silent subtraction, alternating, spoken prompts; trains a personal model only if held-out blocks separate">Calibrate</button></div>
+      <div class="debrief" id="coach" title="one line from Claude every 60 s, from load + answers + signal quality"></div>
+      <div class="debrief" id="dtext"></div>
+      <div class="src" id="dsrc"></div>
+    </div>
+  </section>
+
+  <section class="cell bottom trace">
+    <div class="lbl"><span data-i="[4]">Load · last 10 min</span><em>1 s</em></div>
+    <div class="plot"><canvas id="trace"></canvas><div class="ax" id="alarmax" style="top:30%">70</div></div>
+  </section>
+  <section class="cell bottom sig">
+    <div class="lbl"><span data-i="[5]">Signals · last 2 s</span><em>1–40 Hz · µV</em></div>
+    <div id="sigrows"></div>
+  </section>
+</main>
+
+<script>
+const POS = { Fz:[100,52], F3:[62,64], F4:[138,64], C3:[55,110], Cz:[100,110], C4:[145,110], Pz:[100,158], P3:[62,152], P4:[138,152], O1:[80,196], O2:[120,196], PO7:[52,172], POz:[100,188], PO8:[148,172] };
+const svg = document.getElementById('headsvg'), NS = 'http://www.w3.org/2000/svg', els = {};
+for (const [name,[x,y]] of Object.entries(POS)) {
+  const g = document.createElementNS(NS,'g'); g.setAttribute('class','el');
+  const c = document.createElementNS(NS,'circle'); c.setAttribute('cx',x); c.setAttribute('cy',y); c.setAttribute('r',10); c.setAttribute('fill','#272727');
+  const t = document.createElementNS(NS,'text'); t.setAttribute('x',x); t.setAttribute('y',y-2.2); t.textContent = name;
+  const v = document.createElementNS(NS,'text'); v.setAttribute('class','v'); v.setAttribute('x',x); v.setAttribute('y',y+5); v.textContent='';
+  g.append(c,t,v); svg.append(g); els[name] = {g,c,v};
+}
+const CSSV = n => getComputedStyle(document.body).getPropertyValue(n).trim();
+function hex(c){ const m = c.match(/#([0-9a-f]{6})/i); return m ? [parseInt(m[1].slice(0,2),16), parseInt(m[1].slice(2,4),16), parseInt(m[1].slice(4,6),16)] : [210,162,76]; }
+function heat(db){ // -6..+6 dB: dark grey .. accent
+  const x = Math.max(-1, Math.min(1, db/6));
+  if (x >= 0) { const [r,g,b] = hex(CSSV('--accent')); const k = 0x27; return `rgb(${k+(r-k)*x|0},${k+(g-k)*x|0},${k+(b-k)*x|0})`; }
+  const k = 0x27 + (0x10-0x27)*(-x); return `rgb(${k|0},${k|0},${k|0})`;
+}
+const Q_COL = { good:'#2fbf71', fair:'#fab413', bad:'#f05a24' };
+let hmView = null;   // null: automatic (contact before the baseline, while load is held, during an Alpha check)
+let hmAuto = true;
+document.getElementById('hm_unit').onclick = () => { hmView = hmAuto ? 'change' : 'contact'; };
+// "why did it move": the measured markers next to the load, smoothed over 5 s (median), from the real channel values
+const whyBuf = { a: [], t: [] };
+const med = v => { const s = [...v].sort((x, y) => x - y); return s.length ? s[s.length >> 1] : null; };
+function whyLine(s) {
+  const el = document.getElementById('why');
+  if (!s.baseline_done) { el.textContent = ''; return; }
+  const ch = n => (s.channels || []).find(c => c.name === n && !c.dead && c.alpha_db !== undefined && c.alpha_db !== null);
+  const post = ['Pz', 'O1'].map(ch).filter(Boolean).map(c => c.alpha_db);
+  const fz = ch('Fz');
+  if (post.length) { whyBuf.a.push(post.reduce((x, y) => x + y, 0) / post.length); if (whyBuf.a.length > 10) whyBuf.a.shift(); }
+  if (fz && fz.theta_db !== undefined) { whyBuf.t.push(fz.theta_db); if (whyBuf.t.length > 10) whyBuf.t.shift(); }
+  const h = s.hist || [], d = h.length > 10 ? h[h.length - 1] - h[h.length - 11] : 0;
+  const trend = d > 5 ? 'Rising' : d < -5 ? 'Falling' : 'Steady';
+  const f = v => v === null ? '—' : (v > 0 ? '+' : '') + v.toFixed(1) + ' dB';
+  el.innerHTML = '<b>' + trend + '</b> · alongside it: posterior alpha <b>' + f(med(whyBuf.a)) + '</b>, frontal theta <b>' + f(med(whyBuf.t)) + '</b> vs your rest';
+}
+let ALARM = 70, HOLD = 20;   // updated from the gauge's --alarm each poll
+let chal = { on:false, cur:4000, answers:0, errors:0, t0:0, errT:[] };
+let lastT = 0;
+const curEl = document.getElementById('cur'), ans = document.getElementById('ans'), go = document.getElementById('go');
+async function postEvent(kind, extra={}) {
+  try { await fetch('/event', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({kind, t:lastT, ...extra})}); } catch(e) {}
+}
+go.onclick = () => {
+  if (!chal.on) { chal = { on:true, cur:4000, answers:0, errors:0, t0:lastT, errT:[] }; curEl.textContent='4000'; ans.disabled=false; ans.value=''; ans.focus(); go.textContent='Stop'; postEvent('challenge_start'); }
+  else { chal.on=false; ans.disabled=true; go.textContent='Start'; postEvent('challenge_end'); }
+};
+ans.addEventListener('keydown', e => {
+  if (e.key !== 'Enter' || !chal.on) return;
+  const v = parseInt(ans.value, 10); ans.value=''; chal.answers++;
+  if (v === chal.cur - 7) { chal.cur -= 7; curEl.textContent = chal.cur; postEvent('answer', {value:v, ok:true}); }
+  else { chal.errors++; chal.errT.push(lastT); curEl.style.color='var(--accent)'; setTimeout(()=>curEl.style.color='', 300); postEvent('error', {value:v, expected:chal.cur-7}); }
+  document.getElementById('n_ans').textContent = chal.answers; document.getElementById('n_err').textContent = chal.errors;
+});
+let coachTimer = null, coachBusy = false, coachT = -1, lastStateT = 0;
+async function coach() {
+  // one request at a time, and none once the gauge has stopped (s.t no longer advances); CRITIQUE serverpage-7
+  if (coachBusy || lastStateT === coachT) return;
+  coachBusy = true; coachT = lastStateT;
+  try { const r = await (await fetch('/debrief', {method:'POST', headers:{'Content-Type':'application/json'}, body:'{"mode":"live"}'})).json();
+        if (r.source !== 'none') document.getElementById('coach').textContent = '› ' + r.text.trim() + (r.source.startsWith('claude') ? '' : '  · rule-based summary'); }
+  catch(e) {}
+  finally { coachBusy = false; }
+}
+setInterval(coach, 60000);
+document.getElementById('debrief').onclick = async () => {
+  document.getElementById('dtext').textContent = 'writing';
+  try { const r = await (await fetch('/debrief', {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'})).json();
+        document.getElementById('dtext').textContent = r.text; document.getElementById('dsrc').textContent = r.source.startsWith('claude') ? 'written by ' + r.source + ' from the session numbers' : 'rule-based summary from the session numbers (no AI key set)'; }
+  catch(e) { document.getElementById('dtext').textContent = 'debrief failed'; }
+};
+document.getElementById('calib').onclick = () => {
+  fetch('/event', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({kind:'calibrate', t:lastT})});
+};
+document.getElementById('alphachk').onclick = () => {
+  fetch('/event', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({kind:'alpha_check', t:lastT})});
+};
+document.getElementById('rebase').onclick = () => {
+  fetch('/event', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({kind:'rebaseline', t:lastT})});
+};
+document.querySelectorAll('#condbar button').forEach(b => b.onclick = () => {
+  fetch('/event', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({kind:'condition', value:b.dataset.c, t:lastT})});
+});
+
+const canvas = document.getElementById('trace'), ctx = canvas.getContext('2d');
+function draw(hist){
+  const dpr = devicePixelRatio, w = canvas.width = canvas.clientWidth*dpr, h = canvas.height = canvas.clientHeight*dpr;
+  ctx.clearRect(0,0,w,h);
+  ctx.strokeStyle = CSSV('--line'); ctx.lineWidth = 1;
+  for (const v of [0, 25, 50, 75, 100]) { const y = h - v/100*(h-2) - 1; ctx.beginPath(); ctx.setLineDash([1*dpr, 5*dpr]); ctx.moveTo(0,y); ctx.lineTo(w,y); ctx.stroke(); }
+  ctx.setLineDash([]);
+  ctx.strokeStyle = CSSV('--accent'); ctx.globalAlpha = .7; ctx.beginPath(); ctx.moveTo(0, h-ALARM/100*(h-2)-1); ctx.lineTo(w, h-ALARM/100*(h-2)-1); ctx.stroke(); ctx.globalAlpha = 1;
+  if (hist.length < 2) return;
+  const n = Math.max(hist.length, 120);
+  ctx.strokeStyle = CSSV('--accent'); ctx.lineWidth = 2*dpr;
+  for (const te of chal.errT) { const i = hist.length-1 - Math.round(lastT - te); if (i<0) continue; const x=i/(n-1)*w; ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,h*0.18); ctx.stroke(); }
+  // the line only: no fill
+  ctx.strokeStyle = CSSV('--fg'); ctx.lineWidth = 1*dpr; ctx.beginPath();
+  hist.forEach((v,i)=>{ const x=i/(n-1)*w, y=h-v/100*(h-2)-1; i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
+  ctx.stroke();
+  const xe = (hist.length-1)/(n-1)*w, lv = hist[hist.length-1]; ctx.fillStyle = CSSV('--fg'); ctx.fillRect(xe-2*dpr, h-lv/100*(h-2)-1-2*dpr, 4*dpr, 4*dpr);
+}
+const SIGN = ['Fz','C3','Cz','C4','Pz','P3','O1','P4'];   // layout A, see headset/montage.py
+const sigrows = document.getElementById('sigrows'), sigc = [];
+for (const n of SIGN) {
+  const d = document.createElement('div'); d.className = 'r';
+  const l = document.createElement('div'); l.className = 'l'; l.innerHTML = `<b>${n}</b>`;
+  const c = document.createElement('canvas');
+  d.append(l,c); sigrows.append(d); sigc.push({l,c});
+}
+function drawSig(sig){
+  if (!sig || !sig.length) return;
+  sig.forEach((row,i)=>{
+    const {l,c} = sigc[i]; const g = c.getContext('2d');
+    const dpr = devicePixelRatio, w = c.width = c.clientWidth*dpr, h = c.height = c.clientHeight*dpr;
+    g.clearRect(0,0,w,h);
+    let mx = 0; for (const v of row) mx = Math.max(mx, Math.abs(v));
+    const rms = Math.sqrt(row.reduce((a,v)=>a+v*v,0)/Math.max(1,row.length));
+    const lim = Math.max(5, mx*1.1);
+    l.innerHTML = `<b>${SIGN[i]}</b>${rms.toFixed(0)}`;
+    g.strokeStyle = rms < 40 ? CSSV('--mid') : CSSV('--accent'); g.lineWidth = 1*dpr; g.beginPath();
+    row.forEach((v,j)=>{ const x=j/(row.length-1)*w, y=h/2 - v/lim*(h/2-2); j?g.lineTo(x,y):g.moveTo(x,y); });
+    g.stroke();
+  });
+}
+function nodataOverlay(msg){
+  let o = document.getElementById('nodata');
+  if (!msg) { if (o) o.remove(); return; }
+  if (!o) { o = document.createElement('div'); o.id = 'nodata';
+    o.style.cssText = 'position:fixed;left:0;right:0;top:0;z-index:60;padding:14px 16px;background:#b3261e;color:#fff;font:700 15px/1.3 ui-monospace,Menlo,monospace;text-align:center';
+    document.body.appendChild(o); }
+  o.textContent = msg + ' · the numbers below are frozen, not live';
+}
+async function tick(){
+  try {
+    const s = await (await fetch('/state')).json();
+    const stale = s.age_s === null || s.age_s === undefined ? false : s.age_s > 3;
+    const nodata = stale || (s.state || '').startsWith('NO DATA');
+    nodataOverlay(nodata ? (stale ? 'NO DATA: the gauge has not updated for ' + Math.round(s.age_s) + ' s' : s.state) : null);
+    if (nodata) { document.getElementById('val').textContent = '—'; return; }
+    lastT = s.t;
+    if (s.hold_s) HOLD = s.hold_s;
+    { const lr = document.getElementById('lbl_rule'); if (lr && s.alarm_at) lr.textContent = 'alarm > ' + s.alarm_at + ' for ' + (s.hold_s || HOLD) + ' s'; }
+    if (s.alarm_at && s.alarm_at !== ALARM) { ALARM = s.alarm_at; const ax = document.getElementById('alarmax'); if (ax) { ax.textContent = ALARM; ax.style.top = (100 - ALARM) + '%'; } }
+    document.getElementById('cond').textContent = s.condition || 'none';
+    document.querySelectorAll('#condbar button').forEach(b => b.classList.toggle('on', b.dataset.c === (s.condition || 'none')));
+    if (chal.on) document.getElementById('n_time').textContent = Math.max(0, Math.round(s.t - chal.t0)) + ' s';
+    const m=Math.floor(s.t/60), sec=Math.floor(s.t%60);
+    document.getElementById('clock').textContent = `${m.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`;
+    const lv = s.baseline_done ? s.load : 0;
+    lastStateT = s.t || 0;
+    const alarmOn = !!s.alarm && !s.load_held && s.contact !== false;   // never red while the load is held or the cap is off: no current evidence (CRITIQUE serverpage-6)
+    document.body.classList.toggle('alarm', alarmOn);
+    document.body.classList.toggle('calm', s.baseline_done && !alarmOn && lv < ALARM - 30);
+    document.body.classList.toggle('work', !s.baseline_done || (!alarmOn && lv >= ALARM - 30));
+    const lost = s.baseline_done && s.contact === false;
+    const st = document.getElementById('state'), sw = document.getElementById('statewrap');
+    st.textContent = s.replay ? (/^lab_eegmat/.test(s.replay) ? 'running' : 'REPLAY') : lost ? 'contact lost' : alarmOn ? 'alarm' : (s.baseline_done ? 'live' : 'baseline'); sw.classList.toggle('on', alarmOn || lost);
+    { const b = document.getElementById('replaybanner'); if (b) b.remove();
+      // lab replay: no on-screen label (Paing's call; the narration discloses it), but the header must not name the
+      // Unicorn for data that did not come from it, and the status never says 'live'
+      document.getElementById('devline').textContent = /^lab_eegmat/.test(s.replay || '') ? 'eeg · 8 ch · 250 hz' : 'unicorn bci core-8 · 8 ch · 250 hz'; }   // bottom bar removed at Paing's request; the status text says LAB REPLAY
+    const val = document.getElementById('val'), label = document.getElementById('label'), sub = document.getElementById('sub');
+    if (s.baseline_done) {
+      const v = Math.max(0, Math.min(100, s.load));
+      val.textContent = Math.round(v); val.className = 'n' + (s.low_conf ? ' dim' : (alarmOn || v >= ALARM) ? ' hot' : '');   // hot only at or above the alarm line: rest on this cap reaches 36 (CRITIQUE serverpage-adv3)
+      label.textContent = lost ? 'Contact lost' : s.load_held ? 'Held · noisy' : s.low_conf ? 'Low confidence' : alarmOn ? 'High load' : v >= ALARM ? 'Load rising' : v >= ALARM-30 ? 'Working' : 'Calm';
+      sub.textContent = lost ? (s.state||'').replace('CONTACT LOST: ','') + ' · frozen until the cap is back' : s.load_held ? (s.clean||0) + ' of ' + (s.n_model_ch || 5) + ' channels clean · fix the cap, load resumes at ' + (s.load_min_clean || 2) + ' clean and no channel lost' : s.low_conf ? (s.clean||0) + ' of ' + (s.n_model_ch || 5) + ' channels clean · noisy signal, treat as a rough trend · alarm off' : 'alarm after ' + HOLD + ' s above ' + ALARM;
+      document.getElementById('basebar').style.display='none';
+    } else {
+      const waiting = (s.state||'').startsWith('WAITING') || (s.state||'').startsWith('SETTLING');
+      val.textContent='—'; val.className = 'n dim';
+      label.textContent = (s.state||'').startsWith('SETTLING') ? 'Settling' : waiting ? 'No contact' : 'Baseline';
+      sub.textContent = waiting ? s.state.replace('WAITING FOR CONTACT: ','') + ' · baseline starts by itself' : 'sit still, eyes open · ' + (s.baseline_s || 30) + ' s';
+      document.getElementById('basebar').style.display='block'; document.getElementById('basefill').style.width=(100*s.baseline_progress)+'%';
+    }
+    const fv = document.getElementById('fval'), fl = document.getElementById('flabel');
+    if (s.baseline_done && s.fatigue !== undefined && s.fatigue !== null) {
+      const f = Math.round(s.fatigue); fv.textContent = f; fv.className = 'n' + (f >= 60 ? ' hot' : '');
+      fl.textContent = (s.fatigue_held ? 'Held · noisy' : f >= 70 ? 'above start' : f >= 40 ? 'near start' : 'below start') + ' · slow trend, builds over 20+ min';
+    } else if (s.baseline_done) {
+      fv.textContent='—'; fv.className='n dim';
+      fl.textContent = s.fatigue_note ? s.fatigue_note
+        : (s.fatigue_wait_s !== null && s.fatigue_wait_s !== undefined) ? 'slow trend · shown after 20 min of monitoring'
+        : 'not available';
+    } else { fv.textContent='—'; fv.className='n dim'; fl.textContent='Baseline'; }
+    let top=null, dead=[];
+    const autoContact = !s.baseline_done || !!s.load_held || !!(s.alpha_check||{}).active;
+    const ctc = hmView === null ? autoContact : hmView === 'contact';
+    hmAuto = ctc;
+    document.getElementById('hm_lbl').textContent = ctc ? 'Electrodes · contact noise, 1–40 Hz' : 'Electrodes · change from baseline';
+    document.getElementById('hm_unit').textContent = ctc ? 'µV · show change' : 'dB · show contact';
+    svg.classList.toggle('contact', ctc);
+    const present = new Set((s.channels||[]).map(c => c.name));
+    for (const [name, e] of Object.entries(els)) e.g.style.display = present.size && !present.has(name) ? 'none' : '';
+    for (const ch of (s.channels||[])) {
+      const e = els[ch.name]; if (!e) continue;
+      e.g.classList.toggle('dead', ch.dead);
+      if (ch.dead) { dead.push(ch.name); e.v.textContent='off'; e.c.setAttribute('r',10); continue; }
+      if (s.baseline_done && ch.db !== null && ch.db !== undefined && (top===null || ch.db>top.db)) top = ch;
+      if (ctc) {      // contact view: colour = 1 to 40 Hz noise after the 50 Hz notch (green under 40 µV, red over 100)
+        e.c.setAttribute('r', 10);
+        if (ch.uv === undefined) { e.c.setAttribute('fill', '#2a2a2c'); e.v.textContent = ''; continue; }
+        e.c.setAttribute('fill', Q_COL[ch.q] || '#2a2a2c');
+        e.v.textContent = ch.uv >= 1000 ? (ch.uv/1000).toFixed(1) + 'k' : String(ch.uv);
+        continue;
+      }
+      if (s.baseline_done && (ch.db === null || ch.db === undefined)) {   // no baseline for this channel (dead during it)
+        e.c.setAttribute('fill', '#2a2a2c'); e.c.setAttribute('r', 10); e.v.textContent = 'no base'; continue; }
+      const db = s.baseline_done ? ch.db : 0;
+      e.c.setAttribute('fill', s.baseline_done ? heat(db) : '#2a2a2c');
+      e.c.setAttribute('r', 10 + Math.min(6, Math.max(0, db)));
+      e.v.textContent = s.baseline_done ? (db>0?'+':'')+db.toFixed(1) : '';
+    }
+    { // what to fix first, and whether the back row is quiet enough for the Alpha check
+      const el = document.getElementById('contactline'), chs = s.channels || [];
+      if (!ctc || !chs.length) el.innerHTML = '';
+      else {
+        const GOOD = s.contact_good_uv || 40, AMAX = s.alpha_noise_max_uv || 15;
+        const k = v => v >= 1000 ? (v/1000).toFixed(1) + 'k' : String(v);
+        const off = chs.filter(c => c.dead).map(c => c.name);
+        const noisy = chs.filter(c => !c.dead && c.uv !== undefined && c.uv >= GOOD).sort((a, b) => b.uv - a.uv).slice(0, 3);
+        const back = chs.filter(c => ['Pz','O1','P3','P4'].includes(c.name) && !c.dead && c.a_uv !== undefined);
+        const ready = back.filter(c => c.a_uv <= AMAX).map(c => c.name);
+        const lines = [];
+        if (off.length) lines.push('not connected: <b>' + off.join(' ') + '</b> · seat the amplifier, push the pin to the scalp');
+        if (noisy.length) lines.push('noisy: ' + noisy.map(c => '<b>' + c.name + '</b> ' + k(c.uv) + ' µV' + (c.hum >= 500 ? ' (hum ' + k(c.hum) + ')' : '')).join(' · ')
+                                     + (noisy.some(c => c.hum >= 500) ? ' · hum = poor skin contact: part the hair, press' : ' · sit still, relax jaw'));
+        if (!off.length && !noisy.length) lines.push('all electrodes under ' + GOOD + ' µV');
+        lines.push(ready.length ? 'alpha band quiet enough to test at <b>' + ready.join(' ') + '</b> (under ' + AMAX + ' µV, 8–13 Hz)'
+                   : 'Alpha check needs a back electrode under ' + AMAX + ' µV in 8–13 Hz' + (back.length ? ' (now ' + back.map(c => c.name + ' ' + Math.round(c.a_uv)).join(', ') + ')' : ''));
+        const txt = lines.join('<br>');
+        el.innerHTML = txt;
+      }
+    }
+    document.getElementById('m_top').textContent = top ? `${top.name} +${top.db.toFixed(1)} dB` : '—';
+    if (s.model_note) document.getElementById('m_model').textContent = s.model_note;
+    document.getElementById('m_dead').textContent = dead.length ? dead.join(' ') : 'none';
+    document.getElementById('m_clean').textContent = s.clean === undefined ? '—' : s.clean + ' / ' + (s.n_model_ch || 8);
+    { const ac = s.alpha_check || {}, el = document.getElementById('m_alpha_chk');
+      const now = (s.alpha_now === null || s.alpha_now === undefined) ? '—' : (s.alpha_now > 0 ? '+' : '') + s.alpha_now + ' dB';
+      if (ac.active) el.textContent = now + (ac.elapsed === null ? ' · starting' : ac.elapsed < 20 ? ' · eyes OPEN ' + (20 - ac.elapsed) + ' s' : ' · eyes CLOSED ' + Math.max(0, 42 - ac.elapsed) + ' s');
+      else if (ac.result) el.textContent = ac.result.text;
+      else el.textContent = now; }
+    { const c = s.calibration || {}, el = document.getElementById('m_calib');
+      if (c.active) el.textContent = c.block === null ? 'starting' : 'block ' + c.block + ' of ' + c.blocks + (c.block % 2 ? ' · rest' : ' · subtract silently');
+      else el.textContent = (s.personal ? 'personal model ON' : 'generic model') + (c.result ? ' · last calibration: ' + c.result.text : ' · not calibrated'); }
+    const fz = (s.channels||[]).find(c=>c.name==='Fz'), pz = (s.channels||[]).find(c=>c.name==='Pz');
+    document.getElementById('m_theta').innerHTML = (fz && s.baseline_done && fz.theta_db !== undefined ? (fz.theta_db>0?'+':'')+fz.theta_db.toFixed(1)+'<small>dB</small>' : '—');
+    document.getElementById('m_alpha').innerHTML = (pz && s.baseline_done && pz.alpha_db !== undefined ? (pz.alpha_db>0?'+':'')+pz.alpha_db.toFixed(1)+'<small>dB</small>' : '—');
+    whyLine(s);
+    draw(s.hist||[]);
+    drawSig(s.sig);
+  } catch(e) { document.getElementById('state').textContent='waiting'; nodataOverlay('NO DATA: the page server is not answering'); document.getElementById('val').textContent = '—'; }
+}
+setInterval(tick, 500); tick();
+</script>
+</body>
+</html>

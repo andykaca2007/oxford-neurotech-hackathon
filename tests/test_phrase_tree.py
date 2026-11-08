@@ -4,7 +4,7 @@ import sys
 
 import pytest
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "unicorn"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "explored", "communication"))
 from phrase_tree import TREE, PhraseTree, check_tree  # noqa: E402
 
 

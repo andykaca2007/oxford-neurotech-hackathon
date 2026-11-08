@@ -1,0 +1,512 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mental Load</title>
+<style>
+  :root { --bg:#000; --ink:#EDEDED; --dim:#8A8A8A; --grid:#1E1E1E; --band:#141414; --accent:#2FBF71; --grey:#4A4A4A; }
+  * { box-sizing:border-box; margin:0; }
+  html, body { height:100%; background:var(--bg); color:var(--ink); font-family:"Avenir Next","Helvetica Neue",Helvetica,Arial,sans-serif; overflow:hidden; }
+  .deck { position:relative; width:100vw; height:100vh; }
+  .slide { position:absolute; inset:0; padding:0 6vw; opacity:0; transform:translateY(24px); transition:opacity .6s ease, transform .6s ease; pointer-events:none; }
+  .slide.on { opacity:1; transform:none; pointer-events:auto; }
+  .rule { position:absolute; left:6vw; right:6vw; top:4.5vh; height:1px; background:var(--accent); transform-origin:left; transform:scaleX(0); transition:transform .9s cubic-bezier(.2,.7,.2,1) .2s; }
+  .tab { position:absolute; left:6vw; top:4.5vh; width:2.2vw; height:1.2vh; background:var(--accent); }
+  .slide.on .rule { transform:scaleX(1); }
+  .crit { position:absolute; right:6vw; top:5.6vh; font-size:.75vw; letter-spacing:.3em; text-transform:uppercase; color:var(--dim); }
+  .lim { display:grid; grid-template-columns:1fr 1.1fr; gap:4vw; height:100%; align-items:center; }
+  .lim .illus { height:62vh; }
+  h1 { position:absolute; left:6vw; right:6vw; top:8vh; font-size:2.4vw; font-weight:500; letter-spacing:-0.02em; line-height:1.15; }
+  .sub { position:absolute; left:6vw; right:6vw; top:14.5vh; font-size:1.25vw; color:var(--dim); font-weight:300; }
+  h1, .sub, .body > * { opacity:0; transform:translateY(14px); transition:opacity .6s ease, transform .6s ease; }
+  .slide.on h1 { opacity:1; transform:none; transition-delay:.15s; }
+  .slide.on .sub { opacity:1; transform:none; transition-delay:.3s; }
+  .slide.on .body > * { opacity:1; transform:none; }
+  .slide.on .body > :nth-child(1) { transition-delay:.45s; } .slide.on .body > :nth-child(2) { transition-delay:.6s; } .slide.on .body > :nth-child(3) { transition-delay:.75s; }
+  .body { position:absolute; left:6vw; right:6vw; top:21vh; bottom:9vh; }
+  .src { position:absolute; left:6vw; right:6vw; bottom:4vh; font-size:.8vw; color:var(--dim); }
+  .num { font-size:3.4vw; font-weight:500; color:var(--accent); letter-spacing:-0.03em; line-height:1; }
+  .num small { font-size:1.05vw; color:var(--dim); margin-left:.5vw; font-weight:300; letter-spacing:0; }
+  .cap { font-size:.95vw; color:var(--dim); margin-top:.6vw; line-height:1.4; }
+  .k { font-size:1.15vw; font-weight:500; margin-bottom:.25vw; }
+  svg { width:100%; height:100%; overflow:visible; }
+  svg text { font-family:inherit; }
+  .draw { stroke-dasharray:var(--len); stroke-dashoffset:var(--len); }
+  .slide.on .draw { animation:draw 1.8s cubic-bezier(.3,.6,.2,1) forwards; animation-delay:var(--d, .6s); }
+  @keyframes draw { to { stroke-dashoffset:0; } }
+  .fade { opacity:0; transition:opacity .8s ease; } .slide.on .fade { opacity:1; transition-delay:var(--d, 1.2s); }
+  .nav { position:fixed; right:1.2vw; bottom:1.2vh; font-size:.75vw; color:var(--grid); letter-spacing:.1em; }
+  .pips { position:fixed; left:6vw; bottom:1.4vh; display:flex; gap:.4vw; }
+  .pips i { width:1.6vw; height:2px; background:var(--grid); transition:background .3s; } .pips i.on { background:var(--accent); }
+  /* opening */
+  .grid3 { display:grid; grid-template-columns:repeat(3, 1fr); gap:3vw; }
+  .two { display:grid; grid-template-columns:1fr 1fr; gap:4vw; height:100%; }
+  .two > div { display:flex; flex-direction:column; min-height:0; }
+  .two .plot { flex:1; min-height:0; }
+  /* stages */
+  .stages { display:grid; grid-template-columns:14vw 1fr 7vw; grid-auto-rows:1fr; height:100%; column-gap:1.5vw; align-items:center; }
+  .stages .nm { font-size:1.1vw; font-weight:500; } .stages .wh { font-size:.8vw; color:var(--dim); }
+  .stages .rms { font-size:1.25vw; text-align:left; }
+  .stages .row-on .nm, .stages .row-on .rms { color:var(--accent); }
+  .stages svg { height:85%; }
+  .stages .r { opacity:0; transform:translateX(-10px); transition:opacity .5s ease, transform .5s ease; }
+  .slide.on .stages .r { opacity:1; transform:none; }
+  /* video */
+  .vid { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; }
+  .vid video { max-width:100%; max-height:100%; background:#000; }
+  .drop { width:100%; height:100%; border:1px dashed var(--grey); display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--dim); font-size:1.2vw; gap:.8vw; }
+  .drop b { color:var(--ink); font-weight:500; }
+  .drop input { display:none; }
+  .drop label { border:1px solid var(--accent); color:var(--accent); padding:.6vw 1.4vw; cursor:pointer; font-size:1vw; }
+  /* steps row */
+  .steps { display:grid; grid-template-columns:repeat(7, 1fr); gap:1.2vw; align-items:start; margin-top:6vh; }
+  .step { border:1px solid var(--grey); padding:1.6vh 0; text-align:center; font-size:1.05vw; font-weight:500; position:relative; }
+  .step.hot { background:var(--accent); border-color:var(--accent); color:#000; }
+  .step small { display:block; position:absolute; left:0; right:0; top:110%; font-size:.78vw; color:var(--dim); font-weight:300; line-height:1.35; }
+  .step::after { content:""; position:absolute; right:-1.1vw; top:50%; width:.9vw; height:1px; background:var(--dim); }
+  .step:last-child::after { display:none; }
+  .note { position:absolute; left:0; right:0; bottom:9vh; font-size:1.1vw; } .note + .note { bottom:5vh; color:var(--dim); }
+  .minis { display:grid; grid-template-columns:repeat(7, 1fr); gap:1.2vw; margin-top:9vh; height:30vh; }
+  .minis > div { display:flex; flex-direction:column; min-height:0; opacity:0; transform:translateY(10px); transition:opacity .5s ease, transform .5s ease; }
+  .slide.on .minis > div { opacity:1; transform:none; }
+  .minis .cap { font-size:.78vw; margin-top:.5vw; text-align:center; }
+  .minis svg { flex:1; min-height:0; }
+  .title { position:absolute; inset:0; display:flex; flex-direction:column; justify-content:center; padding:0 6vw; }
+  .title .team { font-size:1.1vw; letter-spacing:.35em; text-transform:uppercase; color:var(--accent); }
+  .title h1 { position:static; font-size:5.2vw; line-height:1.05; margin:2vh 0 2vh; max-width:70vw; }
+  .title .sub { position:static; font-size:1.5vw; max-width:60vw; }
+  .title .meta { margin-top:7vh; font-size:1vw; color:var(--dim); letter-spacing:.08em; }
+  #twave { position:absolute; right:6vw; top:14vh; width:36vw; height:70vh; }
+  .title { right:44vw; }
+  .illus { position:relative; height:66vh; }
+  .illus svg { width:100%; height:100%; }
+  .two-ill { display:grid; grid-template-columns:1.15fr 1fr; gap:4vw; height:100%; align-items:center; }
+  .big { font-size:2.1vw; line-height:1.25; font-weight:500; }
+  .big + .cap { font-size:1.15vw; margin-top:2vh; }
+  .pt { display:flex; gap:1.2vw; align-items:baseline; margin-top:3vh; }
+  .pt b { color:var(--accent); font-size:1.6vw; font-weight:500; min-width:2vw; }
+  .pt span { font-size:1.15vw; color:var(--ink); }
+  .pt small { display:block; font-size:.95vw; color:var(--dim); margin-top:.3vh; }
+  @media (max-width: 900px) { .two, .grid3 { grid-template-columns:1fr; } h1 { font-size:5vw; } .sub { font-size:3vw; top:20vh; } }
+</style>
+</head>
+<body>
+<div class="deck" id="deck">
+
+<!-- T title -->
+<section class="slide" data-src="Oxford Neurotech Hackathon, 7 to 8 November 2026. Team Avengers.">
+  <div class="rule"></div><div class="tab"></div>
+  <div class="title">
+    <div class="team">Team Avengers</div>
+    <h1>A live gauge for mental overload</h1>
+    <div class="sub">From eight dry EEG electrodes to one trustworthy number, once a second</div>
+    <div class="meta">OXFORD NEUROTECH HACKATHON · 8 NOVEMBER 2026</div>
+  </div>
+  <svg class="wave" id="twave"></svg>
+</section>
+
+<!-- P problem -->
+<section class="slide" data-src="EEG facts from PhysioNet EEG during mental arithmetic, 36 people: alpha falls and theta rises within seconds of hard thinking.">
+  <div class="rule"></div><div class="tab"></div><div class="crit">Impact</div>
+  <h1>The problem: overload is invisible until something goes wrong</h1>
+  <div class="sub">The people whose mistakes cost most are the ones with no gauge</div>
+  <div class="body"><div class="two-ill">
+    <div class="illus"><svg id="pill"></svg></div>
+    <div>
+      <div class="big">A surgeon at hour nine. A pilot on approach. A controller with twelve aircraft.</div>
+      <div class="cap">They all overload quietly. The mistake comes after, and nothing warned them.</div>
+      <div class="pt"><b>1</b><span>The brain shows it first.<small>Within seconds of hard thinking, alpha at the back of the head falls and theta at the front rises.</small></span></div>
+      <div class="pt"><b>2</b><span>But no wearable reads it.<small>Lab EEG needs gel and a technician. Dry consumer headsets give 6,000 µV of noise around 30 µV of brain.</small></span></div>
+    </div>
+  </div></div>
+</section>
+
+<!-- S solution -->
+<section class="slide" data-src="Source: loadmonitor/load_gauge.py. Numbers from the live gauge on a held-out person; AUROC 0.74 held out across 36 people.">
+  <div class="rule"></div><div class="tab"></div><div class="crit">Originality</div>
+  <h1>The solution: clean the signal hard, score it only when it is clean</h1>
+  <div class="sub">A consumer headset, a six-stage cleaning chain, a model that has seen 36 brains, and a number that is zero at your own rest</div>
+  <div class="body"><div class="two-ill" style="grid-template-columns:1fr 1.15fr">
+    <div>
+      <div class="pt"><b>1</b><span>Eight dry electrodes, once a second.<small>No gel, no technician; a headset you put on yourself.</small></span></div>
+      <div class="pt"><b>2</b><span>Six filters strip the noise.<small>6,000 µV of drift and hum down to 34 µV of EEG, verified against the live code.</small></span></div>
+      <div class="pt"><b>3</b><span>A model trained on 36 people.<small>Rest vs arithmetic; AUROC 0.74 on people it never saw.</small></span></div>
+      <div class="pt"><b>4</b><span>Your own zero.<small>The number is relative to your rest, with an alarm at 50. Bad signal is reported, never scored.</small></span></div>
+    </div>
+    <div class="illus"><svg id="sill"></svg></div>
+  </div></div>
+</section>
+
+<!-- 0 opening -->
+<section class="slide" data-src="Source: recording paing_20261108_011525 (Pz); PhysioNet EEG during mental arithmetic, person 09 held out of training. Every number traceable to a script in the repository.">
+  <div class="rule"></div><div class="tab"></div><div class="crit">Scientific validity</div>
+  <h1>Mental overload is invisible until something goes wrong.<br>This headset makes it a number.</h1>
+  <div class="sub">A live, personal load reading from eight dry electrodes, cleaned well enough to be trusted</div>
+  <div class="body">
+    <div class="two" style="height:62%">
+      <div><div class="k">The raw signal is nearly all noise</div><div class="cap" style="margin:0 0 .6vw">Four seconds at Pz on our own cap: before the cleaning chain, and after it.</div><div class="plot"><svg id="s0trace"></svg></div></div>
+      <div><div class="k">Under mental arithmetic the load climbs; at rest it falls back</div><div class="cap" style="margin:0 0 .6vw">A person the model had never seen, replayed through the live gauge. Zero is their own rest.</div><div class="plot"><svg id="s0load"></svg></div></div>
+    </div>
+    <div class="grid3" style="margin-top:4vh">
+      <div><div class="num" id="n_raw">0<small>µV of noise in</small></div><div class="cap">drift and mains hum from dry electrodes on hair</div></div>
+      <div><div class="num" id="n_clean">0<small>µV of EEG out</small></div><div class="cap">six filters, verified identical to the live code</div></div>
+      <div><div class="num" id="n_auc">0.00<small>AUROC, held out</small></div><div class="cap">rest vs arithmetic on 36 people the model never saw</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 1 video -->
+<section class="slide" data-src="A real recording from a public dataset (PhysioNet eegmat, person 09, gel cap), replayed through the live gauge. Not this headset.">
+  <div class="rule"></div><div class="tab"></div><div class="crit">Demonstration</div>
+  <h1>Here it is running</h1>
+  <div class="sub">A held-out person from a public dataset, through the live system. Watch the number climb when they start calculating, and fall when they stop.</div>
+  <div class="body"><div class="vid" id="vid">
+    <div class="drop" id="drop"><b>Drop the demo recording here</b><span>or</span><label for="vfile">choose the video file</label><input id="vfile" type="file" accept="video/*"></div>
+  </div></div>
+</section>
+
+<!-- 2 filters -->
+<section class="slide" data-src="Source: recording paing_20261108_011525, Pz. Stage outputs verified identical to the live code (model_search.clean_window). Scalp EEG is about 10 to 50 µV.">
+  <div class="rule"></div><div class="tab"></div><div class="crit">Scientific validity</div>
+  <h1>Six filters take a dry electrode from 6,000 µV of noise to 34 µV of EEG</h1>
+  <div class="sub">The same 4 seconds at Pz on our own cap after each stage, each row on its own scale. Press space to step through.</div>
+  <div class="body"><div class="stages" id="stages"></div></div>
+</section>
+
+<!-- 3 spectrum -->
+<section class="slide" data-src="Source: same Pz window. Welch, 2 s segments. Power in µV² per Hz, log scale.">
+  <div class="rule"></div><div class="tab"></div><div class="crit">Scientific validity</div>
+  <h1>Mains hum sits a million times above the brain bands until the chain removes it</h1>
+  <div class="sub">Power spectrum of the same window after each stage</div>
+  <div class="body"><svg id="spec"></svg></div>
+</section>
+
+<!-- 4 how it works -->
+<section class="slide" data-src="Source: loadmonitor/load_gauge.py, gauge_server.py, web/index.html. Optional Claude debrief when an API key is set.">
+  <div class="rule"></div><div class="tab"></div><div class="crit">Feasibility</div>
+  <h1>Eight electrodes become one number, once a second</h1>
+  <div class="sub">Every stage runs on the last 4 seconds of EEG; the model is the only learned part</div>
+  <div class="body">
+    <div class="steps">
+      <div class="step">Headset<small>8 dry electrodes, 250 Hz</small></div>
+      <div class="step">Contact check<small>open, noisy or clean, per electrode</small></div>
+      <div class="step">Cleaning chain<small>detrend, notch, reference, band-pass, burst mask, ASR</small></div>
+      <div class="step">Features<small>29 relative band powers and ratios</small></div>
+      <div class="step hot">Model<small>gradient boosting, 36 people, held-out AUC 0.76</small></div>
+      <div class="step">Personal scale<small>0 = your own rest, alarm at 50</small></div>
+      <div class="step">Page<small>load, why it moved, head map</small></div>
+    </div>
+    <div class="minis" id="minis"></div>
+    <div class="note">If any model electrode is open the number is held; if one is noisy the number is shown grey with the alarm off.</div>
+    <div class="note">A bad signal is reported as bad, never scored.</div>
+  </div>
+</section>
+
+<!-- 5 ROC -->
+<section class="slide" data-src="Source: PhysioNet EEG during mental arithmetic (gel cap). Per-window scores before the live 12 s smoothing. Not validated on the dry cap.">
+  <div class="rule"></div><div class="tab"></div><div class="crit">Scientific validity</div>
+  <h1 id="roc_h">On people it has never seen, the model reaches an AUROC of 0.74</h1>
+  <div class="sub">Each of 36 people scored by a model trained on the other 35, one 4 s window at a time; grey = one person, green = all pooled</div>
+  <div class="body"><div class="two"><div class="plot"><svg id="roc"></svg></div>
+    <div style="justify-content:center; gap:3vh">
+      <div><div class="num" id="r_auc">0.00</div><div class="cap">pooled AUROC, held out</div></div>
+      <div><div class="num" id="r_med" style="color:var(--ink); font-size:2.4vw">0.00</div><div class="cap">median per person</div></div>
+      <div><div class="num" id="r_good" style="color:var(--ink); font-size:2.4vw">0 of 36</div><div class="cap">people at 0.7 or better</div></div>
+    </div></div></div>
+</section>
+
+<!-- 6 training -->
+<section class="slide" data-src="Source: PhysioNet EEG during mental arithmetic, 36 people. Live recipe: 5 channels, cleaning chain, 29 amplitude-invariant features, 200 trees of depth 2.">
+  <div class="rule"></div><div class="tab"></div><div class="crit">Scientific validity</div>
+  <h1>On a new person the model stops improving after about 50 trees</h1>
+  <div class="sub">AUC, rest vs arithmetic, as trees are added; mean of 36 leave-one-person-out rounds, band = middle half</div>
+  <div class="body"><svg id="train"></svg></div>
+</section>
+
+<!-- L limits -->
+<section class="slide" data-src="Sources: headset/live_check.py and the raw recordings of 7 and 8 Nov (contact); models/lab_demo_loso.json (per-person held-out AUROC); docs/OVERNIGHT.md.">
+  <div class="rule"></div><div class="tab"></div><div class="crit">Limitations, honestly</div>
+  <h1>What does not work yet, and what the system does about it</h1>
+  <div class="sub">Three limits we measured ourselves, none hidden by the demo</div>
+  <div class="body"><div class="lim">
+    <div>
+      <div class="pt"><b>1</b><span>Our dry cap rarely connected four of its eight electrodes.<small>Every second input (C3, C4, P3, P4) read open on hair, and the working four carried thousands of microvolts of hum. The gauge held and said so; it never invented a number.</small></span></div>
+      <div class="pt"><b>2</b><span>The demo is a lab person, not this headset.<small>A public-dataset recording replayed through the live software at real time. A clean recording from our own cap has not been achieved.</small></span></div>
+      <div class="pt"><b>3</b><span>The model is not universal.<small>Good for 23 of 36 held-out people, below chance for 5. A personal calibration exists but was not needed for the demo.</small></span></div>
+    </div>
+    <div class="illus"><svg id="lill"></svg></div>
+  </div></div>
+</section>
+
+<!-- 7 next -->
+<section class="slide" data-src="Source: docs/OVERNIGHT.md in the repository, every number traceable to a script.">
+  <div class="rule"></div><div class="tab"></div><div class="crit">Feasibility and next steps</div>
+  <h1>From one headset to a gauge anyone can wear</h1>
+  <div class="sub">Where this goes next</div>
+  <div class="body" style="display:flex; flex-direction:column; justify-content:center; gap:5vh">
+    <div><div class="k" style="font-size:1.6vw">A personal number, not a lab average.</div><div class="cap" style="font-size:1.1vw">Zero is your own rest, so the same gauge fits a surgeon on a night shift and a pilot on approach.</div></div>
+    <div><div class="k" style="font-size:1.6vw">Proven on people it had never seen.</div><div class="cap" style="font-size:1.1vw">Held-out AUROC 0.74 across 36 people; the pipeline runs end to end in real time on an eight-electrode consumer headset.</div></div>
+    <div><div class="k" style="font-size:1.6vw">Next: better electrodes, more people, longer sessions.</div><div class="cap" style="font-size:1.1vw">Then slow fatigue, which builds over 20 minutes or more, joins the live load on the same page.</div></div>
+  </div>
+</section>
+
+</div>
+<div class="src" id="src"></div>
+<div class="pips" id="pips"></div>
+<div class="nav">← → SPACE · F FULLSCREEN</div>
+
+<script>
+const NS = "http://www.w3.org/2000/svg";
+const el = (t, a, p) => { const e = document.createElementNS(NS, t); for (const k in a) e.setAttribute(k, a[k]); if (p) p.appendChild(e); return e; };
+const txt = (p, x, y, s, a = {}) => { const e = el("text", Object.assign({ x, y, fill: "#8A8A8A", "font-size": 13 }, a), p); e.textContent = s; return e; };
+const C = { ink: "#EDEDED", dim: "#8A8A8A", grid: "#1E1E1E", band: "#141414", acc: "#2FBF71", grey: "#4A4A4A" };
+let D = null;
+
+function sizeOf(svg) { const r = svg.getBoundingClientRect(); const W = Math.max(200, r.width), H = Math.max(120, r.height); svg.setAttribute("viewBox", `0 0 ${W} ${H}`); return [W, H]; }
+function linePath(xs, ys, sx, sy) { return xs.map((x, i) => (i ? "L" : "M") + sx(x).toFixed(1) + " " + sy(ys[i]).toFixed(1)).join(" "); }
+function drawable(p, delay) { const L = p.getTotalLength(); p.style.setProperty("--len", L); p.style.setProperty("--d", delay + "s"); p.classList.add("draw"); }
+function countUp(elm, to, decimals, suffixHTML) { const t0 = performance.now(), dur = 1400; const step = now => { const k = Math.min(1, (now - t0) / dur), v = to * (1 - Math.pow(1 - k, 3)); elm.innerHTML = (decimals ? v.toFixed(decimals) : Math.round(v).toLocaleString()) + (suffixHTML || ""); if (k < 1) requestAnimationFrame(step); }; requestAnimationFrame(step); }
+
+// ---- title: the cleaned trace, drawing itself, as the only ornament ----
+function sT() {
+  const svg = document.getElementById("twave"); svg.innerHTML = ""; const [W, H] = sizeOf(svg);
+  const st = D.stages, raw = st[0], cln = st[st.length - 1], t = raw.y.map((_, i) => i / D.fs);
+  const rows = [[raw, C.grey, .9], [cln, C.acc, 1.8]];
+  rows.forEach(([s, col, lw], r) => { const a = Math.max(...s.y.map(Math.abs)); const p = el("path", { d: linePath(t, s.y, v => v / 4 * W, v => H * (.3 + r * .4) - v / a * H * .16), fill: "none", stroke: col, "stroke-width": lw }, svg); drawable(p, .4 + r * 1.2); p.style.animationDuration = "2.4s"; });
+  txt(svg, 0, H * .3 - H * .19, "raw  " + raw.rms.toLocaleString() + " µV", { "font-size": 13 });
+  txt(svg, 0, H * .7 - H * .19, "cleaned  " + cln.rms + " µV", { fill: C.acc, "font-size": 13, "font-weight": 500 });
+}
+
+// ---- problem: a calm trace that spikes, under a flat gauge that never moved ----
+function sP() {
+  const svg = document.getElementById("pill"); svg.innerHTML = ""; const [W, H] = sizeOf(svg);
+  // person: a simple head and shoulders, drawn with lines
+  const cx = W * .28, cy = H * .36, r = Math.min(W, H) * .11;
+  el("circle", { cx, cy, r, fill: "none", stroke: C.ink, "stroke-width": 1.4 }, svg);
+  el("path", { d: `M${cx - r * 1.9} ${cy + r * 2.6} q${r * 1.9} -${r * 1.5} ${r * 3.8} 0`, fill: "none", stroke: C.ink, "stroke-width": 1.4 }, svg);
+  // inside the head: the real load trace, rest then overload
+  const L = D.load, sx = v => cx - r * .75 + (v - 34) / 176 * r * 1.5, sy = v => cy + r * .35 - v / 100 * r * .7;
+  const p = el("path", { d: linePath(L.t, L.load, sx, sy), fill: "none", stroke: C.acc, "stroke-width": 1.6 }, svg); drawable(p, .6); p.style.animationDuration = "2.4s";
+  txt(svg, cx, cy + r * 1.55, "what the brain does", { "text-anchor": "middle", "font-size": 12 });
+  // the gauge they have: a flat line
+  const gx0 = W * .55, gx1 = W * .95, gy = cy;
+  el("line", { x1: gx0, y1: gy, x2: gx1, y2: gy, stroke: C.grey, "stroke-width": 2, "stroke-dasharray": "6 5" }, svg);
+  txt(svg, (gx0 + gx1) / 2, gy + 22, "what anyone can see", { "text-anchor": "middle", "font-size": 12 });
+  txt(svg, (gx0 + gx1) / 2, gy - 14, "nothing", { "text-anchor": "middle", fill: C.ink, "font-size": 15, "font-weight": 500 });
+  // the consequence: a mark at the end of the overload
+  const ti = L.load.indexOf(Math.max(...L.load)); const mx = sx(L.t[ti]), my = sy(L.load[ti]);
+  const m = el("g", {}, svg); m.classList.add("fade"); m.style.setProperty("--d", "2.6s");
+  el("line", { x1: mx, y1: my - 6, x2: mx, y2: cy - r * 1.35, stroke: C.acc, "stroke-width": 1 }, m);
+  txt(m, mx, cy - r * 1.45, "the mistake comes here", { "text-anchor": "middle", fill: C.acc, "font-size": 12 });
+  // bottom: the two bands, real numbers from the lab people
+  const by = H * .78; txt(svg, 0, by - 36, "within seconds of hard thinking, in 36 lab people", { "font-size": 12 });
+  [["posterior alpha", -1.0, "falls"], ["frontal theta", +0.8, "rises"]].forEach(([nm, d, verb], k) => {
+    const y = by + k * 34, bx = W * .34, scale = W * .22;
+    txt(svg, 0, y + 5, nm, { fill: C.ink, "font-size": 13 });
+    el("line", { x1: bx, y1: y, x2: bx, y2: y, stroke: C.grid }, svg);
+    const bar = el("rect", { x: d < 0 ? bx + d * scale : bx, y: y - 6, width: Math.abs(d) * scale, height: 12, fill: k ? C.acc : C.dim }, svg); bar.classList.add("fade"); bar.style.setProperty("--d", (1.2 + k * .3) + "s");
+    txt(svg, bx + (d < 0 ? d * scale - 8 : d * scale + 8), y + 5, verb + " " + (d > 0 ? "+" : "") + d.toFixed(1) + " dB", { "text-anchor": d < 0 ? "end" : "start", "font-size": 12, fill: k ? C.acc : C.dim });
+  });
+}
+
+// ---- solution: headset, chain, model, gauge whose needle swings to the real peak ----
+function sS() {
+  const svg = document.getElementById("sill"); svg.innerHTML = ""; const [W, H] = sizeOf(svg);
+  // headset: head outline with 8 electrode dots
+  const cx = W * .2, cy = H * .3, r = Math.min(W, H) * .13;
+  el("ellipse", { cx, cy, rx: r * .85, ry: r, fill: "none", stroke: C.ink, "stroke-width": 1.4 }, svg);
+  [[.5, .1], [.25, .4], [.5, .4], [.75, .4], [.5, .68], [.28, .66], [.42, .9], [.72, .66]].forEach(([x, y], k) => { const d = el("circle", { cx: cx - r * .85 + x * r * 1.7, cy: cy - r + y * r * 2, r: 4, fill: C.acc }, svg); d.classList.add("fade"); d.style.setProperty("--d", (.3 + k * .08) + "s"); });
+  txt(svg, cx, cy + r * 1.3, "8 dry electrodes", { "text-anchor": "middle", "font-size": 12 });
+  // arrow to the chain
+  const ax = cx + r * 1.1, chainX0 = W * .4, chainX1 = W * .95;
+  el("line", { x1: ax, y1: cy, x2: chainX0 - 8, y2: cy, stroke: C.dim }, svg); el("path", { d: `M${chainX0 - 8} ${cy - 4} l8 4 l-8 4z`, fill: C.dim }, svg);
+  // the chain: the real cleaned trace emerging from the raw one, six ticks for the six stages
+  const raw = D.stages[0], cln = D.stages[D.stages.length - 1], t = raw.y.map((_, i) => i / D.fs);
+  const sx = v => chainX0 + v / 4 * (chainX1 - chainX0);
+  const ar = Math.max(...raw.y.map(Math.abs)), ac = Math.max(...cln.y.map(Math.abs));
+  const p0 = el("path", { d: linePath(t, raw.y, sx, v => cy - v / ar * r * .55), fill: "none", stroke: C.grey, "stroke-width": .9 }, svg); drawable(p0, .4);
+  const p1 = el("path", { d: linePath(t, cln.y, sx, v => cy - v / ac * r * .55), fill: "none", stroke: C.acc, "stroke-width": 1.6 }, svg); drawable(p1, 1.4); p1.style.animationDuration = "2s";
+  ["detrend", "notch", "reference", "band-pass", "burst mask", "ASR"].forEach((nm, k) => { const x = chainX0 + (k + .5) / 6 * (chainX1 - chainX0); el("line", { x1: x, y1: cy + r * .75, x2: x, y2: cy + r * .85, stroke: C.dim }, svg); txt(svg, x, cy + r * 1.05, nm, { "text-anchor": "middle", "font-size": 11 }); });
+  txt(svg, chainX0, cy - r * .85, "six filters: " + raw.rms.toLocaleString() + " µV to " + cln.rms + " µV", { "font-size": 12 });
+  // the gauge: a half dial whose needle swings to the real peak load
+  const gx = W * .62, gy = H * .82, gr = Math.min(W, H) * .2; const peak = Math.max(...D.load.load);
+  el("path", { d: `M${gx - gr} ${gy} A${gr} ${gr} 0 0 1 ${gx + gr} ${gy}`, fill: "none", stroke: C.grid, "stroke-width": 10 }, svg);
+  const a50 = Math.PI * (1 - .5); el("path", { d: `M${gx + gr * Math.cos(Math.PI)} ${gy - gr * Math.sin(Math.PI)} A${gr} ${gr} 0 0 1 ${gx + gr * Math.cos(a50)} ${gy - gr * Math.sin(a50)}`, fill: "none", stroke: C.grey, "stroke-width": 10 }, svg);
+  [0, 50, 100].forEach(v => { const a = Math.PI * (1 - v / 100); txt(svg, gx + (gr + 18) * Math.cos(a), gy - (gr + 18) * Math.sin(a) + 4, v, { "text-anchor": "middle", "font-size": 12 }); });
+  const needle = el("line", { x1: gx, y1: gy, x2: gx - gr * .9, y2: gy, stroke: C.acc, "stroke-width": 3, "stroke-linecap": "round" }, svg);
+  needle.style.transformOrigin = `${gx}px ${gy}px`; needle.style.transition = "transform 1.8s cubic-bezier(.3,.8,.3,1) 1.6s"; requestAnimationFrame(() => requestAnimationFrame(() => { needle.style.transform = `rotate(${peak / 100 * 180}deg)`; }));
+  el("circle", { cx: gx, cy: gy, r: 5, fill: C.acc }, svg);
+  const n = txt(svg, gx, gy - gr * .35, Math.round(peak), { "text-anchor": "middle", fill: C.ink, "font-size": 34, "font-weight": 500 }); n.classList.add("fade"); n.style.setProperty("--d", "2.8s");
+  txt(svg, gx, gy + 24, "mental load, 0 = your own rest, alarm at 50", { "text-anchor": "middle", "font-size": 12 });
+  el("line", { x1: W * .67, y1: cy + r * 1.25, x2: gx, y2: gy - gr - 26, stroke: C.dim }, svg); el("path", { d: `M${gx - 4} ${gy - gr - 34} l4 8 l4 -8z`, fill: C.dim }, svg);
+}
+
+// ---- limits: the cap as it really connected, and 36 held-out people one bar each ----
+function sL() {
+  const svg = document.getElementById("lill"); svg.innerHTML = ""; const [W, H] = sizeOf(svg);
+  // head: 8 electrode sites, the four that never connected in grey
+  const cx = W * .25, cy = H * .27, r = Math.min(W, H) * .16;
+  el("ellipse", { cx, cy, rx: r * .85, ry: r, fill: "none", stroke: C.ink, "stroke-width": 1.4 }, svg);
+  const sites = [["Fz", .5, .12, 1], ["C3", .2, .42, 0], ["Cz", .5, .42, 1], ["C4", .8, .42, 0], ["P3", .28, .7, 0], ["Pz", .5, .7, 1], ["P4", .72, .7, 0], ["O1", .42, .92, 1]];
+  sites.forEach(([nm, x, y, ok], k) => { const px = cx - r * .85 + x * r * 1.7, py = cy - r + y * r * 2; const d = el("circle", { cx: px, cy: py, r: 5, fill: ok ? C.acc : "none", stroke: ok ? C.acc : C.grey, "stroke-width": 1.5 }, svg); d.classList.add("fade"); d.style.setProperty("--d", (.3 + k * .1) + "s"); txt(svg, px + 9, py + 4, nm, { "font-size": 10, fill: ok ? C.ink : C.grey }); });
+  txt(svg, cx, cy + r * 1.35, "connected  ·  never connected", { "text-anchor": "middle", "font-size": 12 });
+  // 36 bars: held-out AUROC per person, sorted, chance line at 0.5 and the 0.7 line
+  const P = D.persons, x0 = W * .5, x1 = W * .98, y0 = H * .12, y1 = H * .55, bw = (x1 - x0) / P.length;
+  const sy = v => y1 - v * (y1 - y0);
+  [[0.5, "chance 0.5"], [0.7, "0.7"]].forEach(([v, lab]) => { el("line", { x1: x0, y1: sy(v), x2: x1, y2: sy(v), stroke: C.grid }, svg); txt(svg, x1 + 4, sy(v) + 4, lab, { "font-size": 11 }); });
+  P.forEach((v, k) => { const b = el("rect", { x: x0 + k * bw + 1, y: sy(v), width: Math.max(1, bw - 2), height: y1 - sy(v), fill: v >= .7 ? C.acc : v >= .5 ? C.dim : C.grey }, svg); b.classList.add("fade"); b.style.setProperty("--d", (.6 + k * .03) + "s"); });
+  txt(svg, x0, y0 - 10, "held-out AUROC, one bar per person, 36 people", { "font-size": 12 });
+  txt(svg, x0, y1 + 18, P.filter(v => v >= .7).length + " at 0.7 or better", { fill: C.acc, "font-size": 12 });
+  txt(svg, x1, y1 + 18, P.filter(v => v < .5).length + " below chance", { fill: C.grey, "font-size": 12, "text-anchor": "end" });
+  // the hold: a flat held line under the bars, what the gauge did on the dry cap
+  const hy = H * .8; el("line", { x1: W * .5, y1: hy, x2: W * .98, y2: hy, stroke: C.grey, "stroke-width": 2, "stroke-dasharray": "6 5" }, svg);
+  txt(svg, W * .5, hy - 10, "on the dry cap: CHANNEL LOST, load held", { "font-size": 12, fill: C.ink });
+  txt(svg, W * .5, hy + 18, "the number is withheld, never invented", { "font-size": 11 });
+}
+
+// ---- slide 0 ----
+function s0() {
+  const svg = document.getElementById("s0trace"); svg.innerHTML = ""; const [W, H] = sizeOf(svg);
+  const st = D.stages, raw = st[0], cln = st[st.length - 1], t = raw.y.map((_, i) => i / D.fs), pr = 90;
+  [[raw, C.dim, 1, 0], [cln, C.acc, 1.6, 1]].forEach(([s, col, lw, r]) => {
+    const top = r * H / 2, a = Math.max(...s.y.map(Math.abs)); const sx = v => v / 4 * (W - pr), sy = v => top + H / 4 - v / a * (H / 4 - 10);
+    const p = el("path", { d: linePath(t, s.y, sx, sy), fill: "none", stroke: col, "stroke-width": lw }, svg); drawable(p, 0.6 + r * 0.9);
+    txt(svg, W - pr + 10, top + H / 4 - 8, r ? "cleaned" : "raw", { "font-size": 12 }); txt(svg, W - pr + 10, top + H / 4 + 12, s.rms.toLocaleString() + " µV", { fill: col, "font-size": 16, "font-weight": r ? 500 : 400 });
+  });
+  el("line", { x1: 0, y1: H - 1, x2: W - pr, y2: H - 1, stroke: C.dim }, svg);
+  [0, 1, 2, 3, 4].forEach(s => txt(svg, s / 4 * (W - pr), H - 8, s === 4 ? "4 s" : s, { "text-anchor": s ? "middle" : "start", "font-size": 11 }));
+  loadPlot(document.getElementById("s0load"), 0.8);
+  countUp(document.getElementById("n_raw"), raw.rms, 0, "<small>µV of noise in</small>");
+  countUp(document.getElementById("n_clean"), cln.rms, 0, "<small>µV of EEG out</small>");
+  countUp(document.getElementById("n_auc"), D.roc.auc, 2, "<small>AUROC, held out</small>");
+}
+function loadPlot(svg, delay) {
+  svg.innerHTML = ""; const [W, H] = sizeOf(svg); const L = D.load, pad = { l: 34, r: 70, t: 26, b: 26 };
+  const sx = v => pad.l + (v - 34) / (210 - 34) * (W - pad.l - pad.r), sy = v => H - pad.b - v / 100 * (H - pad.t - pad.b);
+  [[34, 90, "rest"], [90, 150, "arithmetic"], [150, 210, "recovery"]].forEach(([a, b, nm], i) => {
+    if (i === 1) el("rect", { x: sx(a), y: pad.t - 4, width: sx(b) - sx(a), height: H - pad.t - pad.b + 4, fill: C.band }, svg);
+    txt(svg, (sx(a) + sx(b)) / 2, pad.t - 9, nm, { fill: C.ink, "text-anchor": "middle", "font-size": 12 });
+  });
+  [0, 50, 100].forEach(v => { el("line", { x1: pad.l, y1: sy(v), x2: W - pad.r, y2: sy(v), stroke: v === 50 ? C.dim : C.grid, "stroke-dasharray": v === 50 ? "4 3" : "" }, svg); txt(svg, pad.l - 6, sy(v) + 4, v, { "text-anchor": "end", "font-size": 11 }); });
+  txt(svg, W - pad.r + 6, sy(50) + 4, "alarm", { "font-size": 11 });
+  let seg = [], segs = []; L.t.forEach((t, i) => { if (L.alarm[i]) seg.push(i); else if (seg.length) { segs.push(seg); seg = []; } }); if (seg.length) segs.push(seg);
+  segs.forEach(s => { const d = "M" + sx(L.t[s[0]]) + " " + sy(0) + s.map(i => "L" + sx(L.t[i]).toFixed(1) + " " + sy(L.load[i]).toFixed(1)).join("") + "L" + sx(L.t[s[s.length - 1]]) + " " + sy(0) + "Z"; const f = el("path", { d, fill: C.acc, "fill-opacity": .35 }, svg); f.classList.add("fade"); f.style.setProperty("--d", (delay + 1.6) + "s"); });
+  const p = el("path", { d: linePath(L.t, L.load, sx, sy), fill: "none", stroke: C.ink, "stroke-width": 2.2 }, svg); drawable(p, delay); p.style.animationDuration = "2.6s";
+  txt(svg, W - pad.r + 6, sy(L.load[L.load.length - 1]) + 4, "load", { fill: C.ink, "font-size": 12, "font-weight": 500 });
+  [40, 80, 120, 160, 200].forEach(s => txt(svg, sx(s), H - 8, s === 200 ? "200 s" : s, { "text-anchor": "middle", "font-size": 11 }));
+}
+
+// ---- slide 2: stages, stepped with space ----
+let stageShown = 0;
+function s2(reset) {
+  const box = document.getElementById("stages"); if (reset || !box.children.length) { box.innerHTML = ""; stageShown = 0;
+    D.stages.forEach((s, i) => {
+      const n = document.createElement("div"); n.className = "r nm"; n.innerHTML = s.name + '<div class="wh">' + s.what + "</div>"; n.style.transitionDelay = (0.1 * i) + "s";
+      const g = document.createElement("div"); g.className = "r"; g.style.transitionDelay = (0.1 * i) + "s"; const svg = el("svg", {}); g.appendChild(svg);
+      const m = document.createElement("div"); m.className = "r rms"; m.textContent = s.rms.toLocaleString(); m.style.transitionDelay = (0.1 * i) + "s";
+      box.append(n, g, m);
+      requestAnimationFrame(() => { const [W, H] = sizeOf(svg); const a = Math.max(...s.y.map(Math.abs)), t = s.y.map((_, k) => k / D.fs);
+        el("path", { d: linePath(t, s.y, v => v / 4 * W, v => H / 2 - v / a * (H / 2 - 4)), fill: "none", stroke: i === D.stages.length - 1 ? C.acc : C.ink, "stroke-width": i === D.stages.length - 1 ? 1.5 : 1 }, svg); });
+    });
+    const u = document.createElement("div"); u.className = "r rms"; u.style.gridColumn = "3"; u.style.alignSelf = "start"; u.style.fontSize = ".8vw"; u.style.color = C.dim; u.textContent = "µV RMS"; box.prepend(u); box.style.gridTemplateRows = "auto repeat(" + D.stages.length + ", 1fr)"; u.style.gridRow = "1"; }
+}
+function stageStep() { const rows = [...document.querySelectorAll("#stages .r")]; if (stageShown >= D.stages.length) return false; stageShown++; return true; }
+
+// ---- slide 3: spectrum ----
+function s3() {
+  const svg = document.getElementById("spec"); svg.innerHTML = ""; const [W, H] = sizeOf(svg); const pad = { l: 60, r: 120, t: 30, b: 40 };
+  const sx = f => pad.l + f / 110 * (W - pad.l - pad.r), sy = p => H - pad.b - Math.max(0, Math.min(1, (Math.log10(p) + 4) / (Math.log10(5e7) + 4))) * (H - pad.t - pad.b);
+  [[4, 8, "theta"], [8, 13, "alpha"], [13, 30, "beta"]].forEach(([a, b, nm]) => { el("rect", { x: sx(a), y: pad.t, width: sx(b) - sx(a), height: H - pad.t - pad.b, fill: C.band }, svg); txt(svg, (sx(a) + sx(b)) / 2, pad.t + 16, nm, { "text-anchor": "middle", "font-size": 12 }); });
+  [1e-4, 1, 1e4].forEach(v => { el("line", { x1: pad.l, y1: sy(v), x2: W - pad.r, y2: sy(v), stroke: C.grid }, svg); txt(svg, pad.l - 8, sy(v) + 4, v >= 1 ? v.toLocaleString() : "0.0001", { "text-anchor": "end", "font-size": 12 }); });
+  const cols = [[C.grey, 1.1, "raw"], [C.dim, 1.1, "notched"], [C.ink, 1.8, "band-passed"], [C.acc, 2.4, "full chain"]];
+  D.spectra.forEach((s, i) => { const [col, lw, nm] = cols[i]; const p = el("path", { d: linePath(s.f, s.p, sx, sy), fill: "none", stroke: col, "stroke-width": lw }, svg); drawable(p, 0.5 + i * 0.5); p.style.animationDuration = "1.4s";
+    const yl = Math.min(H - pad.b - 8, Math.max(pad.t + 8, sy(s.p[s.p.length - 1]))); txt(svg, W - pad.r + 8, yl + [0, 14, -8, 0][i], nm, { fill: col, "font-size": 13, "font-weight": i === 3 ? 500 : 400 }); });
+  txt(svg, sx(50), pad.t + 12, "50 Hz mains", { "text-anchor": "middle", "font-size": 12 });
+  el("line", { x1: pad.l, y1: H - pad.b, x2: W - pad.r, y2: H - pad.b, stroke: C.dim }, svg);
+  [0, 50, 100].forEach(f => txt(svg, sx(f), H - pad.b + 18, f === 100 ? "100 Hz" : f, { "text-anchor": "middle", "font-size": 12 }));
+  txt(svg, pad.l, pad.t - 10, "µV² per Hz", { "font-size": 12 });
+}
+
+// ---- slide 4: a small real figure under each pipeline stage ----
+function s4() {
+  const box = document.getElementById("minis"); box.innerHTML = "";
+  const raw = D.stages[0], cln = D.stages[D.stages.length - 1], t = raw.y.map((_, i) => i / D.fs), L = D.load;
+  const mk = (cap, delay) => { const d = document.createElement("div"); d.style.transitionDelay = delay + "s"; const svg = el("svg", {}); d.appendChild(svg); const c = document.createElement("div"); c.className = "cap"; c.textContent = cap; d.appendChild(c); box.appendChild(d); return svg; };
+  const wave = (svg, y, col, lw) => { const [W, H] = sizeOf(svg); const a = Math.max(...y.map(Math.abs)); const p = el("path", { d: linePath(t, y, v => v / 4 * W, v => H / 2 - v / a * (H / 2 - 4)), fill: "none", stroke: col, "stroke-width": lw }, svg); return p; };
+  const panels = [
+    ["8 traces at 250 Hz", svg => { const [W, H] = sizeOf(svg); for (let k = 0; k < 8; k++) { const sl = raw.y.slice(k * 60, k * 60 + 120); const a = Math.max(...sl.map(Math.abs)) || 1; el("path", { d: linePath(sl.map((_, i) => i), sl, v => v / 119 * W, v => (k + .5) * H / 8 - v / a * H / 20), fill: "none", stroke: C.dim, "stroke-width": .8 }, svg); } }],
+    ["3 of 8 clean here", svg => { const [W, H] = sizeOf(svg); const names = ["Fz", "C3", "Cz", "C4", "Pz", "P3", "O1", "P4"], pos = [[.5, .12], [.25, .42], [.5, .42], [.75, .42], [.5, .7], [.28, .68], [.42, .92], [.72, .68]], ok = [1, 0, 1, 0, 1, 0, 0, 0];
+      el("ellipse", { cx: W / 2, cy: H * .52, rx: W * .36, ry: H * .45, fill: "none", stroke: C.grid }, svg);
+      pos.forEach(([x, y], k) => { el("circle", { cx: x * W, cy: y * H, r: Math.min(W, H) * .07, fill: ok[k] ? C.acc : "none", stroke: ok[k] ? C.acc : C.grey, "stroke-dasharray": ok[k] ? "" : "2 2" }, svg); }); }],
+    ["6,183 to 34 µV", svg => { wave(svg, raw.y, C.dim, .8); const [W, H] = sizeOf(svg); const a = Math.max(...cln.y.map(Math.abs)); el("path", { d: linePath(t, cln.y, v => v / 4 * W, v => H / 2 - v / a * (H / 2 - 4)), fill: "none", stroke: C.acc, "stroke-width": 1.2 }, svg); }],
+    ["theta, alpha, beta shares", svg => { const [W, H] = sizeOf(svg); const sp = D.spectra[D.spectra.length - 1]; const band = (lo, hi) => sp.f.reduce((acc, f, i) => f >= lo && f < hi ? acc + sp.p[i] : acc, 0); const v = [band(4, 8), band(8, 13), band(13, 30)], tot = v[0] + v[1] + v[2];
+      ["θ", "α", "β"].forEach((nm, k) => { const h = v[k] / tot * (H - 22), x = W * (.12 + k * .3); el("rect", { x, y: H - 18 - h, width: W * .2, height: h, fill: k === 1 ? C.acc : C.grey }, svg); txt(svg, x + W * .1, H - 4, nm, { "text-anchor": "middle", "font-size": 12 }); }); }],
+    ["rest vs arithmetic", svg => { const [W, H] = sizeOf(svg); const s = D.roc; const sx = v => 4 + v * (W - 8), sy = v => H - 4 - v * (H - 8); el("line", { x1: sx(0), y1: sy(0), x2: sx(1), y2: sy(1), stroke: C.grey, "stroke-dasharray": "3 3" }, svg); el("path", { d: linePath(s.fpr, s.tpr, sx, sy), fill: "none", stroke: C.acc, "stroke-width": 2 }, svg); }],
+    ["0 = your own rest", svg => { const [W, H] = sizeOf(svg); const sx = v => (v - 34) / 176 * W, sy = v => H - 4 - v / 100 * (H - 8); el("line", { x1: 0, y1: sy(50), x2: W, y2: sy(50), stroke: C.grey, "stroke-dasharray": "3 3" }, svg); el("path", { d: linePath(L.t, L.load, sx, sy), fill: "none", stroke: C.ink, "stroke-width": 1.6 }, svg); }],
+    ["load, why, head map", svg => { const [W, H] = sizeOf(svg); el("rect", { x: 1, y: 1, width: W - 2, height: H - 2, fill: "none", stroke: C.grey }, svg); el("rect", { x: 6, y: 6, width: W * .45, height: H * .5, fill: "none", stroke: C.grid }, svg); txt(svg, 6 + W * .225, 6 + H * .34, Math.round(Math.max(...L.load)), { fill: C.acc, "font-size": Math.round(H * .3), "text-anchor": "middle", "font-weight": 500 });
+      el("ellipse", { cx: W * .75, cy: H * .3, rx: W * .16, ry: H * .22, fill: "none", stroke: C.grid }, svg); const sx = v => 6 + (v - 34) / 176 * (W - 12), sy = v => H - 6 - v / 100 * (H * .3); el("path", { d: linePath(L.t, L.load, sx, sy), fill: "none", stroke: C.dim, "stroke-width": 1 }, svg); }],
+  ];
+  panels.forEach(([cap, fn], i) => { const svg = mk(cap, 0.5 + i * 0.12); requestAnimationFrame(() => fn(svg)); });
+}
+
+// ---- slide 5: ROC ----
+function s5() {
+  const svg = document.getElementById("roc"); svg.innerHTML = ""; const [W, H] = sizeOf(svg); const S = Math.min(W, H) - 50, ox = (W - S) / 2 + 20, oy = 10;
+  const sx = v => ox + v * S, sy = v => oy + (1 - v) * S;
+  [0, .2, .4, .6, .8, 1].forEach(v => { el("line", { x1: sx(0), y1: sy(v), x2: sx(1), y2: sy(v), stroke: C.grid }, svg); el("line", { x1: sx(v), y1: sy(0), x2: sx(v), y2: sy(1), stroke: C.grid }, svg); txt(svg, sx(v), sy(0) + 18, v.toFixed(1), { "text-anchor": "middle", "font-size": 12 }); txt(svg, sx(0) - 8, sy(v) + 4, v.toFixed(1), { "text-anchor": "end", "font-size": 12 }); });
+  D.roc.per.forEach((c, i) => { const p = el("path", { d: linePath(c[0], c[1], sx, sy), fill: "none", stroke: C.grey, "stroke-width": .8, opacity: .7 }, svg); p.classList.add("fade"); p.style.setProperty("--d", (0.3 + i * 0.03) + "s"); });
+  el("line", { x1: sx(0), y1: sy(0), x2: sx(1), y2: sy(1), stroke: C.dim, "stroke-dasharray": "4 3" }, svg);
+  const p = el("path", { d: linePath(D.roc.fpr, D.roc.tpr, sx, sy), fill: "none", stroke: C.acc, "stroke-width": 3 }, svg); drawable(p, 1.4); p.style.animationDuration = "2s";
+  txt(svg, sx(.5), sy(0) + 38, "false positive rate: rest called load", { "text-anchor": "middle", "font-size": 13 });
+  txt(svg, sx(0), oy - 2, "true positive rate: arithmetic caught", { "font-size": 13 });
+  setTimeout(() => { countUp(document.getElementById("r_auc"), D.roc.auc, 2); countUp(document.getElementById("r_med"), D.roc.median, 2); document.getElementById("r_good").textContent = D.roc.n_good + " of 36"; }, 1400);
+}
+
+// ---- slide 6: training curve ----
+function s6() {
+  const svg = document.getElementById("train"); svg.innerHTML = ""; const [W, H] = sizeOf(svg); const pad = { l: 56, r: 190, t: 20, b: 44 }; const T = D.train, n = T.tr.length, xs = T.tr.map((_, i) => i + 1);
+  const sx = v => pad.l + (v - 1) / (n - 1) * (W - pad.l - pad.r), sy = v => H - pad.b - (v - .45) / .55 * (H - pad.t - pad.b);
+  [.5, .6, .7, .8, .9, 1].forEach(v => { el("line", { x1: pad.l, y1: sy(v), x2: W - pad.r, y2: sy(v), stroke: v === .5 ? C.dim : C.grid, "stroke-dasharray": v === .5 ? "4 3" : "" }, svg); txt(svg, pad.l - 8, sy(v) + 4, v.toFixed(1), { "text-anchor": "end", "font-size": 12 }); });
+  const band = el("path", { d: linePath(xs, T.te_hi, sx, sy) + " " + linePath([...xs].reverse(), [...T.te_lo].reverse(), sx, sy).replace("M", "L") + "Z", fill: C.acc, "fill-opacity": .14 }, svg); band.classList.add("fade"); band.style.setProperty("--d", "1.8s");
+  const p1 = el("path", { d: linePath(xs, T.tr, sx, sy), fill: "none", stroke: C.grey, "stroke-width": 2 }, svg); drawable(p1, 0.5); p1.style.animationDuration = "2.2s";
+  const p2 = el("path", { d: linePath(xs, T.te, sx, sy), fill: "none", stroke: C.acc, "stroke-width": 2.6 }, svg); drawable(p2, 0.9); p2.style.animationDuration = "2.2s";
+  txt(svg, W - pad.r + 8, sy(T.tr[n - 1]) + 4, "training people  " + T.tr[n - 1].toFixed(2), { "font-size": 14 });
+  txt(svg, W - pad.r + 8, sy(T.te[n - 1]) + 4, "person never seen  " + T.te[n - 1].toFixed(2), { fill: C.acc, "font-size": 14, "font-weight": 500 });
+  txt(svg, W - pad.r + 8, sy(.5) + 4, "chance", { "font-size": 13 });
+  el("line", { x1: pad.l, y1: H - pad.b, x2: W - pad.r, y2: H - pad.b, stroke: C.dim }, svg);
+  [1, 50, 100, 150, 200].forEach(v => txt(svg, sx(v), H - pad.b + 18, v, { "text-anchor": "middle", "font-size": 12 }));
+  txt(svg, (pad.l + W - pad.r) / 2, H - 4, "boosting trees", { "text-anchor": "middle", "font-size": 13 });
+}
+
+// ---- deck ----
+const slides = [...document.querySelectorAll(".slide")]; let cur = -1;
+const pips = document.getElementById("pips"); slides.forEach(() => pips.appendChild(document.createElement("i")));
+const draw = { 0: sT, 1: sP, 2: sS, 3: s0, 5: () => s2(true), 6: s3, 7: s4, 8: s5, 9: s6, 10: sL };
+function show(i) {
+  i = Math.max(0, Math.min(slides.length - 1, i)); if (i === cur) return;
+  slides.forEach((s, k) => s.classList.toggle("on", k === i)); [...pips.children].forEach((p, k) => p.classList.toggle("on", k <= i));
+  document.getElementById("src").textContent = slides[i].dataset.src || ""; cur = i; location.hash = "#" + i;
+  if (draw[i]) setTimeout(() => draw[i](), 50);
+  const v = document.querySelector("#vid video"); if (v) { if (i === 4) { v.currentTime = 0; v.play().catch(() => {}); } else v.pause(); }
+}
+document.addEventListener("keydown", e => {
+  if (e.key === "ArrowRight" || e.key === "PageDown") show(cur + 1);
+  else if (e.key === "ArrowLeft" || e.key === "PageUp") show(cur - 1);
+  else if (e.key === " ") { e.preventDefault(); show(cur + 1); }
+  else if (e.key.toLowerCase() === "f") { document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen(); }
+});
+document.addEventListener("click", e => { if (!e.target.closest(".drop, video, label, input")) show(cur + 1); });
+window.addEventListener("resize", () => { if (draw[cur]) draw[cur](); });
+// video drop zone
+function mountVideo(file) { const url = URL.createObjectURL(file); const v = document.createElement("video"); v.src = url; v.controls = true; v.playsInline = true; const box = document.getElementById("vid"); box.innerHTML = ""; box.appendChild(v); if (cur === 4) v.play().catch(() => {}); }
+document.getElementById("vfile").addEventListener("change", e => e.target.files[0] && mountVideo(e.target.files[0]));
+const dz = document.getElementById("drop"); ["dragenter", "dragover"].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.style.borderColor = C.acc; }));
+dz.addEventListener("dragleave", () => dz.style.borderColor = ""); dz.addEventListener("drop", e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) mountVideo(f); });
+// a demo.mp4 beside this file is used automatically if present
+fetch("demo.mp4", { method: "HEAD" }).then(r => { if (r.ok) { const v = document.createElement("video"); v.src = "demo.mp4"; v.controls = true; v.playsInline = true; const box = document.getElementById("vid"); box.innerHTML = ""; box.appendChild(v); } }).catch(() => {});
+window.addEventListener("hashchange", () => { const i = parseInt(location.hash.slice(1)); if (!isNaN(i) && i !== cur) show(i); });
+fetch("data.json").then(r => r.json()).then(d => { D = d; show(parseInt(location.hash.slice(1)) || 0); });
+</script>
+</body>
+</html>
