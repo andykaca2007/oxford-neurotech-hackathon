@@ -223,7 +223,7 @@ def main():
     ap.add_argument("--stall-after", type=float, default=None, help="test only, with --fake: stop sending data after this many seconds")
     ap.add_argument("--replay-markers", default=None, help="markers CSV (t,condition) to replay; default: the matching _gauge_markers.csv")
     ap.add_argument("--calib-s", type=int, default=0, help="seconds of mental to train a personal model; OFF by default: on 8 Nov replay it learned session drift, not effort (recovery read 77)")
-    ap.add_argument("--load-min-clean", type=int, default=None, help="hold the load (label Held, noisy) when fewer model channels than this are clean; default: all of them (8 Nov, CRITIQUE dsp-adv2: one noisy channel moves p by a median 0.19, tests/noisy_channel_shift.py)")
+    ap.add_argument("--load-min-clean", type=int, default=None, help="hold the load (label Held, noisy) when fewer model channels than this are clean; default: all of them (8 Nov, CRITIQUE dsp-adv2: one channel carrying a foreign signal moves p by a median 0.18 to 0.21 at any level from 20 uV up, tests/threshold_sweep.py)")
     ap.add_argument("--quality-uv", type=float, default=100.0, help="a channel counts as clean when its RMS is under this (uV) both BEFORE the reference and burst mask (4 to 30 Hz, notched) and AFTER the full chain; fatigue needs 3 clean")
     ap.add_argument("--log")
     ap.add_argument("--no-ui", action="store_true")
@@ -572,8 +572,9 @@ def main():
                 Xc = sosfiltfilt(SIG_SOS, Xc - Xc.mean(1, keepdims=True), axis=1)
             rms_c = Xc.std(1)
             # quality is also judged BEFORE the reference and burst mask (CRITIQUE dsp-adv1): the mask zeroes the loud
-            # samples, so after the chain 30 percent of channels carrying his real noise looked clean, and those moved p
-            # by a median 0.31 (tests/noisy_channel_shift.py, lab EEG plus his recorded noise)
+            # samples, so after the chain 30 percent of channels carrying his real noise looked clean. The 100 uV limit
+            # rests on physiology (lab EEG 7 to 17 uV), not on an error curve: tests/threshold_sweep.py found the shift
+            # in p from one foreign channel flat (0.18 to 0.21) from 20 uV to over 300 uV
             xq = X8[IDX] - X8[IDX].mean(1, keepdims=True)
             pre_c = sosfiltfilt(PRE_Q_SOS, sosfiltfilt(NOTCH_SOS, xq, axis=1), axis=1)[:, FS // 2:-FS // 2].std(1)
             clean = [i for k, i in enumerate(IDX) if (not dead[i]) and 0.5 < rms_c[k] < a.quality_uv and pre_c[k] < a.quality_uv]   # zeroed by ASR is not clean

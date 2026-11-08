@@ -76,7 +76,7 @@ What the gauge applied that morning was looser than both: it held a second when 
 or when fewer than 2 model channels were under 100 uV after its cleaning chain, and it scored 67% of its
 post-baseline rows in the replays. From later on 8 Nov (CRITIQUE dsp-adv1, dsp-adv2) it scores a second only when
 ALL 5 model channels are under 100 uV both before the reference and burst mask (4 to 30 Hz) and after the full chain:
-one noisy channel moved the model's output by a median 0.19. Under that rule it scores 24% of the same rows (0% to
+a channel over 100 uV in 4 to 30 Hz is not brain (lab gel-cap EEG is 7 to 17 uV), and one channel carrying a foreign signal moves the model's output by a median 0.18 to 0.21 whatever its level (tests/threshold_sweep.py). Under that rule it scores 24% of the same rows (0% to
 72% per session). So every load
 number from the 7 and 8 Nov recordings falls outside the original exclusion rule, and must be reported that way.
 From 8 Nov the exclusion rule is the gauge's hold rule. Report, per session, the share excluded under the original
