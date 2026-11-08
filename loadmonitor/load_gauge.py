@@ -84,6 +84,7 @@ def main():
     ap.add_argument("--alarm", type=float, default=70.0, help="load percent that triggers the alarm")
     ap.add_argument("--hold", type=float, default=20.0, help="s above --alarm before it fires")
     ap.add_argument("--smooth", type=float, default=8.0, help="s of smoothing on the gauge")
+    ap.add_argument("--gain", type=float, default=40.0, help="load points per spread of the model output above the wearer's rest (36-subject sweep: 40 = task median 45, rest false alarm 2 percent)")
     ap.add_argument("--strict", action="store_true", help="contact gate + settle check before the baseline, and freeze on contact loss (off: the plain behaviour)")
     ap.add_argument("--quality-uv", type=float, default=300.0, help="a channel counts as clean when its 1 to 40 Hz RMS is under this (uV); fatigue needs 3 clean")
     ap.add_argument("--log")
@@ -333,10 +334,10 @@ def main():
                     # the gauge reads how far above that rest the current output is, so sitting still reads low by construction
                     try:
                         pr = clf.predict_proba(np.array(base_feats) - base)[:, 1]
-                        rest_mean, rest_sd = float(np.mean(pr)), max(float(np.std(pr)), 0.05)
+                        rest_mean, rest_sd = float(np.mean(pr)), max(float(np.std(pr)), 0.10)
                     except Exception:
                         rest_mean, rest_sd = 0.3, 0.2
-                    print(f"# rest calibration: model output on your rest = {rest_mean:.2f} +/- {rest_sd:.2f}; load = 20 x (p - rest) / sd, 0 at rest", flush=True)
+                    print(f"# rest calibration: model output on your rest = {rest_mean:.2f} +/- {rest_sd:.2f}; load = {a.gain:.0f} x (p - rest) / sd, 0 at rest", flush=True)
                     if riem is not None:
                         riem.set_baseline(base_covs)
                     chan_base = {k: np.mean([c[k] for c in base_chan], axis=0) for k in ("tot", "th", "al")}
@@ -377,7 +378,7 @@ def main():
                 p_med = float(np.median(p_recent))      # median of the last 5 outputs: a one-second glitch cannot move the gauge
                 ema = 0.2 if ema is None else ema   # start calm, let the evidence raise it
                 ema = ema + (p_med - ema) * (1.0 / a.smooth)
-                load_pct = float(np.clip(20 * (ema - rest_mean) / rest_sd, 0, 100))   # 0 at his own rest; 20 per spread above it; alarm at 3.5 spreads
+                load_pct = float(np.clip(a.gain * (ema - rest_mean) / rest_sd, 0, 100))   # 0 at his own rest; --gain points per spread above it
                 # fatigue: slow EMA (about 2 min) of the ratio drift, starting AT the baseline; +0.5 log10 (ratio x3) reads as 100
                 if fat_now is not None:
                     fat_recent.append(fat_now)
