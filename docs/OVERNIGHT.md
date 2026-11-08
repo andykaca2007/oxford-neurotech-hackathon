@@ -90,3 +90,22 @@ Rules for every change: it must be tested on recorded data with a split that is 
   - Caveat: rest and arithmetic come from two separate recordings of one session, so recording-to-recording differences may add to the separation; treat 91 percent as optimistic.
 - Decision: no change. Bar stays at 0.80.
 - Checks: smoke ALL PASS, 16 replays 0 failed.
+
+### Iteration 9, 04:15 to 04:30
+
+- Hypothesis: the load mapping tuned on the old 8-channel model still works with the live 5-channel model and the launched settings (gain 40, smoothing 12, median of 5, alarm 50 held 20 s). Test: 36 lab subjects, leave-one-subject-out, exact live mapping.
+  - Gain 40 (live): rest median load 0, 0.1 percent of rest seconds in alarm; arithmetic median 31, 18 percent of task seconds in alarm, 44 percent of people get an alarm, 64 percent read 20 or more above their rest.
+  - Gain 30: task median 23, 33 percent alarm. Gain 50: task 39, still 44 percent alarm, rest false alarms 0.6 percent. Gain 60: task 46, 50 percent alarm, rest false alarms 1.2 percent.
+- Decision: keep gain 40. 50 adds no people and six times the false alarms.
+- Checks: smoke ALL PASS, 16 replays 0 failed.
+- The offline hypotheses are exhausted (alpha, ASR, channels, fatigue, interleaving, calibration bar, mapping). From iteration 10 the loop only re-runs the checks and fixes what fails; no new code without new data.
+
+## Morning summary for Paing
+
+1. Nothing on the software side is blocking a session. Every check passes; all 16 of last night's recordings replay through the live gauge with no crash, no NaN, and no false alarm.
+2. The blocker is the signal. Last night's recordings contain no detectable alpha (Pz 0.0 dB, O1 -0.3 dB above background; lab eyes closed +6 to +7 dB), and the spectrum is noise-like. Zetamac adds typing and gaze artefact on top (ASR fires on every Zetamac window).
+3. Session order, all on the page: Rebaseline when settled, then **Alpha check**. FAIL means fix contact (mastoid stickers on wiped skin, amplifier pressed and strapped, hair parted, 2 min still), not code. PASS means the electrodes see brain.
+4. After a PASS: **Calibrate** (160 s, spoken prompts). The personal model switches on only at held-out AUC 0.80 or above (chance on his data never reached 0.80; 91 percent of lab subjects do).
+5. Then the demo task is **silent** counting down in sevens with eyes on one point, not Zetamac. Lab numbers for the live mapping: rest reads 0, arithmetic median 31, about 4 in 10 people trigger the alarm.
+6. Fatigue is a published ratio, not a trained model, and on this cap it follows muscle artefact (rho -0.43); present it as "slow trend this session", never as a measurement of tiredness.
+7. Fallback if the cap will not pass: `--replay` streams a recorded session through the full live pipeline and page, labelled REPLAY.
