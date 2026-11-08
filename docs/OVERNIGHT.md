@@ -211,3 +211,10 @@ Rules for every change: it must be tested on recorded data with a split that is 
 - CRITIQUE #27 claims-7: PROTOCOL.md said it was written at 21:30 before any session; git shows it was committed at 20:35, before the first protocol recording (20:51), which is the stronger and true statement. The 8 Nov amendments (task, Alpha check, Calibrate, alarm 50) are now marked as made after seeing the data. Stale lines fixed (alarm 70, "peak during Zetamac"); the claim line now reports N honestly (0 of 1 as of 8 Nov). PLAN.md's demo used spoken answers typed by a teammate and claimed "strain shows before the mistakes"; now silent subtraction, claim removed.
 - CRITIQUE #28 claims-8: the README described the explored SSVEP aid, linked HANDOFF.md and RESULTS.md at the wrong path, and named a unicorn/ folder that does not exist. Rewritten for the load monitor with the lab-only numbers and limits, links fixed, provenance line names the real folders.
 - Checks: smoke ALL PASS, 16 replays 0 failed.
+
+### Critique iteration 10, 08:11
+
+- CRITIQUE #30 dsp-4: the order-8 band-pass leaves transients in the first and last 0.5 s of each 4 s window; on his data the Hilbert burst mask flagged 30 and 24 percent of those edges (5.8 percent mid-window; lab EEG under 1 percent), zeroing real signal. Now the mask does not flag the first and last 0.5 s.
+  - Effect on his live windows (n 584): fully zeroed samples 9.4 to 3.2 percent; alpha power lost through the mask -2.15 to -1.71 dB (the rest is the mask working on mid-window artefact).
+  - The change moves some lab features (up to 1.7 within-subject sd; model output up to 0.12 at the 99th percentile), so the 5-channel model was retrained on the corrected chain: LOSO AUC 0.760, balanced accuracy 0.679 (was 0.762, 0.681; same within noise). Previous model kept as models/readiness_5ch_pre_edgefix.joblib (models/ is local, not in git).
+- Checks: smoke ALL PASS; 16 replays 0 failed; commit gated.

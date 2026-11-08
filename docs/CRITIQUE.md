@@ -37,7 +37,7 @@ Ranking: severity as re-rated by the adversary, then grouped so that issues with
 | 27 | medium | claims-7 | confirmed | The protocol's 'decided before the data' claim no longer holds, and its report and claim lines contradict its own amendments | done (3f9cf11) |
 | 28 | medium | claims-8 | confirmed | The README pitches a different product and contradicts how the load model actually works | done (3f9cf11) |
 | 29 | medium | claims-adv1 | ADDED | The protocol's pre-registered exclusion rule invalidates about 83 percent of the recorded seconds, and nothing reports that | open |
-| 30 | medium | dsp-4 | confirmed | On his data the burst mask is mostly triggered by 4 s window-edge transients and zeroes 30 percent of the window edges | open |
+| 30 | medium | dsp-4 | confirmed | On his data the burst mask is mostly triggered by 4 s window-edge transients and zeroes 30 percent of the window edges | done (40dd50b): edges protected and model retrained; the 12 s context alternative was not needed for this |
 | 31 | medium | dsp-adv1 | ADDED | The channel quality gate is measured after the burst mask and ASR, so it passes the artefacts that move the model most | open |
 | 32 | medium | dsp-adv2 | ADDED | Noisy model channels are still fed to the classifier; the clean count only decides whether to hold | open |
 | 33 | medium | fatigue-4 | confirmed | Page calls the drift 'fatigue', 'Tiring' and 'Recovering' and colours it red, though its downward moves come from muscle and from the arithmetic task itself | done (ee26e5b) |
