@@ -55,6 +55,7 @@ open http://localhost:8765 2>/dev/null || true
 if [ "$SERIAL" = "fake" ]; then
   $PY loadmonitor/load_gauge.py --fake --web --no-ui
 else
-  $PY loadmonitor/load_gauge.py --lsl --web --no-ui --log "${SESSION}_gauge.csv"
+  # alarm at 50 held 20 s, 12 s smoothing: on this cap Zetamac reaches about 50 and rest wobbles 0 to 36
+  $PY loadmonitor/load_gauge.py --lsl --web --no-ui --alarm 50 --hold 20 --smooth 12 --log "${SESSION}_gauge.csv"
 fi
 cleanup

@@ -188,7 +188,7 @@
 
   <section class="cell bottom trace">
     <div class="lbl"><span data-i="[4]">Load · last 10 min</span><em>1 s</em></div>
-    <div class="plot"><canvas id="trace"></canvas><div class="ax" style="top:30%">70</div></div>
+    <div class="plot"><canvas id="trace"></canvas><div class="ax" id="alarmax" style="top:30%">70</div></div>
   </section>
   <section class="cell bottom sig">
     <div class="lbl"><span data-i="[5]">Signals · last 2 s</span><em>1–40 Hz · µV</em></div>
@@ -213,7 +213,7 @@ function heat(db){ // -6..+6 dB: dark grey .. accent
   if (x >= 0) { const [r,g,b] = hex(CSSV('--accent')); const k = 0x27; return `rgb(${k+(r-k)*x|0},${k+(g-k)*x|0},${k+(b-k)*x|0})`; }
   const k = 0x27 + (0x10-0x27)*(-x); return `rgb(${k|0},${k|0},${k|0})`;
 }
-const ALARM = 70;
+let ALARM = 70, HOLD = 20;   // updated from the gauge's --alarm each poll
 let chal = { on:false, cur:4000, answers:0, errors:0, t0:0, errT:[] };
 let lastT = 0;
 const curEl = document.getElementById('cur'), ans = document.getElementById('ans'), go = document.getElementById('go');
@@ -296,6 +296,8 @@ async function tick(){
   try {
     const s = await (await fetch('/state')).json();
     lastT = s.t;
+    if (s.hold_s) HOLD = s.hold_s;
+    if (s.alarm_at && s.alarm_at !== ALARM) { ALARM = s.alarm_at; const ax = document.getElementById('alarmax'); if (ax) { ax.textContent = ALARM; ax.style.top = (100 - ALARM) + '%'; } }
     document.getElementById('cond').textContent = s.condition || 'none';
     document.querySelectorAll('#condbar button').forEach(b => b.classList.toggle('on', b.dataset.c === (s.condition || 'none')));
     if (chal.on) document.getElementById('n_time').textContent = Math.max(0, Math.round(s.t - chal.t0)) + ' s';
@@ -313,7 +315,7 @@ async function tick(){
       const v = Math.max(0, Math.min(100, s.load));
       val.textContent = Math.round(v); val.className = 'n' + (v >= ALARM-20 ? ' hot' : '');
       label.textContent = lost ? 'Contact lost' : s.alarm ? 'High load' : v >= ALARM ? 'Load rising' : v >= ALARM-30 ? 'Working' : 'Calm';
-      sub.textContent = lost ? (s.state||'').replace('CONTACT LOST: ','') + ' · frozen until the cap is back' : 'alarm after 20 s above 70';
+      sub.textContent = lost ? (s.state||'').replace('CONTACT LOST: ','') + ' · frozen until the cap is back' : 'alarm after ' + HOLD + ' s above ' + ALARM;
       document.getElementById('basebar').style.display='none';
     } else {
       const waiting = (s.state||'').startsWith('WAITING') || (s.state||'').startsWith('SETTLING');
