@@ -18,3 +18,17 @@ covers 5 and 6, and the ROC covers 3.
 - Say "held-out person from a public dataset" before the video. Nothing on screen says it.
 - Quote only held-out numbers (0.74 pooled, 0.81 median). Never the 0.90 training figure.
 - If you overrun, cut the second sentence of the Problem slide, not the Limits slide.
+
+## Plain version (chosen 8 Nov): the figures carry the detail, the talk stays non-technical
+
+About 100 words in 90 seconds, so each figure gets a few seconds of silence to be read.
+
+| Time | Slide | Say |
+|---|---|---|
+| 0:00 | 0 Problem | "Pilots, surgeons and shift workers overload quietly, and mistakes follow. We built a gauge for it from a consumer brain headset." |
+| 0:25 | 2 Filters | "The raw signal is nearly all noise. Our software strips it layer by layer until what is left is the brain." |
+| 0:45 | 4 ROC | "We tested on people the system had never seen. It separates rest from hard thinking well for most of them." |
+| 1:05 | 7 Limits | "The software works. Our dry electrodes do not connect well yet, and when they do not, it says so instead of guessing." |
+| 1:30 | video | "Here is a real recording from a public dataset, through our live system. Watch the number climb when they start calculating." |
+
+If a judge asks for numbers, they are on the slides: 6,000 µV to 34 µV; AUROC 0.74 held out, median 0.81 per person.
