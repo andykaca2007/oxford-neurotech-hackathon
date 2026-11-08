@@ -1,7 +1,7 @@
 """Interleaved personal calibration: the one implementation used by the live gauge and by the tests.
 
 The gauge collects feature windows (already baseline-relative) into blocks 0..n-1, rest on even blocks and silent
-subtraction on odd blocks. leave_one_pair_out() trains a shrinkage LDA on all pairs but one, scores the held-out pair,
+subtraction on odd blocks. leave_one_pair_out() trains a shrinkage LDA on all pairs but one (minus the held-out pair's two neighbours), scores the held-out pair,
 and repeats for every pair. The mean held-out AUC decides whether the personal model is used (bar in load_gauge.py,
 CAL_MIN_AUC); the held-out rest scores become the rest anchor for the load mapping.
 
@@ -18,7 +18,7 @@ def make_lda():
     return make_pipeline(StandardScaler(), LinearDiscriminantAnalysis(solver="lsqr", shrinkage="auto"))
 
 
-def leave_one_pair_out(blocks, n_blocks):
+def leave_one_pair_out(blocks, n_blocks, buffered=False):
     """blocks: {block index: list or array of feature vectors}. Returns dict(auc, folds, oof_rest).
 
     auc is the mean over held-out pairs (nan if no pair could be scored); folds lists each pair's AUC; oof_rest holds the
@@ -26,7 +26,11 @@ def leave_one_pair_out(blocks, n_blocks):
     from sklearn.metrics import roc_auc_score
     folds, oof_rest = [], []
     for hp in range(n_blocks // 2):                            # hold out one rest block and the task block after it
-        tr = [b for b in range(n_blocks) if b // 2 != hp and b in blocks and len(blocks[b])]
+        # buffered (CRITIQUE calib-4, OFF by default): also leave the two neighbouring blocks out of training; each held-out block
+        # otherwise borders a training block of the OTHER class, and slow drift biased the null AUC down to a median
+        # 0.44 (buffered 0.50), but on the lab positive control it found fewer real effects (25 vs 29 of 35), so it stays off
+        skip = {2 * hp - 1, 2 * hp + 2} if buffered else set()
+        tr = [b for b in range(n_blocks) if b // 2 != hp and b not in skip and b in blocks and len(blocks[b])]
         te = [b for b in (2 * hp, 2 * hp + 1) if b in blocks and len(blocks[b])]
         if len(te) < 2 or len({b % 2 for b in tr}) < 2:
             continue
