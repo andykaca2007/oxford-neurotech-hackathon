@@ -182,6 +182,7 @@ def src_replay(path, speed):
 
 
 def src_lsl(name="Unicorn"):
+    src_lsl.raw_offset_s = None
     from pylsl import StreamInlet, resolve_byprop
     import socket
     s = resolve_byprop("name", name, timeout=10)
@@ -202,6 +203,17 @@ def src_lsl(name="Unicorn"):
             continue
         if t0 is None:
             t0 = ts
+            # how many samples the bridge had already written when the gauge's clock started: replay uses it to put
+            # the markers on the right raw samples (the gauge starts 1.6 to 2.6 s after the bridge; CRITIQUE gauge-7)
+            try:
+                import glob as _glob
+                raws = _glob.glob(os.path.join("recordings", "*_raw*.csv"))
+                newest = max(raws, key=os.path.getmtime) if raws else None
+                if newest and time.time() - os.path.getmtime(newest) < 30:
+                    with open(newest, "rb") as fh:
+                        src_lsl.raw_offset_s = max(0, sum(1 for _ in fh) - 1) / FS
+            except Exception:
+                pass
         yield ts - t0, np.array(smp[:8])
 
 
@@ -222,6 +234,7 @@ def main():
     ap.add_argument("--stream", default="Unicorn", help="LSL stream name to read (run_all.sh gives each session its own)")
     ap.add_argument("--stall-after", type=float, default=None, help="test only, with --fake: stop sending data after this many seconds")
     ap.add_argument("--replay-markers", default=None, help="markers CSV (t,condition) to replay; default: the matching _gauge_markers.csv")
+    ap.add_argument("--replay-offset", type=float, default=2.5, help="seconds the gauge clock started after the raw file, for markers files without a '# raw_offset_s=' line (measured 1.6 to 2.6 s)")
     ap.add_argument("--calib-s", type=int, default=0, help="seconds of mental to train a personal model; OFF by default: on 8 Nov replay it learned session drift, not effort (recovery read 77)")
     ap.add_argument("--load-min-clean", type=int, default=None, help="hold the load (label Held, noisy) when fewer model channels than this are clean; default: all of them (8 Nov, CRITIQUE dsp-adv2: one channel carrying a foreign signal moves p by a median 0.18 to 0.21 at any level from 20 uV up, tests/threshold_sweep.py)")
     ap.add_argument("--fatigue-show-s", type=float, default=1200, help="show the fatigue number this many seconds after the baseline (default 20 min, a slow trend; the lab demo uses 0 and the page says it builds over 20+ min)")
@@ -297,13 +310,21 @@ def main():
     if a.replay:
         mpath = a.replay_markers or re.sub(r"_raw.*\.csv$", "_gauge_markers.csv", a.replay)
         if mpath != a.replay and os.path.exists(mpath):          # a raw file without "_raw" in its name has no markers file
+            # markers are in gauge time; the gauge's clock started 1.6 to 2.6 s after the bridge began the raw file
+            # (CRITIQUE gauge-7). A "# raw_offset_s=" line holds the measured offset; older files get the 2.5 s estimate
+            off = a.replay_offset
+            PHASES = {"alpha_open", "alpha_closed", "alpha_done", "calib_rest", "calib_task", "calib_done"}
             for line in open(mpath).read().splitlines()[1:]:
+                if line.startswith("# raw_offset_s="):
+                    off = float(line.split("=")[1]); continue
                 parts = line.split(",")
                 try:
-                    replay_marks.append((float(parts[0]), parts[1].strip()))
+                    if parts[1].strip() not in PHASES:              # phases are logged, not replayed as conditions
+                        replay_marks.append((float(parts[0]), parts[1].strip()))
                 except (ValueError, IndexError):
                     continue
-            print(f"# replaying {len(replay_marks)} condition markers from {os.path.basename(mpath)}", flush=True)
+            replay_marks = [(tm + off, c) for tm, c in replay_marks]
+            print(f"# replaying {len(replay_marks)} condition markers from {os.path.basename(mpath)} (shifted by {off:.2f} s to raw-file time)", flush=True)
     p_recent = deque(maxlen=5)
     fat_recent = deque(maxlen=5)
     clean_n = 0
@@ -317,6 +338,16 @@ def main():
     markers = open(a.log.replace(".csv", "") + "_markers.csv", "w") if a.log else None
     if markers:
         markers.write("t,condition\n")
+    mark_hdr_done = [False]
+
+    def mark(t_m, label):
+        """A marker row; the first row after the LSL offset is known also writes it as a comment line (replay reads it)."""
+        if not markers:
+            return
+        off = getattr(src_lsl, "raw_offset_s", None)
+        if not mark_hdr_done[0] and off is not None:
+            markers.write(f"# raw_offset_s={off:.3f}\n"); mark_hdr_done[0] = True
+        markers.write(f"{t_m:.1f},{label}\n"); markers.flush()
     cond = {"now": "none", "rebaseline": 0, "redo": False, "alpha_check": 0, "calibrate": 0}
     # interleaved personal calibration: 8 blocks of 20 s, rest / silent subtraction alternating, so slow drift hits both
     # classes equally (the block-design personal model of 8 Nov learned drift: recovery read 77). Leave-one-pair-out
@@ -433,8 +464,7 @@ def main():
             if new != cond["now"]:
                 cond["now"] = new
                 print(f"t={t_now:6.1f} CONDITION {new}", flush=True)
-                if markers:
-                    markers.write(f"{t_now:.1f},{new}\n"); markers.flush()
+                mark(t_now, new)
         except Exception as e:
             if cond.get("web_err") != repr(e)[:60]:
                 cond["web_err"] = repr(e)[:60]
@@ -528,6 +558,7 @@ def main():
                     if ac["t0"] is None:
                         ac["t0"] = t
                         speak("Alpha check. Eyes open, look at one point.")
+                        mark(t, "alpha_open")
                         print(f"t={t:6.1f} ALPHA CHECK started: 20 s eyes open, then 20 s eyes closed", flush=True)
                     el = t - ac["t0"]
                     if 4 <= el < 20 and rec8:
@@ -540,6 +571,7 @@ def main():
                         ac["noise"].append(float(np.min(sosfiltfilt(ALPHA_BAND_SOS, xa, axis=1)[:, FS // 2:-FS // 2].std(1))))   # quietest posterior channel
                     if el >= 20 and "close" not in ac["said"]:
                         ac["said"].add("close"); speak("Close your eyes.")
+                        mark(t, "alpha_closed")
                     if 26 <= el < 42 and post:
                         ac["closed"].append({MONTAGE[i]: (ah[j], abands[j]) for j, i in enumerate(post)})
                     if el >= 42:          # closed windows 26 to 42 s: each starts 2 s or more after the spoken prompt (CRITIQUE alpha-adv2)
@@ -572,6 +604,7 @@ def main():
                         if ac["result"]["layout"]:
                             ac["result"]["text"] += ". " + ac["result"]["layout"]
                         ac["active"] = False
+                        mark(t, "alpha_done")
                         print(f"t={t:6.1f} ALPHA CHECK {ac['result']['text']}", flush=True)
                         if per:
                             print("#   alpha rise per electrode, eyes closed vs open: " + "  ".join(f"{c} {r['rise']:+.1f}{'*' if r['ok'] else ''}" for c, r in per.items()), flush=True)
@@ -642,6 +675,7 @@ def main():
                 blk_now = int((t - cal["t0"]) // CAL_BLOCK_S)
                 if blk_now < CAL_BLOCKS and blk_now not in cal["said"]:
                     cal["said"].add(blk_now); cal.setdefault("prompt_t", {})[blk_now] = t
+                    mark(t, "calib_rest" if blk_now % 2 == 0 else "calib_task")
                     # prompts of equal spoken length for both classes (1.83 s and 1.89 s); the starting number is
                     # given once at the start of the calibration, so the task prompt does not carry extra speech
                     speak("Rest. Eyes on the point." if blk_now % 2 == 0 else "Count down in sevens, silently.")
@@ -786,6 +820,7 @@ def main():
                                                    f"calibration incomplete: clean windows per block {counts} (each needs {CAL_MIN_WIN} of 15); keeping the generic model, redo with better contact" if not complete else
                                                    f"personal model OFF: held-out AUC {auc:.2f} (needs {CAL_MIN_AUC}); keeping the generic model"))
                         cal["active"] = False
+                        mark(t, "calib_done")
                         print(f"t={t:6.1f} CALIBRATION {cal['result']['text']}; folds {cal['result']['folds']}", flush=True)
                         speak("Calibration done. " + ("Personal model on." if ok else "Not separable, keeping the general model."))
                 if personal is None and a.calib_s > 0 and cond["now"] == "mental":
