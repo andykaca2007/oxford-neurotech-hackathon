@@ -237,7 +237,10 @@ def main():
     # classes equally (the block-design personal model of 8 Nov learned drift: recovery read 77). Leave-one-pair-out
     # AUC decides: the personal model replaces the generic one only if it reaches CAL_MIN_AUC on held-out blocks.
     cal = dict(active=False, t0=None, blocks={}, result=None, said=set())
-    # 0.80 from the 8 Nov null test: 81 calibrations on recordings with no real alternation, median 0.46, 99th pct 0.75, none >= 0.80
+    # 0.80, set on 8 Nov. Re-measured with independent runs only (tests/calib_null.py): chance reaches it in 1 of 8 runs on
+    # his recordings and 2 of 35 lab rest-only runs (about 6 to 12 percent; 95 percent upper bounds 47 and 17 percent); a real
+    # rest/arithmetic difference reaches it in 29 of 35 lab subjects (optimistic). A pass means "rest and task blocks were
+    # separable for this person", not "load is measured". (The earlier "none of 81 reach 0.80" counted overlapping positions.)
     CAL_BLOCKS, CAL_BLOCK_S, CAL_SKIP_S, CAL_MIN_AUC = 8, 20, 5, 0.80
     # eyes-closed alpha check: 20 s eyes open, 20 s eyes closed; PASS when posterior alpha rises 3 dB to a peak of +3 dB or more
     ac = dict(active=False, t0=None, open=[], closed=[], noise=[], result=None, said=set())
@@ -611,26 +614,9 @@ def main():
                             cal["blocks"].setdefault(blk, []).append(xf[0].copy())
                         state = f"CALIBRATING: block {blk + 1}/{CAL_BLOCKS} {'rest' if blk % 2 == 0 else 'subtract'}"
                     else:
-                        from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-                        from sklearn.metrics import roc_auc_score
-                        from sklearn.pipeline import make_pipeline
-                        from sklearn.preprocessing import StandardScaler
-
-                        def mk():
-                            return make_pipeline(StandardScaler(), LinearDiscriminantAnalysis(solver="lsqr", shrinkage="auto"))
-                        aucs, oof_rest = [], []
-                        pairs = CAL_BLOCKS // 2
-                        for hp in range(pairs):                                # hold out one rest block and the task block after it
-                            tr = [b for b in range(CAL_BLOCKS) if b // 2 != hp and b in cal["blocks"]]
-                            te = [b for b in (2 * hp, 2 * hp + 1) if b in cal["blocks"]]
-                            if len(te) < 2 or len({b % 2 for b in tr}) < 2:
-                                continue
-                            Xtr = np.vstack([np.array(cal["blocks"][b]) for b in tr]); ytr = np.concatenate([[b % 2] * len(cal["blocks"][b]) for b in tr])
-                            Xte = np.vstack([np.array(cal["blocks"][b]) for b in te]); yte = np.concatenate([[b % 2] * len(cal["blocks"][b]) for b in te])
-                            m_fold = mk().fit(Xtr, ytr)
-                            aucs.append(float(roc_auc_score(yte, m_fold.predict_proba(Xte)[:, 1])))
-                            oof_rest.extend(m_fold.decision_function(Xte[yte == 0]).tolist())     # held-out rest scores: the rest anchor
-                        auc = float(np.mean(aucs)) if aucs else float("nan")
+                        from calibration import leave_one_pair_out, make_lda as mk     # one implementation, shared with tests/calib_null.py
+                        res_cal = leave_one_pair_out(cal["blocks"], CAL_BLOCKS)
+                        aucs, oof_rest, auc = res_cal["folds"], res_cal["oof_rest"], res_cal["auc"]
                         ok = bool(aucs) and auc >= CAL_MIN_AUC
                         if ok:
                             Xall = np.vstack([np.array(v) for v in cal["blocks"].values()])
@@ -642,7 +628,7 @@ def main():
                             ema = None
                             p_recent.clear()
                         cal["result"] = dict(ok=ok, auc=None if not aucs else round(auc, 2), folds=[round(v, 2) for v in aucs],
-                                             text=(f"personal model ON: held-out AUC {auc:.2f} over {len(aucs)} block pairs" if ok else
+                                             text=(f"personal model ON: held-out AUC {auc:.2f} over {len(aucs)} block pairs (rest and task blocks separable; chance passes this about 1 time in 10)" if ok else
                                                    f"personal model OFF: held-out AUC {auc:.2f} (needs {CAL_MIN_AUC}); keeping the generic model"))
                         cal["active"] = False
                         print(f"t={t:6.1f} CALIBRATION {cal['result']['text']}; folds {cal['result']['folds']}", flush=True)
@@ -741,7 +727,7 @@ def main():
                     ya = h - 50 - a.alarm * 0.9
                     pg.draw.line(sc, (240, 80, 80), (40, ya), (w - 40, ya), 1)
                     if alarmed:
-                        al = ui["font"].render("HIGH LOAD: take a break", True, (255, 255, 255))
+                        al = ui["font"].render("load held above the alarm line", True, (255, 255, 255))
                         sc.blit(al, al.get_rect(center=(w // 2, h // 2 + 100)))
                 else:
                     done = min(len(base_feats), a.baseline)
