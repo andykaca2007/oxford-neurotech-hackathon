@@ -35,6 +35,11 @@ Limits (say them first)
 
 ## Mental-load model (the product's model), PhysioNet eegmat, 36 subjects, leave-one-subject-out
 
+> Note, 8 Nov: the table below is the first model search (1 to 40 Hz, channels Fz C3 Cz C4 Pz). The model that
+> runs live now is different: 5 channels (Fz C3 Cz Pz O1), robust cleaning chain, 29 amplitude-invariant
+> features, lab AUC 0.76, balanced accuracy 68% (docs/OVERNIGHT.md, docs/OPTIMIZE.md). All numbers here are lab
+> EEG; none has been reproduced on the dry cap.
+
 Window 4 s, 50% overlap as augmentation (2083 epochs), only the 5 channels our cap reads
 (Fz C3 Cz C4 Pz), features relative to each person's own 28 s rest baseline.
 

@@ -305,6 +305,7 @@ async function tick(){
     const s = await (await fetch('/state')).json();
     lastT = s.t;
     if (s.hold_s) HOLD = s.hold_s;
+    { const lr = document.getElementById('lbl_rule'); if (lr && s.alarm_at) lr.textContent = 'alarm > ' + s.alarm_at + ' for ' + (s.hold_s || HOLD) + ' s'; }
     if (s.alarm_at && s.alarm_at !== ALARM) { ALARM = s.alarm_at; const ax = document.getElementById('alarmax'); if (ax) { ax.textContent = ALARM; ax.style.top = (100 - ALARM) + '%'; } }
     document.getElementById('cond').textContent = s.condition || 'none';
     document.querySelectorAll('#condbar button').forEach(b => b.classList.toggle('on', b.dataset.c === (s.condition || 'none')));
@@ -317,7 +318,14 @@ async function tick(){
     document.body.classList.toggle('work', !s.baseline_done || (!s.alarm && lv >= ALARM - 30));
     const lost = s.baseline_done && s.contact === false;
     const st = document.getElementById('state'), sw = document.getElementById('statewrap');
-    st.textContent = lost ? 'contact lost' : s.alarm ? 'alarm' : (s.baseline_done ? 'live' : 'baseline'); sw.classList.toggle('on', !!s.alarm || lost);
+    st.textContent = s.replay ? 'REPLAY' : lost ? 'contact lost' : s.alarm ? 'alarm' : (s.baseline_done ? 'live' : 'baseline'); sw.classList.toggle('on', !!s.alarm || lost);
+    { let b = document.getElementById('replaybanner');
+      if (s.replay) {
+        if (!b) { b = document.createElement('div'); b.id = 'replaybanner';
+          b.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:50;padding:8px 16px;background:#b8860b;color:#000;font:600 13px/1.3 ui-monospace,Menlo,monospace;text-align:center';
+          document.body.appendChild(b); }
+        b.textContent = 'REPLAY of a recorded session, not live: ' + s.replay;
+      } else if (b) b.remove(); }
     const val = document.getElementById('val'), label = document.getElementById('label'), sub = document.getElementById('sub');
     if (s.baseline_done) {
       const v = Math.max(0, Math.min(100, s.load));

@@ -64,8 +64,12 @@ Personalisation beats a universal model.
    falls back to a plain template so the demo never hangs.
 
 ## What we claim, and what we do not
-Claim: a 400-pound dry headset plus a 30-second baseline detects mental load on people the
-model never saw, 75% balanced accuracy, AUC 0.84, and shows it live.
+Claim (corrected 8 Nov): the live model, trained on lab EEG (PhysioNet eegmat, 36 people, rest vs mental
+arithmetic, leave-one-subject-out), scores AUC 0.76 and balanced accuracy 68% on people it never saw, and is
+at chance for about 1 in 6 of them. Every accuracy number is from lab EEG. On our dry cap we have not yet shown
+brain signal (no alpha in last night's recordings), and on Paing's recordings the gauge did not reliably
+separate task from rest. (The earlier line, "75%, AUC 0.84, and shows it live", described an older model
+and claimed a live result we do not have.)
 Not claimed: that load equals accident risk; that students doing sums are surgeons at hour
 eleven; that one session proves errors follow load. Say these before the judges ask.
 

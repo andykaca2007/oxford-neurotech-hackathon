@@ -4,6 +4,7 @@
 #   ./run_all.sh                      # headset U8-2025.10.14 (default)
 #   ./run_all.sh U8-2025.11.14        # another amplifier
 #   ./run_all.sh fake                 # no headset: fake signal, for rehearsing
+#   ./run_all.sh replay recordings/<x>_raw_<y>.csv   # fallback: a recorded session through the live page, shown as REPLAY
 #   ./run_all.sh U8-2025.10.14 andy   # second word = who is wearing it; names the recordings
 #
 # Every run writes two CSVs in recordings/: <who>_<date>_<time>_raw.csv (all 8 channels, 250 Hz,
@@ -16,6 +17,11 @@ cd "$(dirname "$0")"
 PY=.venv/bin/python
 SERIAL="${1:-U8-2025.10.14}"
 WHO="${2:-anon}"                      # ./run_all.sh U8-2025.10.14 paing  -> files named with the wearer
+REPLAY_FILE=""
+if [ "$SERIAL" = "replay" ]; then
+  REPLAY_FILE="${2:-}"; WHO="replay"
+  if [ ! -f "$REPLAY_FILE" ]; then echo "usage: ./run_all.sh replay recordings/<name>_raw_<stamp>.csv"; ls -t recordings/*raw*.csv | head -5; exit 1; fi
+fi
 mkdir -p logs recordings
 STAMP=$(date +%Y%m%d_%H%M%S)
 SESSION="recordings/${WHO}_${STAMP}"
@@ -32,7 +38,7 @@ PIDS+=($!)
 sleep 1.5
 if curl -s -o /dev/null http://127.0.0.1:8765/state; then echo "web page started"; else echo "web page FAILED, see logs/server_$STAMP.log"; fi
 
-if [ "$SERIAL" != "fake" ]; then
+if [ "$SERIAL" != "fake" ] && [ "$SERIAL" != "replay" ]; then
   # 2. headset bridge (its scope window must stay open; minimise it)
   pkill -f unicorn_gpype.py 2>/dev/null
   $PY headset/unicorn_gpype.py --serial "$SERIAL" --csv "${SESSION}_raw.csv" > logs/bridge_$STAMP.log 2>&1 &
@@ -54,6 +60,9 @@ open http://localhost:8765 2>/dev/null || true
 # 4. the gauge, in the foreground so Ctrl-C ends the demo
 if [ "$SERIAL" = "fake" ]; then
   $PY loadmonitor/load_gauge.py --fake --web --no-ui
+elif [ "$SERIAL" = "replay" ]; then
+  echo "REPLAY of $REPLAY_FILE at real time; the page shows a REPLAY banner"
+  $PY loadmonitor/load_gauge.py --replay "$REPLAY_FILE" --speed 1 --web --no-ui --alarm 50 --hold 20 --smooth 12 --log "${SESSION}_gauge.csv"
 else
   # alarm at 50 held 20 s, 12 s smoothing: on this cap Zetamac reaches about 50 and rest wobbles 0 to 36
   $PY loadmonitor/load_gauge.py --lsl --web --no-ui --alarm 50 --hold 20 --smooth 12 --log "${SESSION}_gauge.csv"

@@ -89,7 +89,8 @@ contrast 0.45, edges only. Chain: unicorn_gpype.py -> ssvep_decode.py --lsl [--m
 Audience he accepted: safety-critical workers (SmartCap precedent) and table tennis players
 (pre-serve focus). Science: loadmonitor/readiness_model.py on PhysioNet eegmat (36 subjects, rest vs
 mental arithmetic), 5 live channels Fz C3 Cz C4 Pz, leave-one-subject-out: raw 63% / AUC 0.75,
-BASELINE-RELATIVE 70% / AUC 0.84. Model in models/readiness.joblib (local, rebuild with the script).
+BASELINE-RELATIVE 70% / AUC 0.84. [Superseded 8 Nov: the live model in models/readiness.joblib is now a
+5-channel (Fz C3 Cz Pz O1) amplitude-invariant model, lab AUC 0.76 / balanced acc 68%; see docs/OVERNIGHT.md.]
 Live: loadmonitor/load_gauge.py --lsl: 30 s personal baseline, 4 s windows every 1 s, smoothed load
 0 to 100, alarm (red + speech) after --hold s above --alarm. --fake shows rest then load.
 Demo: volunteer does mental arithmetic, gauge climbs, alarm fires; rests, it drops.

@@ -55,7 +55,7 @@ def summary():
     high_err = sum(1 for l in err_loads if l >= 70)
     starts = [e["t"] for e in events if e.get("kind") == "challenge_start"]
     ends = [e["t"] for e in events if e.get("kind") == "challenge_end"]
-    return dict(duration_s=round(ts[-1] - ts[0]), peak=round(peak), t_peak=round(t_peak),
+    return dict(replay=STATE.get("replay") or False, duration_s=round(ts[-1] - ts[0]), peak=round(peak), t_peak=round(t_peak),
                 signal_quality=quality, fatigue_start=round(fats[0]), fatigue_now=round(fats[-1]), load_by_condition=per_cond,
                 last_60s=dict(mean_load=round(sum(l for _, l, _ in last) / max(1, len(last))), max_load=round(max([l for _, l, _ in last] or [0])),
                               mean_clean=round(sum(c for _, _, c in last) / max(1, len(last)), 1), answers=len(recent_ans), errors=len(recent_err), condition=conds[-1]),
@@ -85,7 +85,9 @@ def fallback_debrief(s):
 CONTEXT = (
     "The numbers come from an 8-electrode dry EEG headset. 'load' is a classifier score 0 to 100 of how far the person's "
     "brain activity sits above their own 30-second resting baseline (model trained on public rest-versus-arithmetic data, "
-    "cross-validated AUC 0.76; on clean signal rest reads 0 and arithmetic reads a median of 45). 'fatigue' is a published "
+    "cross-validated AUC 0.76 on lab EEG; on lab data rest reads 0 and arithmetic a median of 31; it has not yet been shown "
+    "to separate task from rest on this dry cap). If 'replay' names a file, this is a RECORDED session replayed, not a "
+    "live person: say so in the first words. 'fatigue' is a published "
     "(theta+alpha)/beta ratio, 50 = the person's own start, moving only slowly; it is not a trained model. "
     "'signal_quality' counts electrodes whose cleaned signal is under 100 microvolts: with fewer than 3 clean channels the "
     "EEG numbers are unreliable and the challenge answers and errors are the better evidence. Never make medical claims, never "

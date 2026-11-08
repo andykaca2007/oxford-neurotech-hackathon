@@ -66,6 +66,21 @@
       "problemMatcher": []
     },
     {
+      "label": "RUN REPLAY (fallback): last night's 01:15 session, shown as REPLAY",
+      "type": "shell",
+      "command": "./run_all.sh replay \"$(ls recordings/paing_20261108_011525_raw*.csv | head -1)\"",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "isBackground": true,
+      "presentation": {
+        "panel": "dedicated",
+        "reveal": "always",
+        "focus": true
+      },
+      "problemMatcher": []
+    },
+    {
       "label": "smoke test (every demo path, no Bluetooth)",
       "type": "shell",
       "command": "./tests/smoke.sh",

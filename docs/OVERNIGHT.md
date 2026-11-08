@@ -108,7 +108,7 @@ Rules for every change: it must be tested on recorded data with a split that is 
 4. After a PASS: **Calibrate** (160 s, spoken prompts). The personal model switches on only at held-out AUC 0.80 or above (chance on his data never reached 0.80; 91 percent of lab subjects do).
 5. Then the demo task is **silent** counting down in sevens with eyes on one point, not Zetamac. Lab numbers for the live mapping: rest reads 0, arithmetic median 31, about 4 in 10 people trigger the alarm.
 6. Fatigue is a published ratio, not a trained model, and on this cap it follows muscle artefact (rho -0.43); present it as "slow trend this session", never as a measurement of tiredness.
-7. Fallback if the cap will not pass: `--replay` streams a recorded session through the full live pipeline and page, labelled REPLAY.
+7. Fallback if the cap will not pass: `./run_all.sh replay recordings/<file>_raw_<stamp>.csv` (or the VS Code task RUN REPLAY) streams a recorded session through the full live pipeline; the page shows REPLAY and a banner with the file name (added 8 Nov after CRITIQUE claims-2). Last night's recordings show no clear task effect, so say that when using it.
 
 ### Iteration 10, 02:58: checks only. No new recordings (latest 01:21, 32 s; that live run is still open in his Terminal, untouched). Smoke ALL PASS, 16 replays 0 failed. No code change.
 
