@@ -23,8 +23,9 @@ tight, two minutes to settle.
 ## Segments, with the page's condition buttons
 | step | condition button | duration | what the wearer does |
 |---|---|---|---|
+| 0 | | 40 s | after the baseline: press **Alpha check** on the page, follow the spoken prompts (20 s eyes open, 20 s eyes closed). FAIL means fix contact before anything else |
 | 1 | baseline | 30 s | sits still, eyes open, looks at a blank wall |
-| 2 | mental | 3 min | Zetamac on another screen, hard setting, answers out loud or typed by a teammate |
+| 2 | mental | 3 min | **silent serial subtraction**: eyes on one fixed point, count down from 4000 in 7s in your head, no typing, no talking; say the last number at the end. (Changed 8 Nov: Zetamac's typing and gaze shifts make ASR fire on every window, so it measures movement, not effort; the model was trained on silent subtraction) |
 | 3 | recovery | 2 min | sits quietly, eyes open |
 | 4 | none | 2 to 3 min | cap OFF; running or stairs, enough to breathe hard |
 | 5 | | under 60 s | wipe forehead and behind ears; cap on; press stickies; check the signal panel |

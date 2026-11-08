@@ -43,3 +43,13 @@ Rules for every change: it must be tested on recorded data with a split that is 
 - End-to-end tests through the live gauge: synthetic replay (his 01:15 noise plus 15 uV of 10.2 Hz at Pz and O1 from 60 s) gives PASS, Pz -0.8 to +6.0 dB; the unmodified 01:15 recording gives FAIL, rise +1.7.
 - Checks: smoke ALL PASS, 16 replays 0 failed.
 - Decision: keep. First thing on a head tomorrow: baseline, then Alpha check. If it FAILS, no load or fatigue number is trustworthy and the fix is contact, not code.
+
+### Iteration 4, 02:30 to 02:40
+
+- Hypothesis: is ASR over-cleaning (the 5 uV residual)? Test: ASR calibrated on 0 to 28 s of rest, then count components removed and amplitude kept, on lab rest, lab task and his labelled segments.
+  - Lab, 36 people: 0 percent of windows touched, rest and mental arithmetic alike; amplitude kept 100 percent.
+  - His 01:15 run: Zetamac 100 percent of windows touched (1.0 component each, 95 percent amplitude kept); recovery 51 percent (0.6).
+  - His 01:03 run: Zetamac 100 percent (3.3 components, 87 percent kept); physical 100 percent (2.9); rest 23 percent (0.5).
+- Reading: ASR is not over-cleaning; it never touches clean EEG and keeps 87 to 100 percent of his amplitude. But it fires on every Zetamac window: typing and looking between screen and keys add task-locked eye and muscle artefact. The model was trained on silent mental subtraction, so Zetamac confounds effort with movement.
+- Decision: no code change. docs/PROTOCOL.md changed: the mental segment is now silent serial subtraction with eyes on a fixed point, no typing; Alpha check added as step 0. The ASR component count is NOT used as a load signal (it measures movement).
+- Checks: smoke ALL PASS, 16 replays 0 failed.
