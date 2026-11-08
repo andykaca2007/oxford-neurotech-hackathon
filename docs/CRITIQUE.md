@@ -87,9 +87,9 @@ Ranking: severity as re-rated by the adversary, then grouped so that issues with
 | 77 | low | serverpage-8 | confirmed | Fatigue labels 'Tiring' and 'Recovering' claim tiredness, which the overnight work says the ratio does not measure | done (ee26e5b) |
 | 78 | low | serverpage-adv2 | ADDED | An Alpha check PASS stays on the page after Rebaseline and after the cap is moved | done (the redo block resets the alpha-check state, so a PASS does not outlive the cap position it was made in) |
 | 79 | low | serverpage-adv3 | ADDED | The hero number turns alarm-coloured at 30, inside the range this cap shows at rest | done (hot only when the alarm is on or the number is at or above the alarm line) |
-| 80 | low | stats-3 | confirmed | Every lab number (91 percent positive control, AUC 0.76, gain sweep) has rest and task from different files; the summary drops the caveat | open |
+| 80 | low | stats-3 | confirmed | Every lab number (91 percent positive control, AUC 0.76, gain sweep) has rest and task from different files; the summary drops the caveat | done, wording (summary point 4 already said optimistic since stats-2; the within-file control numbers from the adversary now sit next to the 91 percent; the 4-pair 15 s positive control is not run) |
 | 81 | low | stats-5 | confirmed | 'Held-out AUC 0.76' is the winner of a 96-configuration search on the same 36 subjects; '5 channels lose nothing' has no spread or paired test | open |
-| 82 | low | stats-6 | confirmed | Gain sweep: 'six times the false alarms' rests on about one or two alarm episodes | open |
+| 82 | low | stats-6 | confirmed | Gain sweep: 'six times the false alarms' rests on about one or two alarm episodes | done, wording (alarm seconds, episodes and the exact CI stated; the sweep cannot tell 40 from 50 apart) |
 | 83 | low | stats-adv2 | ADDED | Alpha pass rule can FAIL a channel that meets both criteria, because it only checks the closed peak on the channel with the largest rise | open |
 | 84 | low | stats-adv3 | ADDED | Stale numbers in the --gain help text contradict the iteration 9 sweep | done (ee26e5b) |
 
