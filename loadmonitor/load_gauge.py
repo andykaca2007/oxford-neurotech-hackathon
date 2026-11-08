@@ -116,7 +116,7 @@ def main():
     print(f"# model channels {model_ch} -> stream slots {IDX}", flush=True)
     feat_cfg = m.get("feat_cfg")
     if feat_cfg:
-        print(f"# processing: {feat_cfg['lo']:.0f} to {feat_cfg['hi']:.0f} Hz order {feat_cfg.get('order', 4)}{', 50 Hz notch' if feat_cfg.get('notch') else ''}{', common average reference' if feat_cfg.get('car') else ''}{', burst masking' if feat_cfg.get('burst') else ''}{', median Welch' if feat_cfg.get('median') else ''}{', no delta' if feat_cfg.get('drop_delta') else ''}{', no gamma' if feat_cfg.get('drop_gamma') else ''}", flush=True)
+        print(f"# processing: {feat_cfg['lo']:.0f} to {feat_cfg['hi']:.0f} Hz order {feat_cfg.get('order', 4)}{', 50 Hz notch' if feat_cfg.get('notch') else ''}{', common average reference' if feat_cfg.get('car') else ''}{', burst masking' if feat_cfg.get('burst') else ''}{', median Welch' if feat_cfg.get('median') else ''}{', no delta' if feat_cfg.get('drop_delta') else ''}{', no gamma' if feat_cfg.get('drop_gamma') else ''}{', polynomial detrend' if feat_cfg.get('detrend') else ''}", flush=True)
     asr = None
     if feat_cfg and feat_cfg.get("asr"):
         from model_search import ASR, clean_window

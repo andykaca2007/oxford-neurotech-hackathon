@@ -37,13 +37,20 @@ BANDS_RICH = {"delta": (1, 4), "theta": (4, 8), "alpha": (8, 13), "lbeta": (13, 
 # 50 Hz mains hum and sub-4 Hz drift that together can be 90 percent of the power; a notch, a steeper 3 Hz high-pass
 # and no delta band keep the features on the bands the model is about.
 FEAT_CFG = dict(lo=1.0, hi=40.0, notch=False, order=4, drop_delta=False)
-ROBUST_CFG = dict(lo=3.0, hi=30.0, notch=True, order=6, drop_delta=True, median=True, car="median", burst=4.0, drop_gamma=True, asr=5.0)
+ROBUST_CFG = dict(lo=4.0, hi=30.0, notch=True, order=8, drop_delta=True, median=True, car="median", burst=4.0, drop_gamma=True, asr=5.0, detrend=3)
 
 
 def clean_window(x, fs, cfg):
     """Everything before the spectrum: re-reference, notch comb, band-pass, burst masking. Shared by feats() and ASR."""
     from scipy.signal import iirnotch, tf2sos
     x = x - x.mean(1, keepdims=True)
+    if cfg.get("detrend"):
+        # polynomial detrend: fit and subtract a low-order polynomial per channel, the slow electrode drift and sweat
+        # potential that an IIR high-pass only attenuates at the window edges
+        t = np.linspace(-1, 1, x.shape[1])
+        V = np.vander(t, int(cfg["detrend"]) + 1)
+        coef, *_ = np.linalg.lstsq(V, x.T, rcond=None)
+        x = x - (V @ coef).T
     if cfg.get("notch"):
         for f0 in (50.0, 100.0):
             if f0 < fs / 2:
