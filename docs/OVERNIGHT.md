@@ -111,3 +111,5 @@ Rules for every change: it must be tested on recorded data with a split that is 
 7. Fallback if the cap will not pass: `--replay` streams a recorded session through the full live pipeline and page, labelled REPLAY.
 
 ### Iteration 10, 02:58: checks only. No new recordings (latest 01:21, 32 s; that live run is still open in his Terminal, untouched). Smoke ALL PASS, 16 replays 0 failed. No code change.
+
+### Iteration 11, 03:08: checks only. No new recordings. Smoke ALL PASS, 16 replays 0 failed. No code change.
