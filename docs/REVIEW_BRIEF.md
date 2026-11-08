@@ -62,7 +62,9 @@ every 10 minutes, so do not edit tracked files in this checkout.
    - a model channel is dead (CHANNEL LOST)
    - fewer than 2 channels are clean, meaning under 100 uV after cleaning (NOISY)
    - the stream stops (NO DATA)
-   - an Alpha check or Calibrate is running
+   - a personal model is on and any model channel is not clean (HELD)
+
+   The load keeps scoring during an Alpha check and during Calibrate. Eyes closed in the Alpha check will move it.
 9. Fatigue = median Hilbert-envelope ratio (theta + alpha) / beta on the cleaned window. It is a published ratio,
    not trained. It is shown only after 20 min of monitoring.
 
