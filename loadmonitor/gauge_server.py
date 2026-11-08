@@ -56,7 +56,7 @@ def summary():
     starts = [e["t"] for e in events if e.get("kind") == "challenge_start"]
     ends = [e["t"] for e in events if e.get("kind") == "challenge_end"]
     return dict(replay=STATE.get("replay") or False, duration_s=round(ts[-1] - ts[0]), peak=round(peak), t_peak=round(t_peak),
-                signal_quality=quality, fatigue_start=round(fats[0]), fatigue_now=round(fats[-1]), load_by_condition=per_cond,
+                signal_quality=quality, fatigue_start=(round(fats[0]) if fats[0] == fats[0] else None), fatigue_now=(round(fats[-1]) if fats[-1] == fats[-1] else None), load_by_condition=per_cond,   # fatigue None = not shown yet or no baseline
                 last_60s=dict(mean_load=round(sum(l for _, l, _ in last) / max(1, len(last))), max_load=round(max([l for _, l, _ in last] or [0])),
                               mean_clean=round(sum(c for _, _, c in last) / max(1, len(last)), 1), answers=len(recent_ans), errors=len(recent_err), condition=conds[-1]),
                 seconds_above_70=above, mean_load=round(sum(ls) / len(ls)),
@@ -147,7 +147,7 @@ class H(BaseHTTPRequestHandler):
                 data.pop("rebaseline", None)
                 STATE.update(data)
                 if data.get("baseline_done"):
-                    LOADLOG.append((float(data.get("t", 0)), float(data.get("load", 0)), int(data.get("clean", 0)), float(data.get("fatigue", 50)), STATE.get("condition", "none")))
+                    LOADLOG.append((float(data.get("t", 0)), float(data.get("load", 0)), int(data.get("clean", 0)), (float(data["fatigue"]) if data.get("fatigue") is not None else float("nan")), STATE.get("condition", "none")))
             self._send(200, json.dumps({"condition": cond, "rebaseline": STATE.get("rebaseline", 0), "alpha_check": STATE.get("alpha_check_n", 0), "calibrate": STATE.get("calibrate_n", 0)}).encode(), "application/json")
         elif self.path.startswith("/event"):
             with LOCK:
