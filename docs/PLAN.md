@@ -75,8 +75,10 @@ If the cap does not pass the Alpha check, show the same live pipeline on real EE
   works for about two in three people, and fails for some.
 - What the page shows (replayed through the live gauge, 8 Nov): rest 0 the whole time; mental arithmetic climbs from
   31 to a peak of 88, alarm at 139 s; recovery falls from 76 back to 0 by 190 s (smoothing lag).
-- The recovery minute is the same person's earlier rest (the dataset has no rest after the task). The page banner says
-  "LAB EEG REPLAY, not this headset"; keep it in frame.
+- The recovery minute is the same person's earlier rest (the dataset has no rest after the task).
+- On screen (8 Nov, Paing's call): no replay label; the status reads "running" (never "live") and the header reads
+  "eeg · 8 ch · 250 hz" instead of naming the Unicorn. The narration MUST say it is a held-out person from a public EEG
+  dataset recorded with a gel cap: that line is the only disclosure in the video.
 
 ## What we claim, and what we do not
 Claim (corrected 8 Nov): the live model, trained on lab EEG (PhysioNet eegmat, 36 people, rest vs mental
