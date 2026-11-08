@@ -301,3 +301,8 @@ Rules for every change: it must be tested on recorded data with a split that is 
 
 - Paing is letting a second agent (Antigravity) review the repo while this loop keeps running (his call). Both would have run the tests on port 8799 and the same /tmp log names. tests/free_port.py now claims a free port from 8799 upward (lock directory plus a bind check, never 8765); smoke.sh and replay_all.py use it and per-port log names, and release the claim on exit. Checked by running both at once: smoke on 8799 ALL PASS, replays on 8800 0 failed, no lock left behind. docs/REVIEW_BRIEF.md updated.
 
+### Critique iteration 20 (8 Nov, morning)
+
+- Gates: gauge code unchanged since 253d059; smoke ALL PASS (port 8799) and 16 replays 0 failed (port 8800) ran side by side on the current test scripts this morning (e73f8e0).
+- CRITIQUE #29 claims-adv1 DONE. Measured per whole second over every recording of 60 s or more (3,644 s, tests/exclusion_report.py): the protocol's written rule (any of 8 channels on the rail or above 150 uV RMS) excludes 93 percent; on the 5 model channels it still excludes 72 percent. The gauge's own hold rule is looser (any model channel railed, or fewer than 2 clean after the cleaning chain) and scored 67 percent of its post-baseline rows. PROTOCOL.md now carries a dated amendment saying every load number from 7 and 8 Nov falls outside the original rule, makes the gauge's rule the exclusion rule from 8 Nov, and asks for both shares per session. (The critic's 83 percent counted rail only; adding the 150 uV condition gives 93.)
+

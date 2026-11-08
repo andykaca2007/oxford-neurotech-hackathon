@@ -21,7 +21,7 @@ contrast we recorded today, not a classifier."
 ## Electrodes
 Layout A, as `headset/montage.py` defines: Fz, C3, Cz, C4, Pz, P3, O1, P4. All eight must be
 off the rail and under 100 uV RMS (1 to 40 Hz) before the baseline starts. The page's signal
-panel shows this; red rows mean fix contact first. Mastoid stickies on wiped skin, chin strap
+panel shows this; red rows mean fix contact first. (8 Nov: the head map's contact view shows this per electrode; see the exclusion amendment below for how rarely all 8 met it.) Mastoid stickies on wiped skin, chin strap
 tight, two minutes to settle.
 
 ## Segments, with the page's condition buttons
@@ -62,6 +62,22 @@ number does whatever it does. Report it either way.
 - talking or chewing during baseline or recovery
 - the cap moved between segments without a re-check
 - the wearer saw their own load number during mental (keep the page off their screen)
+
+**Amended 8 Nov (morning), after seeing the data (CRITIQUE claims-adv1).** The channel rule above was written for 8
+live channels; the cap rarely gave that. Measured per whole second over every raw recording of 60 s or more
+(`tests/exclusion_report.py`, 3,644 s):
+
+| rule | share of seconds excluded |
+|---|---|
+| original: any of the 8 channels on the rail or above 150 uV RMS (1 to 40 Hz, 50 Hz notched) | 93% |
+| same rule on the 5 model channels only (Fz C3 Cz Pz O1) | 72% |
+
+What the gauge actually applies is looser than both. It holds a second when any model channel is on the rail, or
+when fewer than 2 model channels are under 100 uV after its cleaning chain (detrend, notch, reference, band-pass,
+burst mask, ASR). It scored 67% of its post-baseline rows in the replays (47% to 100% per session). So every load
+number from the 7 and 8 Nov recordings falls outside the original exclusion rule, and must be reported that way.
+From 8 Nov the exclusion rule is the gauge's hold rule. Report, per session, the share excluded under the original
+rule and under the gauge's rule; the script prints both.
 
 ## Claims we may make
 - The trained model raises a personal load number during mental arithmetic and lowers it in

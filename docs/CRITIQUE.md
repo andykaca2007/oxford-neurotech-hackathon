@@ -36,7 +36,7 @@ Ranking: severity as re-rated by the adversary, then grouped so that issues with
 | 26 | medium | claims-5 | confirmed | '0 false alarms over 16 recordings' is tested on the same data it was tuned on, and comes with 0 true alarms | done (3f9cf11) |
 | 27 | medium | claims-7 | confirmed | The protocol's 'decided before the data' claim no longer holds, and its report and claim lines contradict its own amendments | done (3f9cf11) |
 | 28 | medium | claims-8 | confirmed | The README pitches a different product and contradicts how the load model actually works | done (3f9cf11) |
-| 29 | medium | claims-adv1 | ADDED | The protocol's pre-registered exclusion rule invalidates about 83 percent of the recorded seconds, and nothing reports that | open |
+| 29 | medium | claims-adv1 | ADDED | The protocol's pre-registered exclusion rule invalidates about 83 percent of the recorded seconds, and nothing reports that | done (iteration 20): dated amendment in PROTOCOL.md with measured shares (93% excluded under the 8-channel rule, 72% on 5 channels, gauge scores 67%); tests/exclusion_report.py |
 | 30 | medium | dsp-4 | confirmed | On his data the burst mask is mostly triggered by 4 s window-edge transients and zeroes 30 percent of the window edges | done (40dd50b): edges protected and model retrained; the 12 s context alternative was not needed for this |
 | 31 | medium | dsp-adv1 | ADDED | The channel quality gate is measured after the burst mask and ASR, so it passes the artefacts that move the model most | open |
 | 32 | medium | dsp-adv2 | ADDED | Noisy model channels are still fed to the classifier; the clean count only decides whether to hold | open |
