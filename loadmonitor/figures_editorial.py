@@ -1,9 +1,8 @@
-"""The eight presentation figures, editorial style (loadmonitor/figstyle.py), all from real data.
+"""The six presentation figures, editorial style (loadmonitor/figstyle.py), all from real data.
 
     .venv/bin/python loadmonitor/figures_editorial.py        # writes figures/slides/best8/1..8 (about 6 min; ML pass cached)
 
-1 how it works        2 raw to clean, stage by stage        3 what each stage removes (spectrum)
-4 brain markers, 36 people    5 training curve    6 ROC on unseen people    7 live demo trace    8 app (screenshot, untouched)
+1 how it works   2 raw to clean (stage by stage, plus the spectrum)   3 training curve   4 ROC on unseen people   5 live demo trace   6 app (screenshot)
 """
 import csv
 import glob
@@ -109,7 +108,7 @@ coef, *_ = np.linalg.lstsq(V, y.T, rcond=None); y = y - (V @ coef).T; stages.app
 for f0 in (50.0, 100.0):
     y = sosfiltfilt(tf2sos(*iirnotch(f0, 30.0, fs=FS)), y, axis=1)
 stages.append(("Notch", "50 and 100 Hz mains removed", y.copy()))
-y = y - np.median(y[ok], axis=0, keepdims=True); stages.append(("Reference", "noise common to all electrodes removed", y.copy()))
+y = y - np.median(y[ok], axis=0, keepdims=True); stages.append(("Reference", "shared noise removed", y.copy()))
 y = sosfiltfilt(butter(cfg.get("order", 4), [cfg["lo"], cfg["hi"]], btype="band", fs=FS, output="sos"), y, axis=1)
 stages.append(("Band-pass", "4 to 30 Hz kept", y.copy()))
 env = np.abs(hilbert(y, axis=1)); bad = env > cfg["burst"] * np.median(env, axis=1, keepdims=True) + 1e-9
@@ -121,68 +120,33 @@ stages.append(("Burst mask", "sudden jumps zeroed", y.copy()))
 if asr.V is not None:
     y = asr(y); stages.append(("ASR", "components far above rest removed", y.copy()))
 
-fig = F.page("Six filters take a dry electrode from 6,000 µV of noise to 34 µV of EEG", "The same 4 seconds at Pz on Paing's cap after each stage; each row on its own scale, µV RMS at the right")
-n = len(stages); top, bot = 0.80, 0.15; h = (top - bot) / n
+fig = F.page("Six filters take a dry electrode from 6,000 µV of noise to 34 µV of EEG", "The same 4 seconds at Pz on Paing's cap: the signal after each stage (each row on its own scale) and its power spectrum")
+n = len(stages); top, bot = 0.79, 0.16; h = (top - bot) / n
 for i, (nm, what, yy) in enumerate(stages):
-    ax = fig.add_axes([0.26, top - (i + 1) * h + 0.008, 0.56, h - 0.016]); ax.grid(False); ax.axis("off")
+    ax = fig.add_axes([0.235, top - (i + 1) * h + 0.008, 0.265, h - 0.016]); ax.grid(False); ax.axis("off")
     last = i == n - 1
-    ax.plot(t, yy[j], color=F.ACCENT if last else F.INK, lw=1.3 if last else 0.9)
-    ax.set_xlim(0, 4)
-    fig.text(F.LEFT, top - (i + 0.5) * h + 0.012, nm, fontsize=16, color=F.ACCENT if last else F.INK, va="center", weight="medium")
-    fig.text(F.LEFT, top - (i + 0.5) * h - 0.014, what, fontsize=12.5, color=F.INK2, va="center")
+    ax.plot(t, yy[j], color=F.ACCENT if last else F.INK, lw=1.3 if last else 0.9); ax.set_xlim(0, 4)
+    fig.text(F.LEFT, top - (i + 0.5) * h + 0.010, nm, fontsize=15, color=F.ACCENT if last else F.INK, va="center", weight="medium")
+    fig.text(F.LEFT, top - (i + 0.5) * h - 0.014, what, fontsize=11, color=F.INK2, va="center")
     r = yy[j][FS // 2:-FS // 2].std()
-    fig.text(0.84, top - (i + 0.5) * h, f"{r:,.0f}", fontsize=18, color=F.ACCENT if last else F.INK, va="center", ha="left")
-fig.text(0.84, top + 0.012, "µV RMS", fontsize=F.T_AX, color=F.INK2, va="bottom")
-ax.axis("on"); ax.spines["bottom"].set_visible(True); ax.set_yticks([]); ax.set_xticks([0, 1, 2, 3, 4]); ax.set_xticklabels(["0", "1", "2", "3", "4 s"])
-F.source(fig, "Source: recording paing_20261108_011525, Pz. Stage outputs verified identical to the live code (model_search.clean_window). Scalp EEG is about 10 to 50 µV.")
-out(fig, 2, "raw_to_clean.png")
-
-fig = F.page("Mains hum sits a million times above the brain bands until the chain removes it", "Power spectrum of the same window after each stage, µV² per Hz, log scale")
-a = F.axes(fig, (F.LEFT, 0.16, 0.80, 0.62))
-pick = [(0, F.GREY, 1.2), (2, F.INK2, 1.2), (4, F.INK, 2.0), (n - 1, F.ACCENT, 2.6)]
-for lo, hi, nm in ((4, 8, "theta"), (8, 13, "alpha"), (13, 30, "beta")):
+    fig.text(0.515, top - (i + 0.5) * h, f"{r:,.0f}", fontsize=16, color=F.ACCENT if last else F.INK, va="center", ha="left")
+fig.text(0.515, top + 0.008, "µV RMS", fontsize=13, color=F.INK2, va="bottom")
+ax.axis("on"); ax.spines["bottom"].set_visible(True); ax.spines["bottom"].set_color(F.INK2); ax.set_yticks([]); ax.set_xticks([0, 2, 4]); ax.set_xticklabels(["0", "2", "4 s"])
+a = F.axes(fig, (0.61, 0.16, 0.30, 0.63))
+pick = [(0, F.GREY, 1.1), (2, F.INK2, 1.1), (4, F.INK, 1.8), (n - 1, F.ACCENT, 2.4)]
+for lo, hi, nm in ((4, 8, "θ"), (8, 13, "α"), (13, 30, "β")):
     a.axvspan(lo, hi, color=F.BAND, lw=0)
     a.text((lo + hi) / 2, 2e7, nm, ha="center", va="top", fontsize=13, color=F.INK2)
-ends = {}
 for i, col, lw in pick:
     f_, p_ = welch(stages[i][2][j], fs=FS, nperseg=2 * FS)
-    a.semilogy(f_, p_ + 1e-5, color=col, lw=lw); ends[i] = p_[-1] + 1e-5
-F.end_label(a, 110, 3.0, "raw", F.GREY); F.end_label(a, 110, 0.6, "after notch", F.INK2)
-a.text(21, 2.5e3, "after band-pass", color=F.INK, fontsize=F.T_LABEL, ha="left", va="bottom"); F.end_label(a, 110, 2e-3, "after full chain", F.ACCENT, weight="medium")
-a.set_xlim(0, 110); a.set_ylim(1e-4, 5e7); a.set_xlabel("frequency, Hz")
-a.annotate("50 Hz mains", (50, 1e5), xytext=(58, 3e6), color=F.INK2, fontsize=13, arrowprops=dict(arrowstyle="-", color=F.INK2, lw=0.75))
-F.source(fig, "Source: same Pz window as the previous figure. Welch, 2 s segments.")
-out(fig, 3, "stage_spectra.png")
-
-# ---------- 4 brain markers, 36 people ----------
-rm.CH[:] = ["Fz", "Pz", "O1"]
-def rel(sig, lo, hi):
-    f_, p_ = welch(sig - sig.mean(), fs=FS, nperseg=2 * FS)
-    return 10 * np.log10(p_[(f_ >= lo) & (f_ < hi)].sum() / p_[(f_ >= 4) & (f_ < 30)].sum())
-P = []
-for path in sorted(glob.glob("data/eegmat/Subject*_1.edf")):
-    xr, fs = rm.load_edf(path); xt, _ = rm.load_edf(path.replace("_1.edf", "_2.edf"))
-    if fs == 500:
-        xr = resample_poly(xr, 1, 2, axis=1); xt = resample_poly(xt, 1, 2, axis=1)
-    def med(xx, ch, lo, hi, a0, a1):
-        return float(np.median([rel(sosfiltfilt(NOTCH, xx[ch, s:s + 4 * FS]), lo, hi) for s in range(a0 * FS, min(a1 * FS, xx.shape[1] - 4 * FS), 2 * FS)]))
-    P.append((np.mean([med(xr, 1, 8, 13, 30, 90), med(xr, 2, 8, 13, 30, 90)]), np.mean([med(xt, 1, 8, 13, 0, 60), med(xt, 2, 8, 13, 0, 60)]),
-              med(xr, 0, 4, 8, 30, 90), med(xt, 0, 4, 8, 0, 60)))
-P = np.array(P)
-fig = F.page("In arithmetic, alpha at the back of the head falls and theta at the front rises", f"{len(P)} lab people, rest then silent subtraction; relative band power, dB; one line per person, the median in colour")
-for k, (i0, i1, nm, col, expect_down) in enumerate(((0, 1, "Posterior alpha, Pz and O1", F.ACCENT, True), (2, 3, "Frontal theta, Fz", F.ACCENT, False))):
-    a = F.axes(fig, (F.LEFT + k * 0.47, 0.16, 0.34, 0.60))
-    d = P[:, i1] - P[:, i0]
-    for r in P:
-        a.plot([0, 1], [r[i0], r[i1]], color=F.GREY, lw=1.0)
-    a.plot([0, 1], [np.median(P[:, i0]), np.median(P[:, i1])], color=col, lw=3.0)
-    F.end_label(a, 1, np.median(P[:, i1]), f"median {np.median(d):+.1f} dB", col, weight="medium")
-    a.set_xticks([0, 1]); a.set_xticklabels(["rest", "arithmetic"]); a.set_xlim(-0.1, 1.45)
-    a.text(0, 1.03, nm, transform=a.transAxes, fontsize=F.T_AX, color=F.INK, weight="medium", va="bottom")
-    n_dir = int(np.sum(d < 0)) if expect_down else int(np.sum(d > 0))
-    a.text(0, -0.14, f"{'falls' if expect_down else 'rises'} in {n_dir} of {len(P)} people", transform=a.transAxes, fontsize=14, color=F.INK2)
-F.source(fig, "Source: PhysioNet EEG during mental arithmetic (gel cap). Rest file 30 to 90 s vs task file 0 to 60 s, 4 s windows, median per person.")
-out(fig, 4, "brain_markers.png")
+    a.semilogy(f_, p_ + 1e-5, color=col, lw=lw)
+a.set_xlim(0, 110); a.set_ylim(1e-4, 5e7); a.set_xticks([0, 50, 100]); a.set_xticklabels(["0", "50", "100 Hz"]); a.set_yticks([1e-4, 1e0, 1e4])
+a.set_yticklabels(["0.0001", "1", "10,000"]); a.text(0, 1.02, "µV² per Hz", transform=a.transAxes, fontsize=13, color=F.INK2, va="bottom")
+a.annotate("50 Hz mains", (50, 1e5), xytext=(60, 4e6), color=F.INK2, fontsize=12, arrowprops=dict(arrowstyle="-", color=F.INK2, lw=0.75))
+F.end_label(a, 110, 1.5, "raw", F.GREY, size=12); F.end_label(a, 110, 0.15, "notched", F.INK2, size=12)
+a.text(36, 8e-2, "band-passed", color=F.INK, fontsize=12, ha="left", va="center", bbox=dict(fc=F.PAGE, ec="none", pad=1.5)); F.end_label(a, 110, 2e-3, "full chain", F.ACCENT, weight="medium", size=12)
+F.source(fig, "Source: recording paing_20261108_011525, Pz. Stage outputs verified identical to the live code (model_search.clean_window). Scalp EEG is about 10 to 50 µV. Spectrum: Welch, 2 s segments.")
+out(fig, 2, "raw_to_clean.png")
 
 # ---------- 5 and 6: training curve and ROC, one leave-one-person-out pass ----------
 cache = "models/_slide_feats.npz"
@@ -220,7 +184,7 @@ for arr, col, nm in ((tr_auc, F.GREY, "training people"), (te_auc, F.ACCENT, "pe
 a.axhline(0.5, color=F.INK2, lw=1.0, ls=(0, (4, 3))); F.end_label(a, n_est, 0.5, "chance", F.INK2)
 a.set_xlim(1, n_est); a.set_ylim(0.45, 1.0); a.set_xlabel("boosting trees"); a.set_yticks([0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
 F.source(fig, "Source: PhysioNet EEG during mental arithmetic, 36 people. Live recipe: 5 channels, cleaning chain, 29 amplitude-invariant features, 200 trees of depth 2.")
-out(fig, 5, "training_curve.png")
+out(fig, 3, "training_curve.png")
 
 fig = F.page(f"On people it has never seen, the model reaches an AUROC of {pooled:.2f}", "Each of 36 people scored by a model trained on the other 35, one 4 s window at a time; grey = one person, green = all pooled")
 a = fig.add_axes([0.30, 0.15, 0.40, 0.63]); a.tick_params(axis="y", length=0); a.grid(True, axis="both")
@@ -238,7 +202,7 @@ fig.text(0.76, 0.43, "median per person", fontsize=F.T_AX, color=F.INK2)
 fig.text(0.76, 0.33, f"{int(np.sum(te_auc[:, -1] >= 0.7))} of 36", fontsize=36, color=F.INK, va="center")
 fig.text(0.76, 0.28, "people at 0.7 or better", fontsize=F.T_AX, color=F.INK2)
 F.source(fig, "Source: PhysioNet EEG during mental arithmetic (gel cap). Per-window scores before the live 12 s smoothing. Not validated on the dry cap.")
-out(fig, 6, "roc.png")
+out(fig, 4, "roc.png")
 
 # ---------- 7 live demo trace ----------
 logp = os.path.join(F.OUT, "_lab_demo_gauge.csv")
@@ -270,10 +234,10 @@ b.plot(ta, al_s, color=F.INK2, lw=1.8); b.axhline(0, color=F.GREY, lw=0.75); F.e
 b.set_xlim(34, 210); b.set_yticks([-4, 0, 4]); b.set_xticks([40, 80, 120, 160, 200]); b.set_xticklabels(["40", "80", "120", "160", "200 s"])
 F.source(fig, "Source: PhysioNet eegmat person 09, held out of the model's training. Shaded span = where the alarm was on (load above 50 for 20 s; it lingers from the 12 s smoothing).\n"
          "The recovery minute is the same person's earlier rest; the dataset has no rest after the task. Alpha: 8 to 13 Hz, mean of Pz and O1, 9 s smoothing.")
-out(fig, 7, "live_demo.png")
+out(fig, 5, "live_demo.png")
 
 # ---------- 8 app: the real page, untouched ----------
 import shutil
-shutil.copy(os.path.join(F.OUT, "10_app.png"), os.path.join(BEST, "8_app.png"))
-print("wrote figures/slides/best8/8_app.png (screenshot)")
+shutil.copy(os.path.join(F.OUT, "10_app.png"), os.path.join(BEST, "6_app.png"))
+print("wrote figures/slides/best8/6_app.png (screenshot)")
 print(f"pooled AUROC {pooled:.3f}, median per person {med_auc:.3f}")
