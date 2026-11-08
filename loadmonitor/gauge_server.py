@@ -12,6 +12,7 @@ POST /debrief     builds a session summary and asks Claude for a 3-line debrief
 No dependencies beyond the standard library, plus `anthropic` for the debrief.
 """
 import json
+import time
 import os
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -131,7 +132,9 @@ class H(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path.startswith("/state"):
             with LOCK:
-                body = json.dumps(dict(STATE, events=EVENTS[-200:])).encode()
+                # age of the last gauge update: the page blanks the number and shows NO DATA when it is stale
+                age = (time.time() - STATE["_rx"]) if STATE.get("_rx") else None
+                body = json.dumps(dict({k: v for k, v in STATE.items() if k != "_rx"}, age_s=age, events=EVENTS[-200:])).encode()
             self._send(200, body, "application/json")
         else:
             with open(os.path.join(HERE, "web", "index.html"), "rb") as f:
@@ -146,6 +149,7 @@ class H(BaseHTTPRequestHandler):
                 data.pop("condition", None)          # the page owns the condition, not the gauge
                 data.pop("rebaseline", None)
                 STATE.update(data)
+                STATE["_rx"] = time.time()
                 if data.get("baseline_done"):
                     LOADLOG.append((float(data.get("t", 0)), float(data.get("load", 0)), int(data.get("clean", 0)), (float(data["fatigue"]) if data.get("fatigue") is not None else float("nan")), STATE.get("condition", "none")))
             self._send(200, json.dumps({"condition": cond, "rebaseline": STATE.get("rebaseline", 0), "alpha_check": STATE.get("alpha_check_n", 0), "calibrate": STATE.get("calibrate_n", 0)}).encode(), "application/json")

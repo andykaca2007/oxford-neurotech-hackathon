@@ -300,9 +300,21 @@ function drawSig(sig){
     g.stroke();
   });
 }
+function nodataOverlay(msg){
+  let o = document.getElementById('nodata');
+  if (!msg) { if (o) o.remove(); return; }
+  if (!o) { o = document.createElement('div'); o.id = 'nodata';
+    o.style.cssText = 'position:fixed;left:0;right:0;top:0;z-index:60;padding:14px 16px;background:#b3261e;color:#fff;font:700 15px/1.3 ui-monospace,Menlo,monospace;text-align:center';
+    document.body.appendChild(o); }
+  o.textContent = msg + ' · the numbers below are frozen, not live';
+}
 async function tick(){
   try {
     const s = await (await fetch('/state')).json();
+    const stale = s.age_s === null || s.age_s === undefined ? false : s.age_s > 3;
+    const nodata = stale || (s.state || '').startsWith('NO DATA');
+    nodataOverlay(nodata ? (stale ? 'NO DATA: the gauge has not updated for ' + Math.round(s.age_s) + ' s' : s.state) : null);
+    if (nodata) { document.getElementById('val').textContent = '—'; return; }
     lastT = s.t;
     if (s.hold_s) HOLD = s.hold_s;
     { const lr = document.getElementById('lbl_rule'); if (lr && s.alarm_at) lr.textContent = 'alarm > ' + s.alarm_at + ' for ' + (s.hold_s || HOLD) + ' s'; }
@@ -379,7 +391,7 @@ async function tick(){
     document.getElementById('m_alpha').innerHTML = (pz && s.baseline_done ? (pz.alpha_db>0?'+':'')+pz.alpha_db.toFixed(1)+'<small>dB</small>' : '—');
     draw(s.hist||[]);
     drawSig(s.sig);
-  } catch(e) { document.getElementById('state').textContent='waiting'; }
+  } catch(e) { document.getElementById('state').textContent='waiting'; nodataOverlay('NO DATA: the page server is not answering'); document.getElementById('val').textContent = '—'; }
 }
 setInterval(tick, 500); tick();
 </script>

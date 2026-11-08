@@ -67,7 +67,7 @@ from montage import MONTAGE  # noqa: E402
 IDX = [MONTAGE.index(c) for c in CH]   # model channels -> stream slots, from headset/montage.py
 
 
-def src_fake(seed=0):
+def src_fake(seed=0, stall_after=None):
     """Rest for 45 s (strong alpha at Pz/Cz), then load (frontal theta up, alpha down)."""
     rng = np.random.default_rng(seed)
     n = 0
@@ -80,6 +80,10 @@ def src_fake(seed=0):
         x[4] += a_amp * np.sin(2 * np.pi * 10 * t)
         x[2] += 0.6 * a_amp * np.sin(2 * np.pi * 10 * t + 1)
         x[0] += th_amp * np.sin(2 * np.pi * 6 * t)
+        if stall_after is not None and t > stall_after:     # test only: the headset goes silent
+            time.sleep(1.0)
+            yield None, None
+            continue
         yield t, x
         n += 1
         if n % 50 == 0:
@@ -111,7 +115,12 @@ def src_lsl():
     inlet = StreamInlet(s[0])
     t0 = None
     while True:
-        smp, ts = inlet.pull_sample()
+        # 1 s timeout: a dead headset no longer blocks forever (which also froze the page and swallowed Ctrl-C);
+        # on a timeout yield (None, None) so the loop can say NO DATA (CRITIQUE ops-1, ops-2)
+        smp, ts = inlet.pull_sample(timeout=1.0)
+        if smp is None:
+            yield None, None
+            continue
         if t0 is None:
             t0 = ts
         yield ts - t0, np.array(smp[:8])
@@ -131,6 +140,7 @@ def main():
     ap.add_argument("--gain", type=float, default=40.0, help="load points per spread of the model output above the wearer's rest (36-subject sweep: 40 = task median 45, rest false alarm 2 percent)")
     ap.add_argument("--strict", action="store_true", help="contact gate + settle check before the baseline, and freeze on contact loss (off: the plain behaviour)")
     ap.add_argument("--speed", type=float, default=1.0, help="replay speed")
+    ap.add_argument("--stall-after", type=float, default=None, help="test only, with --fake: stop sending data after this many seconds")
     ap.add_argument("--replay-markers", default=None, help="markers CSV (t,condition) to replay; default: the matching _gauge_markers.csv")
     ap.add_argument("--calib-s", type=int, default=0, help="seconds of mental to train a personal model; OFF by default: on 8 Nov replay it learned session drift, not effort (recovery read 77)")
     ap.add_argument("--load-min-clean", type=int, default=2, help="hold the load (label Held, noisy) when fewer channels than this are clean after the chain")
@@ -316,7 +326,25 @@ def main():
     t = 0.0
     print(f"# {state}", flush=True)
     try:
-        for t, x in (src_fake() if a.fake else src_replay(a.replay, a.speed) if a.replay else src_lsl()):
+        last_t, nodata_since, nodata_said = 0.0, None, False
+        for t, x in (src_fake(stall_after=a.stall_after) if a.fake else src_replay(a.replay, a.speed) if a.replay else src_lsl()):
+            if t is None:
+                # no sample for 1 s from the headset stream
+                nodata_since = nodata_since or time.time()
+                gap = time.time() - nodata_since
+                if gap >= 2:
+                    state = f"NO DATA {gap:.0f} s: headset stopped sending (Bluetooth or amplifier); restart run_all if it does not come back"
+                    print(f"# {state}", flush=True)
+                    if not nodata_said:
+                        speak("No data from the headset.")
+                        nodata_said = True
+                    post_state(last_t)
+                continue
+            if nodata_since is not None:
+                print(f"# data back after {time.time() - nodata_since:.0f} s", flush=True)
+                nodata_since, nodata_said = None, False
+                state = "monitoring" if base is not None else state
+            last_t = t
             if a.seconds and t > a.seconds:
                 break
             buf.append(x)
@@ -681,7 +709,8 @@ def main():
             markers.close()
         if ui is not None:
             ui["pygame"].quit()
-        print(f"# stopped at t={t:.0f} s, last load {load_pct:.0f}")
+        tt = t if isinstance(t, (int, float)) else locals().get("last_t", 0.0)
+        print(f"# stopped at t={tt or 0:.0f} s, last load {load_pct:.0f}")
 
 
 if __name__ == "__main__":

@@ -70,6 +70,14 @@ if [ -z "$BRP" ]; then echo "SKIP"; elif ls -t /tmp/smoke_raw*.csv >/dev/null 2>
 step "SSVEP decoder on fake data (explored path still runs)"
 if $PY explored/ssvep/ssvep_decode.py --fake --seconds 6 2>/dev/null | grep -q "pick=0"; then ok; else bad "ssvep decode"; fi
 
+step "headset stall: NO DATA shown, page age grows, Ctrl-C stops the gauge"
+$PY -c "import signal,os,sys; signal.signal(signal.SIGINT, signal.SIG_DFL); os.execv(sys.argv[1], sys.argv[1:])" $PY loadmonitor/load_gauge.py --fake --stall-after 30 --web --web-port $PORT --no-ui --baseline 4 >/tmp/smoke_stall.log 2>&1 & STP=$!
+sleep 12; kill -INT $STP 2>/dev/null; sleep 3
+STALL_ALIVE=0; kill -0 $STP 2>/dev/null && STALL_ALIVE=1 && kill $STP 2>/dev/null
+sleep 2
+AGE=$(curl -s http://127.0.0.1:$PORT/state | $PY -c "import json,sys; print(int(json.load(sys.stdin).get('age_s') or 0))" 2>/dev/null)
+if grep -q "NO DATA" /tmp/smoke_stall.log && [ "$STALL_ALIVE" = 0 ] && ! grep -q Traceback /tmp/smoke_stall.log && [ "${AGE:-0}" -ge 3 ]; then ok; else bad "see /tmp/smoke_stall.log (alive after Ctrl-C: $STALL_ALIVE, page age: $AGE)"; fi
+
 step "replay of a real recording through the gauge"
 R=$(ls recordings/paing_20261108_011525_raw*.csv 2>/dev/null | head -1)
 if [ -z "$R" ]; then echo "SKIP"; elif $PY loadmonitor/load_gauge.py --replay "$R" --speed 40 --seconds 120 --web --web-port $PORT --no-ui >/tmp/smoke_replay.log 2>&1 && grep -q "baseline done" /tmp/smoke_replay.log && ! grep -q Traceback /tmp/smoke_replay.log; then ok; else bad "see /tmp/smoke_replay.log"; fi

@@ -27,8 +27,12 @@ STAMP=$(date +%Y%m%d_%H%M%S)
 SESSION="recordings/${WHO}_${STAMP}"
 echo "session files: ${SESSION}_raw.csv (8-ch EEG at 250 Hz) and ${SESSION}_gauge.csv (load per second)"
 PIDS=()
-cleanup() { echo; echo "stopping"; for p in "${PIDS[@]}"; do kill "$p" 2>/dev/null; done; exit 0; }
-trap cleanup INT TERM
+cleanup() { trap - EXIT; echo; echo "stopping"; for p in "${PIDS[@]}"; do kill "$p" 2>/dev/null; done; pkill -f loadmonitor/load_gauge.py 2>/dev/null; exit 0; }
+trap cleanup INT TERM EXIT
+# a gauge or launcher left from an earlier session (e.g. a Terminal that was never stopped) would wake up on this
+# session's stream and post to the same page (CRITIQUE ops-2): stop them first
+for p in $(pgrep -f "run_all.sh" | grep -vx -e "$$" -e "$PPID"); do kill "$p" 2>/dev/null; done   # not itself, not the shell that launched it
+pkill -f loadmonitor/load_gauge.py 2>/dev/null
 
 # 1. web page (reuse if already up)
 # always a fresh web server: a leftover one (from another folder or a dead run) answers once and then refuses
