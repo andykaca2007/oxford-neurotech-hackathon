@@ -26,7 +26,7 @@ Ranking: severity as re-rated by the adversary, then grouped so that issues with
 | 16 | high | ops-adv1 | ADDED | Gauge and connect check take any 'Unicorn' LSL stream on the network, not this laptop's | open |
 | 17 | high | serverpage-1 | confirmed | Replay mode is not shown on the page: a recorded session reads as live | done (ae1fc8d) |
 | 18 | high | serverpage-2 | confirmed | The debrief's confidence gate passes on noise; alpha-check and calibration results are never sent to the LLM | done (416d029) |
-| 19 | medium | alpha-1 | confirmed | Pass rule was set from the null only; on real alpha at last night's noise it passes 1 check in 5 | open |
+| 19 | medium | alpha-1 | confirmed | Pass rule was set from the null only; on real alpha at last night's noise it passes 1 check in 5 | done (2a743ce): noise gate and honest FAIL text; thresholds unchanged (no noise level reaches 80 percent sensitivity under any +3/+3 variant per the adversary) |
 | 20 | medium | calib-1 | confirmed | Once the personal model is on, rest no longer reads 0: nothing anchors it to rest, the output is close to on/off, and the alarm sits on the LDA boundary | open |
 | 21 | medium | calib-2 | confirmed | A failed second calibration leaves the old personal model running while the page says it is using the generic model | open |
 | 22 | medium | calib-adv1 | ADDED | After Rebaseline the page keeps showing 'personal model ON' while the generic model is in use | open |
@@ -69,7 +69,7 @@ Ranking: severity as re-rated by the adversary, then grouped so that issues with
 | 59 | low | calib-6 | confirmed | The null and positive-control code behind the 0.80 bar is not in the repo and is not the gauge's own function | open |
 | 60 | low | calib-adv3 | ADDED | The 5 s skip does not cover the spoken prompt, and the task prompt is longer than the rest prompt | open |
 | 61 | low | claims-6 | confirmed | The calibration and alpha-check null tests count overlapping windows as independent, and the 91 percent drops its own caveat | open |
-| 62 | low | claims-adv2 | ADDED | The alpha check says 'Brain signal confirmed' out loud, and the button claims it 'proves' brain contact | open |
+| 62 | low | claims-adv2 | ADDED | The alpha check says 'Brain signal confirmed' out loud, and the button claims it 'proves' brain contact | done (2a743ce): spoken result now 'Alpha rhythm found', not 'Brain signal confirmed' |
 | 63 | low | claims-adv3 | ADDED | OPTIMIZE.md describes a live chain and load mapping that the code no longer runs | open |
 | 64 | low | fatigue-7 | confirmed | Stale docstrings and comments describe a different fatigue index | open |
 | 65 | low | gauge-4 | confirmed | The smoothing EMA starts at 0.2, not at the wearer's rest output, so load is held near 0 for the first 20 to 45 s after every baseline | open |

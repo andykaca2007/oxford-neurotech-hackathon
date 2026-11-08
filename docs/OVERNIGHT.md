@@ -182,3 +182,12 @@ Rules for every change: it must be tested on recorded data with a split that is 
 - CRITIQUE #18 serverpage-2: the debrief's only quality evidence was the clean-channel count, which is high (4.8 of 5 on the 01:15 run) on a recording that FAILS the Alpha check; the Alpha check, calibration and personal-model results never reached it. Now the summary carries them as evidence (brain_signal_shown is true only after a passed Alpha check), the LLM context says the clean count is amplitude only, and both templates open with "Unverified: the Alpha check has not passed" until it does. Unit-checked with a FAIL and a PASS.
 - CRITIQUE #45 serverpage-4 (same lines): the debrief counted and quoted 70 while the gauge alarms at 50; now it uses the gauge's alarm level. The page's held subtitle said "of 8 channels" and "3 or more"; it now says N of 5 and when load resumes. A replay is named in the template.
 - Checks: page JavaScript parses; smoke ALL PASS; 16 replays 0 failed; commit gated on both.
+
+### Critique iteration 6, 07:30
+
+- CRITIQUE #19 alpha-1: the +3/+3 rule was set from the null only. Injection tests by the critic and the adversary (real lab eyes-closed alpha, about 7 uV, added to his closed phase) pass about 19 percent of checks at eyes-open 8 to 13 Hz noise over 30 uV, about 31 percent at 8 to 30 uV, about half at 2 to 8 uV, 73 percent under 2 uV. So a FAIL at high noise cannot tell "no brain" from "too noisy".
+  - Now the check measures eyes-open 8 to 13 Hz RMS at the quietest live posterior channel. Over 15 uV the result is TOO NOISY TO TEST, with the measured noise and the target. Under it, PASS and FAIL as before with the noise shown, and FAIL says a real brain passes only about half the time at that noise, so repeat once.
+  - My noise measure across all 16 recordings: median 10.9 uV per window (48 percent under 10, 24 percent over 50), in line with the critic's buckets. The 01:15 recording is a quiet one (median 3.8 uV): its FAIL (rise +1.6) is a real no-alpha result at low noise. The synthetic case still PASSes (noise 4 uV).
+  - Thresholds unchanged: per the adversary no noise level reaches 80 percent sensitivity under the +3/+3 rule, so that needs a longer check or a different rule, not a gate.
+- claims-adv2 (same lines): the spoken result said "Brain signal confirmed"; now "Alpha rhythm found".
+- Checks: smoke ALL PASS; 16 replays 0 failed; commit gated.
