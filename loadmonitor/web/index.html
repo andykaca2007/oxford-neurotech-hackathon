@@ -173,7 +173,7 @@
       <div><span>dead</span><b id="m_dead">—</b></div>
       <div><span>clean (under 100 µV after cleaning)</span><b id="m_clean">—</b></div>
       <div><span>alpha at Pz/O1 (lab eyes closed ≈ +6 dB)</span><b id="m_alpha_chk">—</b></div>
-      <div><span>model</span><b>GB robust · AUC 0.76</b></div>
+      <div><span>model</span><b>GB robust 5 ch · AUC 0.76</b></div>
     </div>
     <div class="chalcard" style="margin-top:14px">
       <div class="chal"><div class="cur" id="cur">4000</div><input id="ans" type="number" placeholder="next" disabled><button class="btn primary" id="go">Start</button></div>
@@ -348,7 +348,7 @@ async function tick(){
     }
     document.getElementById('m_top').textContent = top ? `${top.name} +${top.db.toFixed(1)} dB` : '—';
     document.getElementById('m_dead').textContent = dead.length ? dead.join(' ') : 'none';
-    document.getElementById('m_clean').textContent = s.clean === undefined ? '—' : s.clean + ' / 8';
+    document.getElementById('m_clean').textContent = s.clean === undefined ? '—' : s.clean + ' / ' + (s.n_model_ch || 8);
     { const ac = s.alpha_check || {}, el = document.getElementById('m_alpha_chk');
       const now = (s.alpha_now === null || s.alpha_now === undefined) ? '—' : (s.alpha_now > 0 ? '+' : '') + s.alpha_now + ' dB';
       if (ac.active) el.textContent = now + (ac.elapsed === null ? ' · starting' : ac.elapsed < 20 ? ' · eyes OPEN ' + (20 - ac.elapsed) + ' s' : ' · eyes CLOSED ' + Math.max(0, 40 - ac.elapsed) + ' s');

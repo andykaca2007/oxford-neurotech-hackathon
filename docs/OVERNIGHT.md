@@ -53,3 +53,13 @@ Rules for every change: it must be tested on recorded data with a split that is 
 - Reading: ASR is not over-cleaning; it never touches clean EEG and keeps 87 to 100 percent of his amplitude. But it fires on every Zetamac window: typing and looking between screen and keys add task-locked eye and muscle artefact. The model was trained on silent mental subtraction, so Zetamac confounds effort with movement.
 - Decision: no code change. docs/PROTOCOL.md changed: the mental segment is now silent serial subtraction with eyes on a fixed point, no typing; Alpha check added as step 0. The ASR component count is NOT used as a load signal (it measures movement).
 - Checks: smoke ALL PASS, 16 replays 0 failed.
+
+### Iteration 5, 02:45 to 03:05
+
+- Hypothesis A: channels flipping live/dead mid-session move the load. Test: per-second live set from the raw files against the replay gauge logs. Load change per second 0.71 when a channel flipped in the window (n 649) versus 1.08 when stable (n 2287). Rejected.
+- Usable channels, share of seconds live over all 16 recordings: Fz 0.81, C3 0.79, Cz 0.81, Pz 0.83, O1 0.83; C4 slot 0.55, P3 slot 0.55, P4 slot 0.42.
+- Hypothesis B: a model on only the five reliable channels loses nothing. Lab LOSO, same robust chain: 5 channels AUC 0.762, bal acc 0.681, train 0.816, 29 features; live 8-channel model AUC 0.762, bal acc 0.671, train 0.836, 44 features. Supported: same accuracy, less overfitting, never reads the flaky slots.
+- Decision: live model is now the 5-channel one (`models/readiness.joblib`; 8-channel backup `models/readiness_8ch_robust.joblib`). Page clean count uses the model's channel count.
+- Replays with the 5-channel model, labelled runs (8-channel in brackets): 01:03 mental 8 (8), rest 3 (1), physical 13 (4); 01:15 mental 4 (10), recovery 7 (23). Neither model separates his Zetamac from rest (iterations 2 and 4 explain why); the 5-channel one reads lower during recovery.
+- Bugs found by the replays and fixed: a recording with no live channels at all (23:03) wrote no CSV rows because the header was only written after a scored window (the 8-channel model had been scoring rail data there); held seconds are now logged, and fatigue shows its start value of 50 instead of 0 before the first scored window. Held message says N of 5, not N of 8.
+- Checks on the final code: smoke ALL PASS, 16 replays 0 failed (23:03 now logs 85 held rows).

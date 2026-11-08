@@ -252,7 +252,7 @@ def main():
             sig = [[int(v) for v in row] for row in Xs]
         except Exception:
             pass
-        body = json.dumps(dict(t=round(t_now, 1), state=state, load=round(load_pct, 1), fatigue=round(fatigue_pct, 1), clean=int(clean_n), fatigue_held=bool(clean_n < 3 and not a.fake), load_held=bool(clean_n < a.load_min_clean and not a.fake), contact=bool(contact or not a.strict), alarm=bool(alarmed), alarm_at=a.alarm, hold_s=a.hold, alpha_now=None if alpha_now is None else round(alpha_now, 1),
+        body = json.dumps(dict(t=round(t_now, 1), state=state, load=round(load_pct, 1), fatigue=round(fatigue_pct, 1), clean=int(clean_n), fatigue_held=bool(clean_n < 3 and not a.fake), load_held=bool(clean_n < a.load_min_clean and not a.fake), contact=bool(contact or not a.strict), alarm=bool(alarmed), alarm_at=a.alarm, hold_s=a.hold, n_model_ch=len(IDX), alpha_now=None if alpha_now is None else round(alpha_now, 1),
                                alpha_check=dict(active=ac["active"], elapsed=None if (not ac["active"] or ac["t0"] is None) else round(t_now - ac["t0"]), result=ac["result"]), personal=personal is not None, calib=len(calib_task), calib_s=a.calib_s, replay=bool(a.replay), channels=chans, sig=sig,
                                baseline_done=base is not None, baseline_s=a.baseline,
                                baseline_progress=min(1.0, len(base_feats) / a.baseline) if base is None else 1.0,
@@ -471,6 +471,7 @@ def main():
                     else:
                         fat_base, fat_start = (float(np.median(base_fat)) if base_fat else float(np.mean(FAT_REF)) if FAT_REF else 1.2), 50.0
                         print(f"# fatigue start unknown (only {len(base_fat)} clean baseline windows under {a.quality_uv:.0f} uV): starting at 50", flush=True)
+                    fatigue_pct = fat_start      # held rows before the first scored window show the start, not 0
                     state = "monitoring"
                     print("# baseline done", flush=True)
                     speak("Baseline done")
@@ -488,9 +489,12 @@ def main():
                 post_state(t)
             elif clean_n < a.load_min_clean and not a.fake:
                 # too few channels survive the cleaning chain: the model would be reading noise. Hold the load, say so.
-                state = f"NOISY: {clean_n}/8 clean, load held"
+                state = f"NOISY: {clean_n}/{len(IDX)} clean, load held"
                 if int(t) % 5 == 0:
                     print(f"# {state}", flush=True)
+                if log and not header_written[0]:
+                    log.write("t,load_pct,fatigue_pct,alarm,condition,contact," + ",".join(f"f{i}" for i in range(len(f))) + "\n")
+                    header_written[0] = True
                 if log and header_written[0]:
                     log.write(f"{t:.1f},{load_pct:.1f},{fatigue_pct:.1f},{int(alarmed)},{cond['now']},1," + ",".join("nan" for _ in f) + "\n")
                 hist.append(round(load_pct, 1))
