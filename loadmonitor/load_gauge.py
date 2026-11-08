@@ -263,6 +263,9 @@ def main():
     asr_cal = []
     features = (lambda x, fs: features_rich(x, fs, True, feat_cfg, asr)) if rich else features_basic
     print(f"# model: {m.get('config', {}).get('model', 'logreg')}, {'rich' if rich else 'basic'} features, held-out AUC {m.get('loso_auc', 0):.2f}", flush=True)
+    # one line for the page's model row: what was trained on what, and what it has not been validated on
+    MODEL_NOTE = (f"lab AUC {m.get('loso_auc', float('nan')):.2f}, each of 36 people held out in turn"
+                  + (f" · this copy trained without person {m['held_out']}" if m.get("held_out") else " · not validated on this cap"))
     win = int(m["epoch_s"] * FS)
     buf = deque(maxlen=win)
     base_feats, base = [], None
@@ -372,7 +375,7 @@ def main():
                                calibration=dict(active=cal["active"], block=None if (not cal["active"] or cal["t0"] is None) else int((t_now - cal["t0"]) // CAL_BLOCK_S) + 1,
                                                 blocks=CAL_BLOCKS, result=cal["result"]), alpha_now=None if alpha_now is None else round(alpha_now, 1),
                                alpha_check=dict(active=ac["active"], elapsed=None if (not ac["active"] or ac["t0"] is None) else round(t_now - ac["t0"]), result=ac["result"]), personal=personal is not None, calib=len(calib_task), calib_s=a.calib_s, replay=(os.path.basename(a.replay) if a.replay else False), channels=chans, sig=sig,
-                               baseline_done=base is not None, baseline_s=a.baseline, contact_good_uv=CONTACT_GOOD_UV, contact_fair_uv=CONTACT_FAIR_UV, alpha_noise_max_uv=ALPHA_NOISE_MAX_UV,
+                               baseline_done=base is not None, baseline_s=a.baseline, model_note=MODEL_NOTE, contact_good_uv=CONTACT_GOOD_UV, contact_fair_uv=CONTACT_FAIR_UV, alpha_noise_max_uv=ALPHA_NOISE_MAX_UV,
                                baseline_progress=min(1.0, len(base_feats) / a.baseline) if base is None else 1.0,
                                hist=list(hist))).encode()
         try:

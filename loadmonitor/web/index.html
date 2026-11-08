@@ -181,7 +181,7 @@
       <div><span>clean (under 100 µV after cleaning)</span><b id="m_clean">—</b></div>
       <div><span>alpha at Pz/O1 (lab rest ≈ +6 dB)</span><b id="m_alpha_chk">—</b></div>
       <div><span>personal calibration</span><b id="m_calib">not run (generic model)</b></div>
-      <div><span>model</span><b>lab AUC 0.76 (36 people) · not validated on this cap</b></div>
+      <div><span>model</span><b id="m_model">lab AUC 0.76 (36 people) · not validated on this cap</b></div>
     </div>
     <div class="chalcard" style="margin-top:14px">
       <div class="chal"><div class="cur" id="cur">4000</div><input id="ans" type="number" placeholder="next" disabled><button class="btn primary" id="go">Start</button></div>
@@ -347,7 +347,9 @@ async function tick(){
         if (!b) { b = document.createElement('div'); b.id = 'replaybanner';
           b.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:50;padding:8px 16px;background:#b8860b;color:#000;font:600 13px/1.3 ui-monospace,Menlo,monospace;text-align:center';
           document.body.appendChild(b); }
-        b.textContent = 'REPLAY of a recorded session, not live: ' + s.replay;
+        const lab = /^lab_eegmat_s(\d+)/.exec(s.replay);
+        b.textContent = lab ? 'LAB EEG REPLAY, not this headset: public dataset (PhysioNet eegmat, gel cap), person ' + lab[1] + ', held out of the model\u2019s training'
+                            : 'REPLAY of a recorded session, not live: ' + s.replay;
       } else if (b) b.remove(); }
     const val = document.getElementById('val'), label = document.getElementById('label'), sub = document.getElementById('sub');
     if (s.baseline_done) {
@@ -423,6 +425,7 @@ async function tick(){
       }
     }
     document.getElementById('m_top').textContent = top ? `${top.name} +${top.db.toFixed(1)} dB` : '—';
+    if (s.model_note) document.getElementById('m_model').textContent = s.model_note;
     document.getElementById('m_dead').textContent = dead.length ? dead.join(' ') : 'none';
     document.getElementById('m_clean').textContent = s.clean === undefined ? '—' : s.clean + ' / ' + (s.n_model_ch || 8);
     { const ac = s.alpha_check || {}, el = document.getElementById('m_alpha_chk');

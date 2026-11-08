@@ -65,6 +65,19 @@ Personalisation beats a universal model.
    Built. Needs `export ANTHROPIC_API_KEY=...` before starting gauge_server.py; without a key it
    falls back to a plain template so the demo never hangs.
 
+### Demo fallback: lab EEG replay (added 8 Nov morning)
+If the cap does not pass the Alpha check, show the same live pipeline on real EEG instead, and say so:
+`./run_all.sh lab` (build once with `.venv/bin/python loadmonitor/lab_demo.py`, about 5 min).
+- Data: PhysioNet "EEG during mental arithmetic" (gel cap, 36 people). The demo person (09) was picked by a rule
+  fixed before replaying anyone: the person at the 75th percentile of held-out AUC (0.89, 10th of 36). The model on
+  screen (`models/readiness_demo.joblib`) was trained without that person.
+- Across all 36 held out in turn: median per-person AUC 0.81, 23 of 36 at 0.7 or more, 5 below 0.5. Say this: it
+  works for about two in three people, and fails for some.
+- What the page shows (replayed through the live gauge, 8 Nov): rest 0 the whole time; mental arithmetic climbs from
+  31 to a peak of 88, alarm at 139 s; recovery falls from 76 back to 0 by 190 s (smoothing lag).
+- The recovery minute is the same person's earlier rest (the dataset has no rest after the task). The page banner says
+  "LAB EEG REPLAY, not this headset"; keep it in frame.
+
 ## What we claim, and what we do not
 Claim (corrected 8 Nov): the live model, trained on lab EEG (PhysioNet eegmat, 36 people, rest vs mental
 arithmetic, leave-one-subject-out), scores AUC 0.76 and balanced accuracy 68% on people it never saw, and is

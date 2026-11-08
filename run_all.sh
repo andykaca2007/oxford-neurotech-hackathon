@@ -5,6 +5,8 @@
 #   ./run_all.sh U8-2025.11.14        # another amplifier
 #   ./run_all.sh fake                 # no headset: fake signal, for rehearsing
 #   ./run_all.sh replay recordings/<x>_raw_<y>.csv   # fallback: a recorded session through the live page, shown as REPLAY
+#   ./run_all.sh lab                  # demo fallback: a held-out lab person (rest, arithmetic, rest) through the live page;
+#                                     #   build it once with .venv/bin/python loadmonitor/lab_demo.py
 #   ./run_all.sh U8-2025.10.14 andy   # second word = who is wearing it; names the recordings
 #
 # Every run writes two CSVs in recordings/: <who>_<date>_<time>_raw.csv (all 8 channels, 250 Hz,
@@ -19,7 +21,14 @@ SERIAL="${1-U8-2025.10.14}"          # no colon: an explicit '' means "whichever
 ALLOW="U8-2025.10.14 U8-2025.11.14"   # our two amplifiers; other teams' Unicorns in the room are never picked
 WHO="${2:-anon}"                      # ./run_all.sh U8-2025.10.14 paing  -> files named with the wearer
 REPLAY_FILE=""
-if [ "$SERIAL" = "replay" ]; then
+MODEL_ARG=""                          # plain string, not an array: bash 3.2 with set -u rejects an empty array
+if [ "$SERIAL" = "lab" ]; then
+  REPLAY_FILE=$(ls -t demo/lab_eegmat_s*_raw.csv 2>/dev/null | head -1); WHO="lab"
+  if [ -z "$REPLAY_FILE" ] || [ ! -f models/readiness_demo.joblib ]; then
+    echo "lab demo files missing: run  .venv/bin/python loadmonitor/lab_demo.py  once (about 5 min)"; exit 1; fi
+  SERIAL="replay"; MODEL_ARG="--model models/readiness_demo.joblib"
+  echo "LAB DEMO: $REPLAY_FILE with models/readiness_demo.joblib (that person held out of training)"
+elif [ "$SERIAL" = "replay" ]; then
   REPLAY_FILE="${2:-}"; WHO="replay"
   if [ ! -f "$REPLAY_FILE" ]; then echo "usage: ./run_all.sh replay recordings/<name>_raw_<stamp>.csv"; ls -t recordings/*raw*.csv | head -5; exit 1; fi
 fi
@@ -81,7 +90,7 @@ if [ "$SERIAL" = "fake" ]; then
   $PY loadmonitor/load_gauge.py --fake --web --no-ui
 elif [ "$SERIAL" = "replay" ]; then
   echo "REPLAY of $REPLAY_FILE at real time; the page shows a REPLAY banner"
-  $PY loadmonitor/load_gauge.py --replay "$REPLAY_FILE" --speed 1 --web --no-ui --alarm 50 --hold 20 --smooth 12 --log "${SESSION}_gauge.csv"
+  $PY loadmonitor/load_gauge.py --replay "$REPLAY_FILE" $MODEL_ARG --speed 1 --web --no-ui --alarm 50 --hold 20 --smooth 12 --log "${SESSION}_gauge.csv"
 else
   # alarm at 50 held 20 s, 12 s smoothing: on this cap Zetamac reaches about 50 and rest wobbles 0 to 36
   $PY loadmonitor/load_gauge.py --lsl --stream "$STREAM" --web --no-ui --alarm 50 --hold 20 --smooth 12 --log "${SESSION}_gauge.csv"
