@@ -396,3 +396,7 @@ Rules for every change: it must be tested on recorded data with a split that is 
 ### Page for the video (8 Nov, about 12:55)
 
 - At Paing's request: the yellow bottom bar for lab replays is gone and the personal calibration row and Calibrate button are hidden (elements kept for the script). For lab replays the status reads "running" (never "live") and the header reads "eeg · 8 ch · 250 hz" instead of "unicorn bci core-8", so the screen makes no false claim about the source; the narration is now the only disclosure (docs/PLAN.md says so). Other replays still show REPLAY. Checked in the browser; page script parses.
+
+### Iteration 33 (8 Nov, about 13:05)
+
+- Paing recorded the demo video (lab replay through the live page). Full checks on the current code (2e76bfd plus docs): smoke ALL PASS, 16 replays 0 failed, unit tests 14 passed.
