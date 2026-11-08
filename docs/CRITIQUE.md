@@ -33,9 +33,9 @@ Ranking: severity as re-rated by the adversary, then grouped so that issues with
 | 23 | medium | calib-adv2 | ADDED | One fold corrupted by noise sinks a strong real effect: calibration windows mix channel sets, and the pass rule averages fold AUCs | open |
 | 24 | medium | claims-3 | confirmed | Page labels assert things the overnight analysis disproved, and show a different alarm line from the one that fires | done (ee26e5b) |
 | 25 | medium | claims-4 | confirmed | The Claude debrief context feeds the LLM an inflated task number and hides the facts that should limit its confidence | done (ee26e5b) |
-| 26 | medium | claims-5 | confirmed | '0 false alarms over 16 recordings' is tested on the same data it was tuned on, and comes with 0 true alarms | open |
-| 27 | medium | claims-7 | confirmed | The protocol's 'decided before the data' claim no longer holds, and its report and claim lines contradict its own amendments | open |
-| 28 | medium | claims-8 | confirmed | The README pitches a different product and contradicts how the load model actually works | open |
+| 26 | medium | claims-5 | confirmed | '0 false alarms over 16 recordings' is tested on the same data it was tuned on, and comes with 0 true alarms | done (3f9cf11) |
+| 27 | medium | claims-7 | confirmed | The protocol's 'decided before the data' claim no longer holds, and its report and claim lines contradict its own amendments | done (3f9cf11) |
+| 28 | medium | claims-8 | confirmed | The README pitches a different product and contradicts how the load model actually works | done (3f9cf11) |
 | 29 | medium | claims-adv1 | ADDED | The protocol's pre-registered exclusion rule invalidates about 83 percent of the recorded seconds, and nothing reports that | open |
 | 30 | medium | dsp-4 | confirmed | On his data the burst mask is mostly triggered by 4 s window-edge transients and zeroes 30 percent of the window edges | open |
 | 31 | medium | dsp-adv1 | ADDED | The channel quality gate is measured after the burst mask and ASR, so it passes the artefacts that move the model most | open |
