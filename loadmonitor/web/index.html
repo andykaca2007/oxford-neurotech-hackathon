@@ -266,14 +266,14 @@ ans.addEventListener('keydown', e => {
 let coachTimer = null;
 async function coach() {
   try { const r = await (await fetch('/debrief', {method:'POST', headers:{'Content-Type':'application/json'}, body:'{"mode":"live"}'})).json();
-        if (r.source !== 'none') document.getElementById('coach').textContent = '› ' + r.text.trim() + (r.source.startsWith('claude') ? '' : '  (template)'); }
+        if (r.source !== 'none') document.getElementById('coach').textContent = '› ' + r.text.trim() + (r.source.startsWith('claude') ? '' : '  · rule-based summary'); }
   catch(e) {}
 }
 setInterval(coach, 60000);
 document.getElementById('debrief').onclick = async () => {
   document.getElementById('dtext').textContent = 'writing';
   try { const r = await (await fetch('/debrief', {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'})).json();
-        document.getElementById('dtext').textContent = r.text; document.getElementById('dsrc').textContent = 'written by ' + r.source; }
+        document.getElementById('dtext').textContent = r.text; document.getElementById('dsrc').textContent = r.source.startsWith('claude') ? 'written by ' + r.source + ' from the session numbers' : 'rule-based summary from the session numbers (no AI key set)'; }
   catch(e) { document.getElementById('dtext').textContent = 'debrief failed'; }
 };
 document.getElementById('calib').onclick = () => {
