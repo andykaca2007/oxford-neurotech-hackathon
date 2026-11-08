@@ -18,6 +18,7 @@ not risk. Needs the model's channels alive (layout A: all 8).
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -60,6 +61,23 @@ def src_fake(seed=0):
             time.sleep(0.2 / 1.0 * 1.0 / 1.0 * 0.2)   # ~5x real time for a quick test
 
 
+def src_replay(path, speed):
+    """Stream a recorded raw CSV (recordings/*_raw*.csv) through the live pipeline at real time x speed."""
+    rows = []
+    for line in open(path):
+        if line.startswith("#"):
+            continue
+        try:
+            rows.append([float(v) for v in line.split(",")[1:9]])
+        except ValueError:
+            continue
+    print(f"# REPLAY {os.path.basename(path)}: {len(rows) / FS:.0f} s at {speed:g}x", flush=True)
+    for n, r in enumerate(rows):
+        yield n / FS, np.array(r)
+        if n % 50 == 49:
+            time.sleep(0.2 / speed)
+
+
 def src_lsl():
     from pylsl import StreamInlet, resolve_byprop
     s = resolve_byprop("name", "Unicorn", timeout=10)
@@ -79,6 +97,7 @@ def main():
     g = ap.add_mutually_exclusive_group(required=True)
     g.add_argument("--lsl", action="store_true")
     g.add_argument("--fake", action="store_true")
+    g.add_argument("--replay", default=None, help="stream a recorded raw CSV instead of the headset (demo fallback, test)")
     ap.add_argument("--model", default="models/readiness.joblib")
     ap.add_argument("--baseline", type=float, default=30.0)
     ap.add_argument("--alarm", type=float, default=70.0, help="load percent that triggers the alarm")
@@ -86,6 +105,9 @@ def main():
     ap.add_argument("--smooth", type=float, default=8.0, help="s of smoothing on the gauge")
     ap.add_argument("--gain", type=float, default=40.0, help="load points per spread of the model output above the wearer's rest (36-subject sweep: 40 = task median 45, rest false alarm 2 percent)")
     ap.add_argument("--strict", action="store_true", help="contact gate + settle check before the baseline, and freeze on contact loss (off: the plain behaviour)")
+    ap.add_argument("--speed", type=float, default=1.0, help="replay speed")
+    ap.add_argument("--replay-markers", default=None, help="markers CSV (t,condition) to replay; default: the matching _gauge_markers.csv")
+    ap.add_argument("--calib-s", type=int, default=0, help="seconds of mental to train a personal model; OFF by default: on 8 Nov replay it learned session drift, not effort (recovery read 77)")
     ap.add_argument("--load-min-clean", type=int, default=2, help="hold the load (label Held, noisy) when fewer channels than this are clean after the chain")
     ap.add_argument("--quality-uv", type=float, default=100.0, help="a channel counts as clean when its RMS AFTER the cleaning chain is under this (uV); fatigue needs 3 clean")
     ap.add_argument("--log")
@@ -138,6 +160,15 @@ def main():
     fat_start = 0.0
     fat_sd = 0.1
     rest_mean, rest_sd = 0.3, 0.2
+    personal, calib_task = None, []
+    replay_marks = []
+    if a.replay:
+        mpath = a.replay_markers or re.sub(r"_raw.*\.csv$", "_gauge_markers.csv", a.replay)
+        if os.path.exists(mpath):
+            for line in open(mpath).read().splitlines()[1:]:
+                tm, c = line.split(",")[:2]
+                replay_marks.append((float(tm), c.strip()))
+            print(f"# replaying {len(replay_marks)} condition markers from {os.path.basename(mpath)}", flush=True)
     p_recent = deque(maxlen=5)
     fat_recent = deque(maxlen=5)
     clean_n = 0
@@ -193,7 +224,7 @@ def main():
             sig = [[int(v) for v in row] for row in Xs]
         except Exception:
             pass
-        body = json.dumps(dict(t=round(t_now, 1), state=state, load=round(load_pct, 1), fatigue=round(fatigue_pct, 1), clean=int(clean_n), fatigue_held=bool(clean_n < 3 and not a.fake), load_held=bool(clean_n < a.load_min_clean and not a.fake), contact=bool(contact or not a.strict), alarm=bool(alarmed), alarm_at=a.alarm, hold_s=a.hold, channels=chans, sig=sig,
+        body = json.dumps(dict(t=round(t_now, 1), state=state, load=round(load_pct, 1), fatigue=round(fatigue_pct, 1), clean=int(clean_n), fatigue_held=bool(clean_n < 3 and not a.fake), load_held=bool(clean_n < a.load_min_clean and not a.fake), contact=bool(contact or not a.strict), alarm=bool(alarmed), alarm_at=a.alarm, hold_s=a.hold, personal=personal is not None, calib=len(calib_task), calib_s=a.calib_s, replay=bool(a.replay), channels=chans, sig=sig,
                                baseline_done=base is not None, baseline_s=a.baseline,
                                baseline_progress=min(1.0, len(base_feats) / a.baseline) if base is None else 1.0,
                                hist=list(hist))).encode()
@@ -202,6 +233,16 @@ def main():
                                                               headers={"Content-Type": "application/json"}), timeout=0.3)
             reply = json.loads(r.read() or b"{}")
             new = reply.get("condition", cond["now"])
+            if replay_marks:
+                due = [c for tm, c in replay_marks if tm <= t_now]
+                if due and due[-1] != new:
+                    new = due[-1]
+                    try:
+                        urllib.request.urlopen(urllib.request.Request(f"http://127.0.0.1:{a.web_port}/event",
+                                               data=json.dumps({"kind": "condition", "value": new, "t": t_now}).encode(),
+                                               headers={"Content-Type": "application/json"}), timeout=0.3)
+                    except Exception:
+                        pass
             rb = int(reply.get("rebaseline", 0))
             if rb != cond["rebaseline"]:
                 cond["rebaseline"] = rb
@@ -220,7 +261,7 @@ def main():
     t = 0.0
     print(f"# {state}", flush=True)
     try:
-        for t, x in (src_fake() if a.fake else src_lsl()):
+        for t, x in (src_fake() if a.fake else src_replay(a.replay, a.speed) if a.replay else src_lsl()):
             if a.seconds and t > a.seconds:
                 break
             buf.append(x)
@@ -296,6 +337,7 @@ def main():
                 cond["redo"] = False
                 base, chan_base, fat_ema, fatigue_pct, alarmed, above_since, ema = None, None, None, 0.0, False, None, None
                 base_feats.clear(); base_chan.clear(); base_fat.clear(); base_covs.clear(); amp_hist.clear(); asr_cal.clear(); p_recent.clear()
+                personal = None; calib_task.clear()
                 if asr is not None:
                     asr.V = None
                 print(f"t={t:6.1f} REBASELINE requested from the page", flush=True)
@@ -384,15 +426,40 @@ def main():
                 post_state(t)
             else:
                 state = "monitoring"
-                p = float(clf.predict_proba((f - base)[None, :])[0, 1])
+                xf = (f - base)[None, :]
+                if personal is None and a.calib_s > 0 and cond["now"] == "mental":
+                    calib_task.append(xf[0])
+                    state = f"CALIBRATING: {len(calib_task)}/{a.calib_s} s of mental"
+                    if len(calib_task) >= a.calib_s:
+                        # personal model: his own 30 s rest (baseline) versus his own first minute of Zetamac;
+                        # shrinkage LDA on the same cleaned, amplitude-invariant features (tested on tonight's sessions:
+                        # 0.98 within a session, 0.67 to 0.69 across sessions; the generic model gave none on him)
+                        from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+                        from sklearn.pipeline import make_pipeline
+                        from sklearn.preprocessing import StandardScaler
+                        X0 = np.array(base_feats) - base
+                        X1 = np.array(calib_task)
+                        personal = make_pipeline(StandardScaler(), LinearDiscriminantAnalysis(solver="lsqr", shrinkage="auto"))
+                        personal.fit(np.vstack([X0, X1]), [0] * len(X0) + [1] * len(X1))
+                        ema = None
+                        p_recent.clear()
+                        print(f"t={t:6.1f} PERSONAL MODEL trained on {len(X0)} s rest + {len(X1)} s mental; load now = 100 x its probability", flush=True)
+                        speak("Calibrated")
+                if personal is not None:
+                    p = float(personal.predict_proba(xf)[0, 1])
+                else:
+                    p = float(clf.predict_proba(xf)[0, 1])
                 if riem is not None:
                     pr = float(riem_clf.predict_proba(riem.features(riem.covs(X8[IDX]))[None, :])[0, 1])
                     p = 0.5 * (p + pr)
                 p_recent.append(p)
                 p_med = float(np.median(p_recent))      # median of the last 5 outputs: a one-second glitch cannot move the gauge
-                ema = 0.2 if ema is None else ema   # start calm, let the evidence raise it
+                ema = (0.2 if personal is None else 0.1) if ema is None else ema   # start calm, let the evidence raise it
                 ema = ema + (p_med - ema) * (1.0 / a.smooth)
-                load_pct = float(np.clip(a.gain * (ema - rest_mean) / rest_sd, 0, 100))   # 0 at his own rest; --gain points per spread above it
+                if personal is not None:
+                    load_pct = float(np.clip(100 * ema, 0, 100))      # personal model: its probability is already his own scale
+                else:
+                    load_pct = float(np.clip(a.gain * (ema - rest_mean) / rest_sd, 0, 100))   # 0 at his own rest; --gain points per spread above it
                 # fatigue: slow EMA (about 2 min) of the ratio drift, starting AT the baseline; +0.5 log10 (ratio x3) reads as 100
                 if fat_now is not None:
                     fat_recent.append(fat_now)
