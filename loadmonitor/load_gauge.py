@@ -343,9 +343,12 @@ def main():
                     fat_sd = max(float(np.std(base_fat)), 0.05) if len(base_fat) >= 3 else 0.1
                     if len(base_fat) >= 5 and FAT_REF:
                         fat_base = float(np.median(base_fat))
-                        # fatigue starting point: where this baseline ratio sits among 36 rested people (percentile)
-                        fat_start = 100.0 * float(np.mean(np.array(FAT_REF) < fat_base))
-                        print(f"# fatigue start {fat_start:.0f}: baseline ratio {fat_base:.2f} from {len(base_fat)} clean windows vs rested reference mean {np.mean(FAT_REF):.2f}", flush=True)
+                        # the percentile among 36 lab-cap subjects does NOT transfer to a dry cap (a dry resting ratio sits
+                        # above all of them), so it is printed for information only; the scale starts at 50 = "your start"
+                        # and moves with this session, scored against the spread of your own baseline
+                        pct = 100.0 * float(np.mean(np.array(FAT_REF) < fat_base))
+                        fat_start = 50.0
+                        print(f"# fatigue: start 50 (your own start); baseline ratio {fat_base:.2f} +/- {fat_sd:.2f} from {len(base_fat)} clean windows (lab-cap percentile {pct:.0f}, not used)", flush=True)
                     else:
                         fat_base, fat_start = (float(np.median(base_fat)) if base_fat else float(np.mean(FAT_REF)) if FAT_REF else 1.2), 50.0
                         print(f"# fatigue start unknown (only {len(base_fat)} clean baseline windows under {a.quality_uv:.0f} uV): starting at 50", flush=True)
