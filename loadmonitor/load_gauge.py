@@ -289,9 +289,9 @@ def main():
         print(f"# artefact subspace reconstruction: components over {feat_cfg['asr']:.0f}x their resting power are removed (calibrated on your baseline)", flush=True)
     asr_cal = []
     features = (lambda x, fs: features_rich(x, fs, True, feat_cfg, asr)) if rich else features_basic
-    print(f"# model: {m.get('config', {}).get('model', 'logreg')}, {'rich' if rich else 'basic'} features, held-out AUC {m.get('loso_auc', 0):.2f}", flush=True)
+    print(f"# model: {m.get('config', {}).get('model', 'logreg')}, {'rich' if rich else 'basic'} features, LOSO AUC {m.get('loso_auc', 0):.2f} (each lab person held out in turn, but window, features and classifier were chosen on the same 36 people: optimistic, CRITIQUE stats-5)", flush=True)
     # one line for the page's model row: what was trained on what, and what it has not been validated on
-    MODEL_NOTE = (f"lab AUC {m.get('loso_auc', float('nan')):.2f}, each of 36 people held out in turn"
+    MODEL_NOTE = (f"lab AUC {m.get('loso_auc', float('nan')):.2f}, each of 36 people held out in turn (recipe chosen on the same people, so optimistic)"
                   + (f" · this copy trained without person {m['held_out']}" if m.get("held_out") else " · not validated on this cap"))
     win = int(m["epoch_s"] * FS)
     buf = deque(maxlen=win)
