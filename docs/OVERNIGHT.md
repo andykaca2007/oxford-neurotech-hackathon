@@ -329,3 +329,9 @@ Rules for every change: it must be tested on recorded data with a split that is 
 - Decision: keep 100 uV, on physiology (lab gel-cap EEG 7 to 17 uV; over 100 uV in 4 to 30 Hz is not brain), not on the curve. Raising it would show the number more often with no evidence the extra seconds are brain.
 - Correction: iteration 21 said "one noisy channel moves p by a median 0.19". The sweep shows that shift comes from replacing a channel with any foreign signal, not specifically from noise level; wording corrected in PROTOCOL.md, CRITIQUE.md and the gauge comments. The strict all-5 gate stays: a channel over 100 uV is not brain, and one such channel moves p about twice as much as the clean-EEG reference.
 
+### Critique iteration 23 (8 Nov, late morning)
+
+- No code changed; gates last passed on c9c8ee3 (smoke ALL PASS, 16 replays 0 failed).
+- CRITIQUE #50 stats-adv1 PARTLY DONE. Checked the source: the PhysioNet eegmat page states serial subtraction, ICA-cleaned 60 s segments and a 50 Hz notch, but not the eye condition. The critic's spectra (lab alpha +7.5 dB at rest, +5.0 during arithmetic) point to eyes closed in both. PROTOCOL.md now has live tests run eyes closed for baseline, rest and subtraction, matching the likely training condition and removing blink and gaze artefact. Not done: re-running the Calibrate positive control on an eyes-open workload dataset.
+- Paing chose to test live now; the loop will skip its heavy tests while a live headset session is running, so they do not steal CPU from the gauge.
+

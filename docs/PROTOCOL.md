@@ -56,6 +56,13 @@ segments shaded, a second row with the muscle marker. Mental should peak during 
 in recovery; after running, muscle power and alpha are the things expected to move, and the load
 number does whatever it does. Report it either way.
 
+## Eyes (amended 8 Nov, late morning, CRITIQUE stats-adv1)
+The PhysioNet eegmat page (the model's training data) does not say whether eyes were open or closed. Its spectra
+suggest closed: posterior alpha stays high even during arithmetic (+7.5 dB at rest, +5.0 dB during the task, 83
+percent of people at +3 dB or more while counting). So live tests now match it: baseline, rest and silent
+subtraction all with eyes CLOSED, relaxed jaw. This also removes blinks and eye movements. The Alpha check is the
+only step with eyes open (its first 20 s). The page's baseline prompt still says "eyes open"; ignore that line.
+
 ## Things that invalidate a segment
 - any of the eight channels on the rail or above 150 uV RMS: mark the segment "contact" and
   exclude it
