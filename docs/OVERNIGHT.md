@@ -291,3 +291,9 @@ Rules for every change: it must be tested on recorded data with a split that is 
   - Layout check inside the Alpha check: the same band-specific rule on each of the 8 electrodes alone; the verdict adds where alpha passed. Chance on his recordings (67 non-overlapping 40 s checks, no eye closure): any of 8 passed in 1 (1.5 percent), front or centre alone in 0. The official PASS still uses the back four only.
   - Checked on a replay (port 8797): contact colours and fix line correct (C3 and O1 about 35 uV green, Fz and Cz red with 3 to 4k hum); Alpha check on the replay FAILs as it should (no eye closure) and prints the per-electrode rises.
 
+### Critique iteration 19 (8 Nov, morning)
+
+- Gates: smoke ALL PASS and 16 replays 0 failed on 253d059 (run minutes before this iteration); no gauge code changed here.
+- CRITIQUE #23 calib-adv2 REJECTED with evidence. Its failure (channel sets mixing inside calibration blocks) was removed by 0c25f19, which holds the load and collects no calibration windows while any model channel is dead. With that gate, an effect injected into the task blocks passes the 0.80 bar in 97 percent (0.5 SD) and 99 percent (1.0 SD) of 115 overlapping starts (about 12 independent runs); the null passes 0. The proposed all-5-clean gate leaves 103 of 115 starts untestable on this dry cap; a 4-fold minimum leaves 33 untestable; neither changed null or power here. Script kept as tests/calib_inject.py (its base features now drop infinities, which crashed the critic's version).
+- Honest scope: injected effects are a fixed shift in feature space, not real brain data; Calibrate is still untested on a head.
+
