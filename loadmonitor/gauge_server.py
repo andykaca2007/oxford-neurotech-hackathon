@@ -91,7 +91,9 @@ UNVERIFIED = "Unverified: the Alpha check has not passed, so these load numbers 
 
 def fallback_live(s):
     l = s.get("last_60s", {})
-    if not s.get("evidence", {}).get("brain_signal_shown"):
+    if str(s.get("replay") or "").startswith("lab_eegmat"):
+        q = "lab EEG replay (gel cap, public dataset), not this headset"
+    elif not s.get("evidence", {}).get("brain_signal_shown"):
         q = "EEG not yet shown to contain brain signal (run the Alpha check); trust the answers more than the EEG"
     else:
         q = "signal clean" if l.get("mean_clean", 0) >= 3 else "signal noisy, trust the answers more than the EEG"
@@ -101,8 +103,11 @@ def fallback_live(s):
 
 def fallback_debrief(s):
     thr = int(s.get("alarm_threshold", 70))
-    lines = [] if s.get("evidence", {}).get("brain_signal_shown") else [UNVERIFIED]
-    if s.get("replay"):
+    lab = str(s.get("replay") or "").startswith("lab_eegmat")
+    lines = [] if (lab or s.get("evidence", {}).get("brain_signal_shown")) else [UNVERIFIED]
+    if lab:
+        lines.insert(0, "Lab EEG replay: a held-out person from the public PhysioNet eegmat dataset (gel cap), not this headset.")
+    elif s.get("replay"):
         lines.insert(0, f"This is a REPLAY of a recorded session ({s['replay']}), not a live person.")
     lines.append(f"Load peaked at {s['peak']} at {s['t_peak'] // 60}:{s['t_peak'] % 60:02d}, and stayed at or above {thr} for {s['seconds_above_alarm']} s of a {s['duration_s']} s session.")
     if s["challenge_start"] is not None:
