@@ -808,7 +808,7 @@ def main():
                     p_recent.append(p)
                     p_med = float(np.median(p_recent))      # median of the last 5 outputs: a one-second glitch cannot move the gauge
                     if ema is None:
-                        ema = 0.2 if personal is None else pers_anchor[0]   # start at rest
+                        ema = rest_mean if personal is None else pers_anchor[0]   # start at YOUR rest (was a fixed 0.2, below every measured rest_mean of 0.49 to 0.86, so the first 20 to 45 s read low; CRITIQUE gauge-4)
                     ema = ema + (p_med - ema) * (1.0 / a.smooth)
                     if personal is not None:
                         load_pct = float(np.clip(a.gain * (ema - pers_anchor[0]) / pers_anchor[1], 0, 100))   # 0 at his out-of-fold rest

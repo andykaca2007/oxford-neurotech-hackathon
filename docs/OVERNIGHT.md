@@ -417,3 +417,10 @@ Rules for every change: it must be tested on recorded data with a split that is 
 ### Figures (8 Nov, about 14:40)
 
 - Paing called the first slide set "plastic AI". Researched the rules behind Nature, Tufte, Economist and FT figures (ftplottools ft_theme.R, ggthemes economist.R, the Nature figure guide, Rougier et al. 2014) and wrote them into loadmonitor/figstyle.py: statement title left-aligned at the page edge, subtitle carries the units, source line bottom-left, bottom spine only, horizontal hairline grid, y ticks of length 0, direct labels at line ends instead of legend boxes, context series thin grey, one accent colour. He wanted black, so the palette is the page's: black, #EDEDED ink, #8A8A8A secondary, #F05A24 as the single accent. All 8 redrawn by loadmonitor/figures_editorial.py (same data and checks as before; the stage-by-stage chain is still asserted identical to clean_window; the ML pass is cached in models/_slide_*). figures/slides/best8/ holds the final eight.
+
+### Critique iteration 36 (8 Nov, about 15:10)
+
+- Gates on 5a36cdf: smoke ALL PASS, 16 replays 0 failed.
+- CRITIQUE #65 gauge-4 DONE. The load's smoothing EMA started at a fixed 0.2, below every measured rest output (0.49 to 0.86), so the first 20 to 45 s after a baseline or Rebaseline read low by construction. It now starts at the wearer's own rest_mean (the personal-model path already started at its anchor). Checked on the lab demo, old vs new: rest median 0 and 0, first 60 scored s max 0.0 vs 0.7, mental peak 88.7 both, alarm 35 s both. The critic's iteration-9 worry (that the lab sweep's "rest median 0" came from the low start) is not supported: with the corrected start the lab rest still reads 0.
+- Gates on the fix: smoke ALL PASS, 16 replays 0 failed.
+- Presentation: figures/slides/best8 now holds 0_problem and 7_limits text slides plus the six figures; docs/TALK_3MIN.md has the final order (problem, 90 s video, filters, ROC, close).

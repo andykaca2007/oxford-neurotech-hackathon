@@ -72,7 +72,7 @@ Ranking: severity as re-rated by the adversary, then grouped so that issues with
 | 62 | low | claims-adv2 | ADDED | The alpha check says 'Brain signal confirmed' out loud, and the button claims it 'proves' brain contact | done (2a743ce): spoken result now 'Alpha rhythm found', not 'Brain signal confirmed' |
 | 63 | low | claims-adv3 | ADDED | OPTIMIZE.md describes a live chain and load mapping that the code no longer runs | open |
 | 64 | low | fatigue-7 | confirmed | Stale docstrings and comments describe a different fatigue index | open |
-| 65 | low | gauge-4 | confirmed | The smoothing EMA starts at 0.2, not at the wearer's rest output, so load is held near 0 for the first 20 to 45 s after every baseline | open |
+| 65 | low | gauge-4 | confirmed | The smoothing EMA starts at 0.2, not at the wearer's rest output, so load is held near 0 for the first 20 to 45 s after every baseline | done (iteration 36): EMA starts at rest_mean; lab demo unchanged (rest 0, peak 88.7, alarm 35 s) |
 | 66 | low | gauge-5 | confirmed | Alarm hold counts held (unscored) seconds, so the alarm can fire after 1 to 2 scored seconds above threshold | open |
 | 67 | low | gauge-6 | confirmed | Calibrate block prompts are tied to scored seconds, but block labels follow the clock | open |
 | 68 | low | gauge-7 | confirmed | Replayed markers fire 1.6 to 2.6 s early, and alpha-check and calibration phases are never marked in the logs | open |
