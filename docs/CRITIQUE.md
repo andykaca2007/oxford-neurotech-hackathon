@@ -55,7 +55,7 @@ Ranking: severity as re-rated by the adversary, then grouped so that issues with
 | 45 | medium | serverpage-4 | confirmed | Hardcoded thresholds disagree with the launched gauge: debrief uses 70 while the alarm is 50; held subtitle says 'of 8' and '3 or more' | done (416d029) |
 | 46 | medium | serverpage-5 | confirmed | Debrief statistics count held and frozen seconds as measured load and are never reset on Rebaseline | done (3a013a4) |
 | 47 | medium | serverpage-adv1 | ADDED | After Rebaseline the page still says 'personal model ON', and the page's own held message tells the user to press Rebaseline | done (797f41a) |
-| 48 | medium | stats-2 | confirmed | Calibration null: 81 overlapping positions from about 13 independent runs; the 0.80 bar was set on the same null that then 'validates' it | open |
+| 48 | medium | stats-2 | confirmed | Calibration null: 81 overlapping positions from about 13 independent runs; the 0.80 bar was set on the same null that then 'validates' it | done (625ba64) |
 | 49 | medium | stats-4 | confirmed | Alpha check: false-pass rate depends on how many channels are live, and sensitivity (false FAIL) was never measured | open |
 | 50 | medium | stats-adv1 | ADDED | The positive control and the gain sweep come from alpha-rich (likely eyes-closed) lab data, but live Calibrate and the demo run eyes open, so the 91 percent does not transfer | open |
 | 51 | low | alpha-2 | confirmed | Check never starts and hangs at 'starting' when every posterior channel is dead | open |
@@ -66,9 +66,9 @@ Ranking: severity as re-rated by the adversary, then grouped so that issues with
 | 56 | low | calib-3 | confirmed | No minimum folds or windows per block: dropped noisy windows can turn the 4-fold test into a 1-fold test, which passes the null about 10x more often | open |
 | 57 | low | calib-4 | confirmed | Leave-one-pair-out is biased below chance because each held-out block sits next to a training block of the opposite class | open |
 | 58 | low | calib-5 | confirmed | The positive control does not test what the live mode does, and the 91 vs 0 comparison mixes 3-pair and 4-pair tests | open |
-| 59 | low | calib-6 | confirmed | The null and positive-control code behind the 0.80 bar is not in the repo and is not the gauge's own function | open |
+| 59 | low | calib-6 | confirmed | The null and positive-control code behind the 0.80 bar is not in the repo and is not the gauge's own function | done (625ba64) |
 | 60 | low | calib-adv3 | ADDED | The 5 s skip does not cover the spoken prompt, and the task prompt is longer than the rest prompt | open |
-| 61 | low | claims-6 | confirmed | The calibration and alpha-check null tests count overlapping windows as independent, and the 91 percent drops its own caveat | open |
+| 61 | low | claims-6 | confirmed | The calibration and alpha-check null tests count overlapping windows as independent, and the 91 percent drops its own caveat | done (625ba64) |
 | 62 | low | claims-adv2 | ADDED | The alpha check says 'Brain signal confirmed' out loud, and the button claims it 'proves' brain contact | done (2a743ce): spoken result now 'Alpha rhythm found', not 'Brain signal confirmed' |
 | 63 | low | claims-adv3 | ADDED | OPTIMIZE.md describes a live chain and load mapping that the code no longer runs | open |
 | 64 | low | fatigue-7 | confirmed | Stale docstrings and comments describe a different fatigue index | open |

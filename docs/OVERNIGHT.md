@@ -241,3 +241,17 @@ Rules for every change: it must be tested on recorded data with a split that is 
 - CRITIQUE #46 serverpage-5 (and ops-adv3): the debrief counted every posted second as a measurement, including held seconds that re-post a frozen number (33 percent of his windows have fewer than 2 of 5 clean channels), never reset on Rebaseline, and a gauge restarted against a running page server took the server's old counters as new requests (unrequested Alpha check or Calibrate). Now held seconds (load held, noisy, channel or contact lost, no data, personal model held) are tagged and excluded and reported as held_seconds; Rebaseline and a new gauge session (time going backwards) clear the statistics; the gauge adopts the server's counters on its first reply. Unit-tested (2 scored, 2 held, peak from scored only; cleared on rebaseline and new session) and checked live: a fresh gauge against a server with pending counters started 0 checks.
 - CRITIQUE #44 serverpage-3: the context numbers were fixed earlier (31, 5 of 8 electrodes); now it also explains the personal model when it is on, what held seconds are, and that fatigue moves with muscle tension and must not be called tiredness.
 - Checks: smoke ALL PASS; 16 replays 0 failed; commit gated.
+
+### Critique iteration 15, 09:02
+
+- CRITIQUE #48 stats-2, #59 calib-6, claims-6: the 0.80 calibration bar was set on a null of 81 overlapping positions (about 12 independent runs) and then reported as proof that chance never reaches it, and the null code was not in the repo. Now the leave-one-pair-out is one function (loadmonitor/calibration.py) used by the gauge and by tests/calib_null.py, and the bar was re-measured with independent runs only:
+
+  | test | runs | median AUC | at or above 0.80 | 95 percent upper bound |
+  |---|---|---|---|---|
+  | his recordings, no real alternation (null) | 8 | 0.59 | 1 (12 percent) | 47 percent |
+  | lab rest only, fake blocks (null) | 35 | 0.47 | 2 (6 percent) | 17 percent |
+  | lab rest vs arithmetic (positive, optimistic) | 35 | 0.93 | 29 (83 percent) | |
+
+  So my earlier "chance never reached 0.80" was wrong: chance passes about 1 time in 10. The bar stays at 0.80 (choosing a new one from these same numbers would repeat the circularity; at 0.85 the lab null still passes 6 percent and the positive control drops to 77 percent). The gauge comment, the pass text on the page, and the morning summary now say what a pass means: rest and task blocks were separable for this person, not that load is measured. Counterbalanced block order and an artefact-control block are still open ideas.
+- Also: the pygame window's alarm still said "HIGH LOAD: take a break"; now "load held above the alarm line".
+- Checks: smoke ALL PASS; 16 replays 0 failed; commit gated.
