@@ -129,6 +129,65 @@ a.set_xlim(0, 110); a.set_xlabel("frequency (Hz)"); a.set_ylabel("power (µV² /
 a.legend(frameon=False, fontsize=14, loc="upper right")
 save(fig, "02_dsp_spectrum.png", "Welch, 2 s segments. Same Pz window as the previous slide.")
 
+# ---- 05 / 06: the chain stage by stage (same window, same code path as model_search.clean_window) ----
+from scipy.signal import butter as _butter, hilbert as _hilbert, iirnotch as _iirnotch, sosfiltfilt as _sff, tf2sos as _tf2sos  # noqa: E402
+stages = []
+ok = (w.std(1) > 1e-6) & ~np.any(np.abs(np.abs(w) - 200000) < 1, axis=1)
+y = w - w.mean(1, keepdims=True)
+stages.append(("raw signal", "what the amplifier sends", y.copy()))
+tt_ = np.linspace(-1, 1, y.shape[1]); V = np.vander(tt_, int(cfg["detrend"]) + 1)
+coef, *_ = np.linalg.lstsq(V, y.T, rcond=None); y = y - (V @ coef).T
+stages.append(("1  cubic detrend", "removes slow electrode drift and sweat potentials", y.copy()))
+for f0 in (50.0, 100.0):
+    b_, a_ = _iirnotch(f0, 30.0, fs=FS); y = _sff(_tf2sos(b_, a_), y, axis=1)
+stages.append(("2  notch 50 and 100 Hz", "removes mains hum from the room's wiring", y.copy()))
+y = y - np.median(y[ok], axis=0, keepdims=True)
+stages.append(("3  median common reference", "removes noise shared by every electrode", y.copy()))
+y = _sff(_butter(cfg.get("order", 4), [cfg["lo"], cfg["hi"]], btype="band", fs=FS, output="sos"), y, axis=1)
+stages.append(("4  band-pass 4 to 30 Hz", "keeps theta, alpha and beta; drops muscle and drift", y.copy()))
+env = np.abs(_hilbert(y, axis=1)); bad = env > cfg["burst"] * np.median(env, axis=1, keepdims=True) + 1e-9
+edge = int(0.5 * FS); bad[:, :edge] = False; bad[:, -edge:] = False
+k_ = max(3, int(FS * 0.05)); soft = np.array([np.convolve(bb.astype(float), np.ones(k_) / k_, mode="same") for bb in bad])
+y = y * np.clip(1.0 - soft * 1.5, 0.0, 1.0)
+assert np.allclose(y, ms.clean_window(w, FS, cfg)), "stage-by-stage chain differs from clean_window"
+stages.append(("5  burst mask", "zeroes sudden jumps (envelope over 4 x median)", y.copy()))
+if asr.V is not None:
+    y = asr(y)
+    stages.append(("6  artefact subspace reconstruction", "removes components over 5 x their resting power", y.copy()))
+fig = slide("The cleaning chain, one filter at a time", "Same 4 seconds at Pz, Paing's dry cap; each row is the signal after one more stage (each row has its own scale)")
+n = len(stages); top, bot = 0.83, 0.12; hgt = (top - bot) / n
+for i, (nm, what, yy) in enumerate(stages):
+    ax = fig.add_axes([0.30, top - (i + 1) * hgt + 0.012, 0.52, hgt - 0.024])
+    col = ORA if i == 0 else (BLU if i == n - 1 else FG)
+    ax.plot(t, yy[j], color=col, lw=1.0 if i else 0.8)
+    ax.set_xlim(0, 4); ax.set_yticks([]); ax.grid(False)
+    ax.spines["left"].set_visible(False)
+    if i < n - 1:
+        ax.set_xticks([])
+        ax.spines["bottom"].set_visible(False)
+    else:
+        ax.set_xlabel("time (s)")
+    fig.text(0.05, top - (i + 0.5) * hgt + 0.012, nm, fontsize=17, color=col, va="center", weight="bold")
+    fig.text(0.05, top - (i + 0.5) * hgt - 0.018, what, fontsize=12, color=DIM, va="center")
+    r = yy[j][FS // 2:-FS // 2].std()
+    fig.text(0.84, top - (i + 0.5) * hgt, f"{r:,.0f} µV RMS", fontsize=17, color=col, va="center")
+save(fig, "05_dsp_pipeline.png", "Code path checked against model_search.clean_window (identical output). Recording paing_20261108_011525. Brain EEG is about 10 to 50 µV.")
+
+fig = slide("What each filter removes, in frequency", "Spectrum of the same window after successive stages")
+a = fig.add_axes([0.08, 0.18, 0.86, 0.60])
+pick = [0, 1, 2, 4, n - 1]
+cols = [ORA, "#c97a2a", YEL, GRN, BLU]
+for c, i in zip(cols, pick):
+    f_, p_ = welch(stages[i][2][j], fs=FS, nperseg=2 * FS)
+    a.semilogy(f_, p_ + 1e-6, color=c, lw=1.8, label=stages[i][0].split("  ")[-1])
+a.set_xlim(0, 110); a.set_xlabel("frequency (Hz)"); a.set_ylabel("power (µV² / Hz)")
+a.set_ylim(1e-4, 3e7)
+fig.legend(*a.get_legend_handles_labels(), frameon=False, fontsize=14, loc="upper left", bbox_to_anchor=(0.06, 0.845), ncol=5)
+for lo, hi, nm in ((4, 8, "theta"), (8, 13, "alpha"), (13, 30, "beta")):
+    a.axvspan(lo, hi, color="#ffffff", alpha=0.04)
+    a.text((lo + hi) / 2, 1.2e7, nm, ha="center", color=DIM, fontsize=13)
+save(fig, "06_dsp_stage_spectra.png", "Welch, 2 s segments. The notch cuts the 50 and 100 Hz peaks; reference and band-pass remove most power below 4 Hz and above 30 Hz;\nthe burst mask and ASR take out the movement spike (blue, lower in 4 to 30 Hz). Detrend barely changes this particular window.")
+
 # ---- 03: held-out AUC per lab person ----
 d = json.load(open("models/lab_demo_loso.json"))
 per = sorted(d["per_person_auc"].items(), key=lambda kv: kv[1])
