@@ -424,3 +424,8 @@ Rules for every change: it must be tested on recorded data with a split that is 
 - CRITIQUE #65 gauge-4 DONE. The load's smoothing EMA started at a fixed 0.2, below every measured rest output (0.49 to 0.86), so the first 20 to 45 s after a baseline or Rebaseline read low by construction. It now starts at the wearer's own rest_mean (the personal-model path already started at its anchor). Checked on the lab demo, old vs new: rest median 0 and 0, first 60 scored s max 0.0 vs 0.7, mental peak 88.7 both, alarm 35 s both. The critic's iteration-9 worry (that the lab sweep's "rest median 0" came from the low start) is not supported: with the corrected start the lab rest still reads 0.
 - Gates on the fix: smoke ALL PASS, 16 replays 0 failed.
 - Presentation: figures/slides/best8 now holds 0_problem and 7_limits text slides plus the six figures; docs/TALK_3MIN.md has the final order (problem, 90 s video, filters, ROC, close).
+
+### Critique iteration 37 (8 Nov, about 15:40)
+
+- CRITIQUE #66 gauge-5 DONE. The alarm's 20 s hold was wall time from the first second above the line and only the scored branch cleared it, so a held stretch (channel lost, or noisy before --show-noisy) counted toward the alarm and it could fire 1 to 2 scored seconds after scoring resumed. It now counts scored seconds above the line (above_n), reset to 0 by both held branches, by Rebaseline and by the keyboard reset. Lab demo: alarm at t 138 after 20 scored seconds above 50 (was t 139 by wall time), 36 alarm seconds; no other change. p_recent is not cleared on gaps (the critic's second suggestion); it is a 5-sample median and the held branches do not feed it, so it holds at most 5 stale values.
+- Gates: smoke ALL PASS, 16 replays 0 failed.

@@ -277,6 +277,7 @@ def main():
     base_chan, chan_base, chan_now = [], None, None
     CH8 = MONTAGE
     ema, above_since, alarmed = None, None, False
+    above_n = 0                                      # scored seconds above the alarm line in a row
     base_fat, fat_base, fat_ema, fatigue_pct, contact = [], 0.0, None, 0.0, False
     amp_hist = deque(maxlen=40)
     alpha_hist = deque(maxlen=8)            # live alpha readout, see alpha-6
@@ -470,7 +471,7 @@ def main():
                         if e.key == ui["pygame"].K_ESCAPE:
                             raise KeyboardInterrupt
                         if e.key == ui["pygame"].K_b:
-                            base_feats, base, ema, alarmed, above_since = [], None, None, False, None
+                            base_feats, base, ema, alarmed, above_since, above_n = [], None, None, False, None, 0
                             state = f"BASELINE: sit still, eyes open, {a.baseline:g} s"
                             print("# re-baselining", flush=True)
             if len(buf) < win or t < next_eval:
@@ -615,6 +616,7 @@ def main():
             if cond.get("redo"):
                 cond["redo"] = False
                 base, chan_base, fat_ema, fatigue_pct, alarmed, above_since, ema = None, None, None, 0.0, False, None, None
+                above_n = 0
                 base_feats.clear(); base_chan.clear(); base_fat.clear(); base_covs.clear(); amp_hist.clear(); asr_cal.clear(); p_recent.clear()
                 personal = None; pers_anchor = None; calib_task.clear(); cal.update(active=False, t0=None, blocks={}, result=None, said=set())
                 fat_ok, t_mon0, fatigue_pct = False, None, float("nan"); fat_recent.clear()
@@ -708,6 +710,7 @@ def main():
                     print(f"# {state}", flush=True)
                 if log and header_written[0]:
                     log.write(f"{t:.1f},{load_pct:.1f},{fatigue_pct:.1f},{int(alarmed)},{cond['now']},0," + ",".join("nan" for _ in f) + "\n")
+                above_since, above_n = None, 0            # held: evidence toward the alarm stops here
                 hist.append(round(load_pct, 1))
                 post_state(t)
             elif (lost or (clean_n < a.load_min_clean and not a.show_noisy)) and not a.fake:
@@ -721,6 +724,7 @@ def main():
                     header_written[0] = True
                 if log and header_written[0]:
                     log.write(f"{t:.1f},{load_pct:.1f},{fatigue_pct:.1f},{int(alarmed)},{cond['now']},1," + ",".join("nan" for _ in f) + "\n")
+                above_since, above_n = None, 0            # held: evidence toward the alarm stops here
                 hist.append(round(load_pct, 1))
                 post_state(t)
             else:
@@ -828,14 +832,17 @@ def main():
                     fatigue_pct = float(np.clip(fat_start + min(10 * z, (fat_ema - fat_base) / 0.301 * 25) if z > 0 else fat_start + 10 * z, 0, 100))
                 else:
                     fatigue_pct = float("nan")
+                # the hold counts SCORED seconds above the line, not wall time: a held stretch (channel lost, no data)
+                # no longer counts toward the alarm, so it cannot fire 2 s after scoring resumes (CRITIQUE gauge-5)
                 if load_pct >= a.alarm and not low_conf:
+                    above_n += 1
                     above_since = above_since or t
-                    if not alarmed and t - above_since >= a.hold:
+                    if not alarmed and above_n >= a.hold:
                         alarmed = True
                         print(f"t={t:6.1f} ALARM load {load_pct:.0f}", flush=True)
                         speak("Load above the line.")
                 else:
-                    above_since, alarmed = None, False
+                    above_since, above_n, alarmed = None, 0, False
                 if log:
                     if not header_written[0]:
                         log.write("t,load_pct,fatigue_pct,alarm,condition,contact," + ",".join(f"f{i}" for i in range(len(f))) + "\n")
