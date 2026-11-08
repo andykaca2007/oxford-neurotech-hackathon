@@ -402,22 +402,24 @@ def main():
             dead = dead | rail
             chan_now["dead"] = dead
             post = [MONTAGE.index(c) for c in POSTERIOR if c in MONTAGE and not dead[MONTAGE.index(c)]]
-            if post:
-                ah = alpha_height(X8[post])
-                alpha_now = float(np.max(ah))
+            ah = alpha_height(X8[post]) if post else None
+            alpha_now = float(np.max(ah)) if post else None
+            # the check's clock, prompts and verdict run whether or not a posterior channel is live, so a dead back
+            # row gets an answer instead of a check that starts minutes later (CRITIQUE alpha-2)
+            if True:
                 if ac["active"]:
                     if ac["t0"] is None:
                         ac["t0"] = t
                         speak("Alpha check. Eyes open, look at one point.")
                         print(f"t={t:6.1f} ALPHA CHECK started: 20 s eyes open, then 20 s eyes closed", flush=True)
                     el = t - ac["t0"]
-                    if 4 <= el < 20:
+                    if 4 <= el < 20 and post:
                         ac["open"].append(dict(zip([MONTAGE[i] for i in post], ah)))
                         xa = X8[post] - X8[post].mean(1, keepdims=True)
                         ac["noise"].append(float(np.min(sosfiltfilt(ALPHA_BAND_SOS, xa, axis=1)[:, FS // 2:-FS // 2].std(1))))   # quietest posterior channel
-                    elif el >= 20 and "close" not in ac["said"]:
+                    if el >= 20 and "close" not in ac["said"]:
                         ac["said"].add("close"); speak("Close your eyes.")
-                    if 24 <= el < 40:
+                    if 24 <= el < 40 and post:
                         ac["closed"].append(dict(zip([MONTAGE[i] for i in post], ah)))
                     if el >= 40:
                         best = None
@@ -430,14 +432,15 @@ def main():
                                     best = (ch, delta, float(np.median(o)), float(np.median(c_)))
                         noise = float(np.median(ac["noise"])) if ac["noise"] else float("nan")
                         if best is None:
-                            ac["result"] = dict(ok=False, text="not enough live posterior windows")
+                            ac["result"] = dict(ok=False, untestable=True, text="NO LIVE BACK ELECTRODE: Pz, O1, P3 and P4 were not connected long enough to test; fix the back of the cap and retry")
                         elif not (noise <= ALPHA_NOISE_MAX_UV):
                             ac["result"] = dict(ok=False, untestable=True, noise_uv=round(noise, 1),
                                                 text=f"TOO NOISY TO TEST: eyes-open alpha-band noise {noise:.0f} uV at the quietest posterior channel; "
                                                      f"lab alpha is about 7 uV, so the check needs under {ALPHA_NOISE_MAX_UV:.0f} uV. Improve Pz/O1 contact and retry")
                         else:
-                            # PASS rule from the 8 Nov null test: rise >= 3 dB AND eyes-closed peak >= +3 dB; pure noise on
-                            # his 16 recordings passes this 0.9 percent of the time (a 2 dB rise alone: 15 to 20 percent)
+                            # PASS rule: rise >= 3 dB AND eyes-closed peak >= +3 dB. tests/alpha_check_eval.py on his recordings:
+                            # chance passes 1.3 percent of testable checks, real lab alpha injected passes about 30 percent at his
+                            # noise; best of 4 channels and best of Pz/O1 give the same numbers (CRITIQUE stats-4)
                             ok = best[1] >= 3.0 and best[3] >= 3.0
                             ac["result"] = dict(ok=ok, ch=best[0], delta=round(best[1], 1), open_db=round(best[2], 1), closed_db=round(best[3], 1), noise_uv=round(noise, 1),
                                                 text=(f"PASS: alpha at {best[0]} {best[2]:+.1f} dB eyes open, {best[3]:+.1f} dB eyes closed (rise {best[1]:+.1f}; noise {noise:.0f} uV)" if ok else
@@ -446,7 +449,7 @@ def main():
                         ac["active"] = False
                         print(f"t={t:6.1f} ALPHA CHECK {ac['result']['text']}", flush=True)
                         speak("Open your eyes. " + ("Alpha rhythm found." if ac["result"]["ok"] else
-                                                    "Too noisy to test. Improve the back electrodes." if ac["result"].get("untestable") else
+                                                    ("Too noisy to test. Improve the back electrodes." if "NOISY" in ac["result"]["text"] else "No back electrode connected.") if ac["result"].get("untestable") else
                                                     "No alpha change found."))
             live = [i for i in IDX if not dead[i]] or list(IDX)
             live_n = int(sum(not dead[i] for i in IDX))
