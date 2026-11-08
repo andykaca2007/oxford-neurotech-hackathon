@@ -161,7 +161,7 @@
         <line class="ring" x1="24" y1="110" x2="176" y2="110" stroke-dasharray="1 4"/>
       </svg>
     </div>
-    <div class="alarmline">High mental load · take a break</div>
+    <div class="alarmline">Load held above the alarm line</div>
   </section>
 
   <section class="cell">
@@ -172,9 +172,9 @@
       <div><span>most active</span><b id="m_top">—</b></div>
       <div><span>dead</span><b id="m_dead">—</b></div>
       <div><span>clean (under 100 µV after cleaning)</span><b id="m_clean">—</b></div>
-      <div><span>alpha at Pz/O1 (lab eyes closed ≈ +6 dB)</span><b id="m_alpha_chk">—</b></div>
+      <div><span>alpha at Pz/O1 (lab rest ≈ +6 dB)</span><b id="m_alpha_chk">—</b></div>
       <div><span>personal calibration</span><b id="m_calib">not run (generic model)</b></div>
-      <div><span>model</span><b>GB robust 5 ch · AUC 0.76</b></div>
+      <div><span>model</span><b>lab AUC 0.76 (36 people) · not validated on this cap</b></div>
     </div>
     <div class="chalcard" style="margin-top:14px">
       <div class="chal"><div class="cur" id="cur">4000</div><input id="ans" type="number" placeholder="next" disabled><button class="btn primary" id="go">Start</button></div>
@@ -355,7 +355,7 @@ async function tick(){
     const fv = document.getElementById('fval'), fl = document.getElementById('flabel');
     if (s.baseline_done && s.fatigue !== undefined && s.fatigue !== null) {
       const f = Math.round(s.fatigue); fv.textContent = f; fv.className = 'n' + (f >= 60 ? ' hot' : '');
-      fl.textContent = s.fatigue_held ? 'Held · noisy' : f >= 70 ? 'Tiring' : f >= 40 ? 'Steady' : 'Recovering';
+      fl.textContent = s.fatigue_held ? 'Held · noisy' : f >= 70 ? 'above start' : f >= 40 ? 'near start' : 'below start';
     } else if (s.baseline_done) {
       fv.textContent='—'; fv.className='n dim';
       fl.textContent = s.fatigue_note ? s.fatigue_note

@@ -8,7 +8,7 @@ GET  /state       latest gauge state + challenge events
 POST /state       the gauge pushes {t, state, load, alarm, channels, hist, ...}
 POST /event       the page pushes {t, kind: "answer"|"error"|"challenge_start"|"challenge_end", ...}
 POST /debrief     builds a session summary and asks Claude for a 3-line debrief
-                  (model claude-opus-5-5; falls back to a plain template if no credentials)
+                  (debrief claude-opus-5-5, live coach claude-sonnet-5-5; falls back to a plain template if no credentials)
 No dependencies beyond the standard library, plus `anthropic` for the debrief.
 """
 import json
@@ -101,7 +101,7 @@ def fallback_debrief(s):
 
 
 CONTEXT = (
-    "The numbers come from an 8-electrode dry EEG headset. 'load' is a classifier score 0 to 100 of how far the person's "
+    "The numbers come from a dry EEG headset; the model uses 5 of its 8 electrodes (Fz C3 Cz Pz O1). 'load' is a classifier score 0 to 100 of how far the person's "
     "brain activity sits above their own 30-second resting baseline (model trained on public rest-versus-arithmetic data, "
     "cross-validated AUC 0.76 on lab EEG; on lab data rest reads 0 and arithmetic a median of 31; it has not yet been shown "
     "to separate task from rest on this dry cap). If 'replay' names a file, this is a RECORDED session replayed, not a "
@@ -117,25 +117,30 @@ CONTEXT = (
 
 
 def claude_debrief(s, mode="full"):
+    """Returns (text, source); source names the model that actually wrote the text, or the template."""
     import anthropic
     client = anthropic.Anthropic()
     if mode == "live":
+        # the live line gets the evidence and replay flag too, not only the last minute (else it cannot say "unverified")
+        live = dict(last_60s=s.get("last_60s", {}), evidence=s.get("evidence", {}), replay=s.get("replay", False))
         prompt = (CONTEXT + " You are a live coach. In ONE short plain sentence (under 25 words), say what the last 60 seconds "
-                  "show, combining load, the person's answer pace and errors, and the signal quality. JSON:\n" + json.dumps(s.get("last_60s", s)))
+                  "show, combining load, the person's answer pace and errors, and the signal evidence. JSON:\n" + json.dumps(live))
     else:
-        prompt = (CONTEXT + " Write exactly three short plain-English lines for a supervisor: 1) when load peaked, how long it stayed "
-                  "high and how it differed between the marked conditions, 2) how answers and errors related to load if a challenge ran, "
-                  "3) one practical recommendation. State the confidence from signal_quality. No headings, no bullets. Session summary as JSON:\n"
+        prompt = (CONTEXT + " Write exactly three short plain-English lines for the person and their team: 1) when load peaked, how long it "
+                  "stayed high and how it differed between the marked conditions, 2) how answers and errors related to load if a challenge ran, "
+                  "3) one next step for the session (for example rebaseline, fix contact, repeat the Alpha check), no health or work advice. "
+                  "State the confidence from 'evidence' first, then signal_quality. No headings, no bullets. Session summary as JSON:\n"
                   + json.dumps(s))
+    model = "claude-sonnet-5-5" if mode == "live" else "claude-opus-5-5"      # the once-a-minute coach line is cheap; the debrief gets Opus
     resp = client.messages.create(
-        model="claude-sonnet-5-5" if mode == "live" else "claude-opus-5-5",     # the once-a-minute coach line is cheap; the debrief gets Opus
+        model=model,
         max_tokens=120 if mode == "live" else 400,
         output_config={"effort": "low"},
         messages=[{"role": "user", "content": prompt}],
     )
     if resp.stop_reason == "refusal":
-        return fallback_debrief(s)
-    return "".join(b.text for b in resp.content if b.type == "text").strip()
+        return (fallback_live(s) if mode == "live" else fallback_debrief(s)), "template (model refused)"
+    return "".join(b.text for b in resp.content if b.type == "text").strip(), model
 
 
 class H(BaseHTTPRequestHandler):
@@ -196,7 +201,7 @@ class H(BaseHTTPRequestHandler):
                 return
             mode = data.get("mode", "full")
             try:
-                text, source = claude_debrief(s, mode), "claude-opus-5-5"
+                text, source = claude_debrief(s, mode)
             except Exception as e:  # no credentials, offline, or an API error: never block the demo
                 text, source = (fallback_live(s) if mode == "live" else fallback_debrief(s)), f"template ({type(e).__name__})"
             self._send(200, json.dumps({"text": text, "source": source, "summary": s}).encode(), "application/json")

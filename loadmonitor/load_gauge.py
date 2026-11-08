@@ -48,7 +48,7 @@ POSTERIOR = ["Pz", "O1", "P3", "P4"]
 
 def alpha_height(x):
     """Alpha peak height in dB per channel: mean of 8 to 13 Hz above a 1/f line fitted on 3 to 7 and 15 to 30 Hz.
-    About +6 dB at Pz/O1 for lab-cap EEG at rest with eyes closed, about 0 for flat noise (overnight test, 8 Nov)."""
+    About +6 dB at Pz/O1 for lab-cap EEG at rest (eegmat; eye state not stated by the dataset), about 0 for flat noise (overnight test, 8 Nov)."""
     from scipy.signal import iirnotch, tf2sos, welch
     x = x - x.mean(1, keepdims=True)
     t = np.linspace(-1, 1, x.shape[1])
@@ -142,7 +142,7 @@ def main():
     ap.add_argument("--alarm", type=float, default=70.0, help="load percent that triggers the alarm")
     ap.add_argument("--hold", type=float, default=20.0, help="s above --alarm before it fires")
     ap.add_argument("--smooth", type=float, default=8.0, help="s of smoothing on the gauge")
-    ap.add_argument("--gain", type=float, default=40.0, help="load points per spread of the model output above the wearer's rest (36-subject sweep: 40 = task median 45, rest false alarm 2 percent)")
+    ap.add_argument("--gain", type=float, default=40.0, help="load points per spread of the model output above the wearer's rest (36-subject lab sweep, 5-channel model, alarm 50 held 20 s: gain 40 gives rest 0, task median 31, 0.1 percent of rest seconds in alarm)")
     ap.add_argument("--strict", action="store_true", help="contact gate + settle check before the baseline, and freeze on contact loss (off: the plain behaviour)")
     ap.add_argument("--speed", type=float, default=1.0, help="replay speed")
     ap.add_argument("--stall-after", type=float, default=None, help="test only, with --fake: stop sending data after this many seconds")
@@ -690,7 +690,7 @@ def main():
                     if not alarmed and t - above_since >= a.hold:
                         alarmed = True
                         print(f"t={t:6.1f} ALARM load {load_pct:.0f}", flush=True)
-                        speak("High mental load. Take a break.")
+                        speak("Load above the line.")
                 else:
                     above_since, alarmed = None, False
                 if log:
