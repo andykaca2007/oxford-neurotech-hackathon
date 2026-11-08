@@ -10,7 +10,8 @@ Slides (hash `#n` jumps straight to one): 0 title (Team Avengers; the raw and cl
 1 the problem (a head whose load trace spikes against a flat "nothing" line, then the alpha and theta shifts measured
 in 36 lab people), 2 the solution (headset, the six-filter chain, a dial that swings to the real peak of 89),
 3 opening numbers (raw vs cleaned trace, the load under arithmetic, three numbers), 4 video, 5 the six filters,
-6 the spectrum, 7 how it works, 8 ROC, 9 training curve, 10 what comes next.
+6 the spectrum, 7 how it works, 8 ROC, 9 training curve, 10 limitations (contact picture of the dry cap, 36 held-out
+AUROCs one bar each), 11 what comes next. Each slide carries a small top-right tag naming the judging criterion it answers.
 
 The video slide plays `deck/demo.mp4` (the 8 Nov recording, converted from the phone's HEVC to H.264 so browsers
 play it: `ffmpeg -i in.MOV -vf scale=-2:1080 -c:v libx264 -crf 22 -pix_fmt yuv420p -movflags +faststart -c:a aac
