@@ -537,7 +537,8 @@ def main():
                                                 d_low=round(best["d_low"], 1), d_high=round(best["d_high"], 1), noise_uv=round(noise, 1),
                                                 text=(f"{'PASS' if ok else 'FAIL'}: at {best['ch']} eyes closed vs open, alpha 8 to 13 Hz {best['rise']:+.1f} dB, "
                                                       f"3 to 7 Hz {best['d_low']:+.1f} dB, 15 to 30 Hz {best['d_high']:+.1f} dB closed windows above the open range {best['sep']:.0%} (pass needs alpha +3, 3 dB above both flanks, and 80%); noise {noise:.0f} uV"
-                                                      + ("" if ok else ". Repeat once before changing anything")))
+                                                      + ("" if ok else ". Repeat once before changing anything: noise was low enough to test, so this is not a contact verdict, "
+                                                                       "and some people show little alpha (3 of 36 lab people on a gel cap stay under +3 dB even with eyes closed)")))
                         # layout check: the same rule on each of the 8 electrodes on its own
                         per = {}
                         for ch in MONTAGE:

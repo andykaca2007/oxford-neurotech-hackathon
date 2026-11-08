@@ -60,7 +60,7 @@ Ranking: severity as re-rated by the adversary, then grouped so that issues with
 | 50 | medium | stats-adv1 | ADDED | The positive control and the gain sweep come from alpha-rich (likely eyes-closed) lab data, but live Calibrate and the demo run eyes open, so the 91 percent does not transfer | partly done (iteration 23): the PhysioNet page does not state the eye condition; the lab spectra suggest eyes closed, so live tests now run eyes closed for baseline, rest and subtraction (PROTOCOL.md); positive control not re-run on eyes-open data |
 | 51 | low | alpha-2 | confirmed | Check never starts and hangs at 'starting' when every posterior channel is dead | done (4177a08) |
 | 52 | low | alpha-3 | confirmed | Synthetic PASS test was one lucky position; the same sine fails at 3 of 4 positions | done (4177a08) |
-| 53 | low | alpha-4 | confirmed | About 1 in 12 real brains fails even with a gel cap and perfect contact | open |
+| 53 | low | alpha-4 | confirmed | About 1 in 12 real brains fails even with a gel cap and perfect contact | done (iteration 24): a testable FAIL (noise under the gate) now says it is not a contact verdict and that 3 of 36 lab people show little alpha; it already said repeat once, not fix contact |
 | 54 | low | alpha-6 | confirmed | Live alpha readout is the max of up to four noisy channels and often looks like alpha on eyes-open noise | open |
 | 55 | low | alpha-adv2 | ADDED | Closed-phase windows start before the eyes can be closed | open |
 | 56 | low | calib-3 | confirmed | No minimum folds or windows per block: dropped noisy windows can turn the 4-fold test into a 1-fold test, which passes the null about 10x more often | open |

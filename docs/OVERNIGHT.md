@@ -335,3 +335,9 @@ Rules for every change: it must be tested on recorded data with a split that is 
 - CRITIQUE #50 stats-adv1 PARTLY DONE. Checked the source: the PhysioNet eegmat page states serial subtraction, ICA-cleaned 60 s segments and a 50 Hz notch, but not the eye condition. The critic's spectra (lab alpha +7.5 dB at rest, +5.0 during arithmetic) point to eyes closed in both. PROTOCOL.md now has live tests run eyes closed for baseline, rest and subtraction, matching the likely training condition and removing blink and gaze artefact. Not done: re-running the Calibrate positive control on an eyes-open workload dataset.
 - Paing chose to test live now; the loop will skip its heavy tests while a live headset session is running, so they do not steal CPU from the gauge.
 
+### Critique iteration 24 (8 Nov, about 10:35)
+
+- Paing is testing the headset live, so this round ran only the unit tests (12 passed) and a targeted gauge run; the long smoke and replay tests wait until no headset session is running, so they cannot slow the live gauge.
+- Live test so far (10:25 to 10:33, from the raw files): every electrode reads exactly +200 mV with no noise (OPEN) for whole sessions: the amplifier is not connecting to the cap. Not a software fault; same as 7 Nov. Added headset/live_check.py (OPEN / SATURATED / noise per electrode every 2 s; says NOT RECORDING when run_all is stopped and follows new sessions). A 100 mV saturation rule was tried and dropped: quiet channels in his recordings sit at a median 80 mV offset, so only the last 4 mV before the limit count as SATURATED.
+- CRITIQUE #53 alpha-4 DONE. A FAIL with noise under the gate already said "repeat once" (not "fix the contact"); it now also says the noise was low enough to test, so it is not a contact verdict, and that 3 of 36 lab people on a gel cap stay under +3 dB even with eyes closed. Checked by an Alpha check on the lab replay (FAIL as expected: no eye closure in that file; no crash).
+
