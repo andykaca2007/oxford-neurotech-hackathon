@@ -56,10 +56,10 @@ Ranking: severity as re-rated by the adversary, then grouped so that issues with
 | 46 | medium | serverpage-5 | confirmed | Debrief statistics count held and frozen seconds as measured load and are never reset on Rebaseline | done (3a013a4) |
 | 47 | medium | serverpage-adv1 | ADDED | After Rebaseline the page still says 'personal model ON', and the page's own held message tells the user to press Rebaseline | done (797f41a) |
 | 48 | medium | stats-2 | confirmed | Calibration null: 81 overlapping positions from about 13 independent runs; the 0.80 bar was set on the same null that then 'validates' it | done (625ba64) |
-| 49 | medium | stats-4 | confirmed | Alpha check: false-pass rate depends on how many channels are live, and sensitivity (false FAIL) was never measured | open |
+| 49 | medium | stats-4 | confirmed | Alpha check: false-pass rate depends on how many channels are live, and sensitivity (false FAIL) was never measured | done (4177a08) |
 | 50 | medium | stats-adv1 | ADDED | The positive control and the gain sweep come from alpha-rich (likely eyes-closed) lab data, but live Calibrate and the demo run eyes open, so the 91 percent does not transfer | open |
-| 51 | low | alpha-2 | confirmed | Check never starts and hangs at 'starting' when every posterior channel is dead | open |
-| 52 | low | alpha-3 | confirmed | Synthetic PASS test was one lucky position; the same sine fails at 3 of 4 positions | open |
+| 51 | low | alpha-2 | confirmed | Check never starts and hangs at 'starting' when every posterior channel is dead | done (4177a08) |
+| 52 | low | alpha-3 | confirmed | Synthetic PASS test was one lucky position; the same sine fails at 3 of 4 positions | done (4177a08) |
 | 53 | low | alpha-4 | confirmed | About 1 in 12 real brains fails even with a gel cap and perfect contact | open |
 | 54 | low | alpha-6 | confirmed | Live alpha readout is the max of up to four noisy channels and often looks like alpha on eyes-open noise | open |
 | 55 | low | alpha-adv2 | ADDED | Closed-phase windows start before the eyes can be closed | open |

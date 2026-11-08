@@ -255,3 +255,9 @@ Rules for every change: it must be tested on recorded data with a split that is 
   So my earlier "chance never reached 0.80" was wrong: chance passes about 1 time in 10. The bar stays at 0.80 (choosing a new one from these same numbers would repeat the circularity; at 0.85 the lab null still passes 6 percent and the positive control drops to 77 percent). The gauge comment, the pass text on the page, and the morning summary now say what a pass means: rest and task blocks were separable for this person, not that load is measured. Counterbalanced block order and an artefact-control block are still open ideas.
 - Also: the pygame window's alarm still said "HIGH LOAD: take a break"; now "load held above the alarm line".
 - Checks: smoke ALL PASS; 16 replays 0 failed; commit gated.
+
+### Critique iteration 16, 09:10
+
+- CRITIQUE #49 stats-4 and #52 alpha-3: the Alpha check's sensitivity rested on one synthetic sine replay, and the best-of-4-channel rule was a multiple comparison. tests/alpha_check_eval.py now measures both sides with the gauge's own rule at every 10 s position of his recordings (245 positions, about 61 non-overlapping): chance (no eyes closing) passes 1.3 percent of testable checks; real lab rest EEG injected into the closed phase passes about 30 percent of testable checks at his noise; 38 percent of checks are too noisy to test. Best of Pz/O1/P3/P4 and best of Pz/O1 give the same numbers (P3/P4 are rarely live), so the rule is unchanged. Open: sensitivity on a real eyes-open vs eyes-closed dataset (PhysioNet EEGMMIDB runs 1 and 2) was not run offline.
+- CRITIQUE #51 alpha-2: the check's clock sat inside "a posterior channel is live", so with the back row dead it never started and later fired by itself, possibly during Calibrate. Now it runs regardless and ends with "NO LIVE BACK ELECTRODE ... fix the back of the cap" (checked on the all-dead 23:03 recording).
+- Checks: smoke ALL PASS; 16 replays 0 failed; commit gated.
