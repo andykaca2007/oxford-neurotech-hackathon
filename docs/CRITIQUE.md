@@ -47,8 +47,8 @@ Ranking: severity as re-rated by the adversary, then grouped so that issues with
 | 37 | medium | gauge-adv2 | ADDED | A model channel that rails after the baseline still feeds the model and moves the load by up to 14 points | done (0c25f19) |
 | 38 | medium | model-3 | confirmed | Live 5-channel model cannot be rebuilt from committed code; the documented rebuild commands overwrite it with a different model | done (02b14a1) |
 | 39 | medium | model-adv1 | ADDED | A dead or railed model channel is not removed: after the common reference it becomes a copy of the negated reference and is scored as if it were real EEG | done (0c25f19) |
-| 40 | medium | ops-3 | confirmed | The 'whichever amplifier answers' task still forces U8-2025.10.14, and the serial flip broke 1 in 5 launches | open |
-| 41 | medium | ops-5 | confirmed | Manual VS Code tasks run different alarm settings and unpaired file names from run_all.sh | open |
+| 40 | medium | ops-3 | confirmed | The 'whichever amplifier answers' task still forces U8-2025.10.14, and the serial flip broke 1 in 5 launches | done (2d1b5e4) |
+| 41 | medium | ops-5 | confirmed | Manual VS Code tasks run different alarm settings and unpaired file names from run_all.sh | done (2d1b5e4) |
 | 42 | medium | ops-adv2 | ADDED | Page label and debrief still use alarm 70 while the live alarm is 50 | done (ae1fc8d) |
 | 43 | medium | ops-adv3 | ADDED | Restarting the page server mid-session re-fires Rebaseline, Alpha check or Calibrate | open |
 | 44 | medium | serverpage-3 | confirmed | CONTEXT prompt claims are stale after the overnight changes | open |
