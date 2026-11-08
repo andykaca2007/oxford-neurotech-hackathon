@@ -236,7 +236,7 @@ def main():
     ap.add_argument("--alarm", type=float, default=70.0, help="load percent that triggers the alarm")
     ap.add_argument("--hold", type=float, default=20.0, help="s above --alarm before it fires")
     ap.add_argument("--smooth", type=float, default=8.0, help="s of smoothing on the gauge")
-    ap.add_argument("--gain", type=float, default=40.0, help="load points per spread of the model output above the wearer's rest (36-subject lab sweep, 5-channel model, alarm 50 held 20 s: gain 40 gives rest 0, task median 31, 0.1 percent of rest seconds in alarm)")
+    ap.add_argument("--gain", type=float, default=40.0, help="load points per spread of the model output above the wearer's rest (36-subject lab sweep, 5-channel model, alarm 50 held 20 s: gain 40 gives rest 0, task median 31, 0.1 percent of rest seconds in alarm, which is one or two alarm episodes over about 5,300 rest seconds; 16 of 36 people reach the alarm during arithmetic, and the sweep cannot tell gain 40 from 50 apart)")
     ap.add_argument("--strict", action="store_true", help="contact gate + settle check before the baseline, and freeze on contact loss (off: the plain behaviour)")
     ap.add_argument("--speed", type=float, default=1.0, help="replay speed")
     ap.add_argument("--stream", default="Unicorn", help="LSL stream name to read (run_all.sh gives each session its own)")
