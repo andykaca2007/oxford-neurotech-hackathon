@@ -50,10 +50,10 @@ Ranking: severity as re-rated by the adversary, then grouped so that issues with
 | 40 | medium | ops-3 | confirmed | The 'whichever amplifier answers' task still forces U8-2025.10.14, and the serial flip broke 1 in 5 launches | done (2d1b5e4) |
 | 41 | medium | ops-5 | confirmed | Manual VS Code tasks run different alarm settings and unpaired file names from run_all.sh | done (2d1b5e4) |
 | 42 | medium | ops-adv2 | ADDED | Page label and debrief still use alarm 70 while the live alarm is 50 | done (ae1fc8d) |
-| 43 | medium | ops-adv3 | ADDED | Restarting the page server mid-session re-fires Rebaseline, Alpha check or Calibrate | open |
-| 44 | medium | serverpage-3 | confirmed | CONTEXT prompt claims are stale after the overnight changes | open |
+| 43 | medium | ops-adv3 | ADDED | Restarting the page server mid-session re-fires Rebaseline, Alpha check or Calibrate | done (3a013a4) |
+| 44 | medium | serverpage-3 | confirmed | CONTEXT prompt claims are stale after the overnight changes | done (3a013a4) |
 | 45 | medium | serverpage-4 | confirmed | Hardcoded thresholds disagree with the launched gauge: debrief uses 70 while the alarm is 50; held subtitle says 'of 8' and '3 or more' | done (416d029) |
-| 46 | medium | serverpage-5 | confirmed | Debrief statistics count held and frozen seconds as measured load and are never reset on Rebaseline | open |
+| 46 | medium | serverpage-5 | confirmed | Debrief statistics count held and frozen seconds as measured load and are never reset on Rebaseline | done (3a013a4) |
 | 47 | medium | serverpage-adv1 | ADDED | After Rebaseline the page still says 'personal model ON', and the page's own held message tells the user to press Rebaseline | done (797f41a) |
 | 48 | medium | stats-2 | confirmed | Calibration null: 81 overlapping positions from about 13 independent runs; the 0.80 bar was set on the same null that then 'validates' it | open |
 | 49 | medium | stats-4 | confirmed | Alpha check: false-pass rate depends on how many channels are live, and sensitivity (false FAIL) was never measured | open |
