@@ -176,3 +176,9 @@ Rules for every change: it must be tested on recorded data with a split that is 
   - Tested with a test-only --stall-after on the fake source (his stale bridge still owns the Unicorn stream name, so the live path was not used): NO DATA after 2 s, Ctrl-C stops the gauge within 2.5 s with no traceback, page age passes 3 s once the gauge stops. Added as a smoke step.
   - Note for the morning: run_all.sh will now stop the 01:21 processes still running in his Terminal when he next launches; closing that Terminal first is still cleaner.
 - Checks: smoke ALL PASS (new stall step included), 16 replays 0 failed; commit gated on both exit codes.
+
+### Critique iteration 5, 07:21
+
+- CRITIQUE #18 serverpage-2: the debrief's only quality evidence was the clean-channel count, which is high (4.8 of 5 on the 01:15 run) on a recording that FAILS the Alpha check; the Alpha check, calibration and personal-model results never reached it. Now the summary carries them as evidence (brain_signal_shown is true only after a passed Alpha check), the LLM context says the clean count is amplitude only, and both templates open with "Unverified: the Alpha check has not passed" until it does. Unit-checked with a FAIL and a PASS.
+- CRITIQUE #45 serverpage-4 (same lines): the debrief counted and quoted 70 while the gauge alarms at 50; now it uses the gauge's alarm level. The page's held subtitle said "of 8 channels" and "3 or more"; it now says N of 5 and when load resumes. A replay is named in the template.
+- Checks: page JavaScript parses; smoke ALL PASS; 16 replays 0 failed; commit gated on both.
