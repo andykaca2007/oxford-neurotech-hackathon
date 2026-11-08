@@ -186,6 +186,11 @@ def main():
     fat_sd = 0.1
     rest_mean, rest_sd = 0.3, 0.2
     lost = []
+    # fatigue: a baseline of at least 15 clean windows, and nothing shown before 20 min of monitoring. The ratio's
+    # 180 s smoothing cannot reach 'Tiring' honestly in a short demo; what moves it in minutes is artefact and
+    # baseline steps (CRITIQUE fatigue-3: lab rest stays 45 to 55, his sessions step 0.2 to 0.4 log10 with no task).
+    FAT_MIN_BASE, FAT_SHOW_S = 15, 1200
+    fat_ok, t_mon0 = False, None
     personal, calib_task = None, []
     replay_marks = []
     if a.replay:
@@ -259,7 +264,9 @@ def main():
             sig = [[int(v) for v in row] for row in Xs]
         except Exception:
             pass
-        body = json.dumps(dict(t=round(t_now, 1), state=state, load=round(load_pct, 1), fatigue=round(fatigue_pct, 1), clean=int(clean_n), fatigue_held=bool(clean_n < 3 and not a.fake), load_held=bool((clean_n < a.load_min_clean or bool(lost)) and not a.fake), contact=bool(contact or not a.strict), alarm=bool(alarmed), alarm_at=a.alarm, hold_s=a.hold, n_model_ch=len(IDX),
+        body = json.dumps(dict(t=round(t_now, 1), state=state, load=round(load_pct, 1), fatigue=(round(fatigue_pct, 1) if (fat_ok and t_mon0 is not None and t_now - t_mon0 >= FAT_SHOW_S and np.isfinite(fatigue_pct)) or (a.fake and np.isfinite(fatigue_pct)) else None),
+                               fatigue_note=("" if fat_ok else "no fatigue baseline (fewer than 15 clean seconds); press Rebaseline when clean") if base is not None else "",
+                               fatigue_wait_s=(max(0, int(FAT_SHOW_S - (t_now - t_mon0))) if (fat_ok and t_mon0 is not None) else None), clean=int(clean_n), fatigue_held=bool(clean_n < 3 and not a.fake), load_held=bool((clean_n < a.load_min_clean or bool(lost)) and not a.fake), contact=bool(contact or not a.strict), alarm=bool(alarmed), alarm_at=a.alarm, hold_s=a.hold, n_model_ch=len(IDX),
                                calibration=dict(active=cal["active"], block=None if (not cal["active"] or cal["t0"] is None) else int((t_now - cal["t0"]) // CAL_BLOCK_S) + 1,
                                                 blocks=CAL_BLOCKS, result=cal["result"]), alpha_now=None if alpha_now is None else round(alpha_now, 1),
                                alpha_check=dict(active=ac["active"], elapsed=None if (not ac["active"] or ac["t0"] is None) else round(t_now - ac["t0"]), result=ac["result"]), personal=personal is not None, calib=len(calib_task), calib_s=a.calib_s, replay=(os.path.basename(a.replay) if a.replay else False), channels=chans, sig=sig,
@@ -423,6 +430,7 @@ def main():
                 base, chan_base, fat_ema, fatigue_pct, alarmed, above_since, ema = None, None, None, 0.0, False, None, None
                 base_feats.clear(); base_chan.clear(); base_fat.clear(); base_covs.clear(); amp_hist.clear(); asr_cal.clear(); p_recent.clear()
                 personal = None; calib_task.clear(); cal.update(active=False, t0=None, blocks={}, result=None, said=set())
+                fat_ok, t_mon0, fatigue_pct = False, None, float("nan"); fat_recent.clear()
                 if asr is not None:
                     asr.V = None
                 print(f"t={t:6.1f} REBASELINE requested from the page", flush=True)
@@ -480,19 +488,19 @@ def main():
                     if riem is not None:
                         riem.set_baseline(base_covs)
                     chan_base = {k: np.mean([c[k] for c in base_chan], axis=0) for k in ("tot", "th", "al")}
-                    fat_sd = max(float(np.std(base_fat)), 0.05) if len(base_fat) >= 3 else 0.1
-                    if len(base_fat) >= 5 and FAT_REF:
+                    # fatigue needs its own baseline: at least FAT_MIN_BASE clean windows. No lab-mean fallback and no
+                    # invented spread (a dry-cap resting ratio sits above every lab subject; CRITIQUE fatigue-2)
+                    fat_ok = len(base_fat) >= FAT_MIN_BASE
+                    fat_start = 50.0
+                    if fat_ok:
                         fat_base = float(np.median(base_fat))
-                        # the percentile among 36 lab-cap subjects does NOT transfer to a dry cap (a dry resting ratio sits
-                        # above all of them), so it is printed for information only; the scale starts at 50 = "your start"
-                        # and moves with this session, scored against the spread of your own baseline
-                        pct = 100.0 * float(np.mean(np.array(FAT_REF) < fat_base))
-                        fat_start = 50.0
-                        print(f"# fatigue: start 50 (your own start); baseline ratio {fat_base:.2f} +/- {fat_sd:.2f} from {len(base_fat)} clean windows (lab-cap percentile {pct:.0f}, not used)", flush=True)
+                        fat_sd = max(float(np.std(base_fat)), 0.05)
+                        pct = 100.0 * float(np.mean(np.array(FAT_REF) < fat_base)) if FAT_REF else float("nan")
+                        print(f"# fatigue: baseline ratio {fat_base:.2f} +/- {fat_sd:.2f} from {len(base_fat)} clean windows; shown after {FAT_SHOW_S // 60} min of monitoring (lab-cap percentile {pct:.0f}, not used)", flush=True)
                     else:
-                        fat_base, fat_start = (float(np.median(base_fat)) if base_fat else float(np.mean(FAT_REF)) if FAT_REF else 1.2), 50.0
-                        print(f"# fatigue start unknown (only {len(base_fat)} clean baseline windows under {a.quality_uv:.0f} uV): starting at 50", flush=True)
-                    fatigue_pct = fat_start      # held rows before the first scored window show the start, not 0
+                        print(f"# fatigue OFF: only {len(base_fat)} clean baseline windows (needs {FAT_MIN_BASE}); press Rebaseline when the signal is clean", flush=True)
+                    t_mon0 = t
+                    fatigue_pct = fat_start if fat_ok else float("nan")      # held rows before the first scored window
                     state = "monitoring"
                     print("# baseline done", flush=True)
                     speak("Baseline done")
@@ -612,8 +620,11 @@ def main():
                     fat_ema = fat_base
                 # percentile start, then drift scored against his own baseline spread: +10 points per spread above rest,
                 # capped at 25 points per doubling of the ratio so a noisy baseline cannot make it hypersensitive
-                z = (fat_ema - fat_base) / fat_sd
-                fatigue_pct = float(np.clip(fat_start + min(10 * z, (fat_ema - fat_base) / 0.301 * 25) if z > 0 else fat_start + 10 * z, 0, 100))
+                if fat_ok:
+                    z = (fat_ema - fat_base) / fat_sd
+                    fatigue_pct = float(np.clip(fat_start + min(10 * z, (fat_ema - fat_base) / 0.301 * 25) if z > 0 else fat_start + 10 * z, 0, 100))
+                else:
+                    fatigue_pct = float("nan")
                 if load_pct >= a.alarm:
                     above_since = above_since or t
                     if not alarmed and t - above_since >= a.hold:

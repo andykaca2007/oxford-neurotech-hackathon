@@ -63,7 +63,7 @@ def main():
                     except ValueError:
                         bad += 1
                         continue
-                    if not (math.isfinite(load) and math.isfinite(fat)):
+                    if not math.isfinite(load):          # fatigue may be nan by design (no fatigue baseline)
                         bad += 1
                         continue
                     by.setdefault(p[4], []).append(load)

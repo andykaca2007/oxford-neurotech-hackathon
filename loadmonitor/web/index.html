@@ -341,9 +341,14 @@ async function tick(){
       document.getElementById('basebar').style.display='block'; document.getElementById('basefill').style.width=(100*s.baseline_progress)+'%';
     }
     const fv = document.getElementById('fval'), fl = document.getElementById('flabel');
-    if (s.baseline_done && s.fatigue !== undefined) {
+    if (s.baseline_done && s.fatigue !== undefined && s.fatigue !== null) {
       const f = Math.round(s.fatigue); fv.textContent = f; fv.className = 'n' + (f >= 60 ? ' hot' : '');
       fl.textContent = s.fatigue_held ? 'Held · noisy' : f >= 70 ? 'Tiring' : f >= 40 ? 'Steady' : 'Recovering';
+    } else if (s.baseline_done) {
+      fv.textContent='—'; fv.className='n dim';
+      fl.textContent = s.fatigue_note ? s.fatigue_note
+        : (s.fatigue_wait_s !== null && s.fatigue_wait_s !== undefined) ? 'trend needs 20 min of monitoring · ' + Math.ceil(s.fatigue_wait_s / 60) + ' min to go'
+        : 'not available';
     } else { fv.textContent='—'; fv.className='n dim'; fl.textContent='Baseline'; }
     let top=null, dead=[];
     const present = new Set((s.channels||[]).map(c => c.name));
