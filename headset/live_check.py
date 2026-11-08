@@ -1,6 +1,7 @@
 """Live electrode check while run_all.sh is running: reads the newest raw recording every 2 s.
 
     .venv/bin/python headset/live_check.py          # in a second Terminal tab; Ctrl-C to stop
+    .venv/bin/python headset/live_check.py --4ch    # when run_all uses the 4-electrode model (no C3)
 
 Per electrode, over the last 2 s:
   OPEN      every sample at +/-200 mV: the amplifier is not connected to that electrode (press the amplifier in)
@@ -24,7 +25,7 @@ from montage import MONTAGE  # noqa: E402
 FS = 250
 BB = butter(4, [1, 40], btype="band", fs=FS, output="sos")
 NO = tf2sos(*iirnotch(50.0, 30.0, fs=FS))
-MODEL = {"Fz", "C3", "Cz", "Pz", "O1"}
+MODEL = {"Fz", "C3", "Cz", "Pz", "O1"} if "--4ch" not in sys.argv else {"Fz", "Cz", "Pz", "O1"}
 
 
 def tail_rows(path, n):
@@ -56,7 +57,7 @@ def main():
             time.sleep(2); continue
         if p != path:
             path = p
-            print(f"watching {os.path.basename(path)}  (model electrodes marked *; all 5 must be under 100 for a load number)", flush=True)
+            print(f"watching {os.path.basename(path)}  (model electrodes marked *; all of them must be under 100 for a load number)", flush=True)
         x = tail_rows(path, 2 * FS)
         if x is None or x.shape[1] < FS:
             print("waiting for data ..."); time.sleep(2); continue

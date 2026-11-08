@@ -8,6 +8,7 @@
 #   ./run_all.sh lab                  # demo fallback: a held-out lab person (rest, arithmetic, rest) through the live page;
 #                                     #   build it once with .venv/bin/python loadmonitor/lab_demo.py
 #   ./run_all.sh U8-2025.10.14 andy   # second word = who is wearing it; names the recordings
+#   ./run_all.sh "" paing 4ch         # third word 4ch = the model without C3 (Fz Cz Pz O1), when C3 will not connect
 #
 # Every run writes two CSVs in recordings/: <who>_<date>_<time>_raw.csv (all 8 channels, 250 Hz,
 # from the bridge) and <who>_<date>_<time>_gauge.csv (load, alarm and features, once a second).
@@ -22,6 +23,12 @@ ALLOW="U8-2025.10.14 U8-2025.11.14"   # our two amplifiers; other teams' Unicorn
 WHO="${2:-anon}"                      # ./run_all.sh U8-2025.10.14 paing  -> files named with the wearer
 REPLAY_FILE=""
 MODEL_ARG=""                          # plain string, not an array: bash 3.2 with set -u rejects an empty array
+if [ "${3-}" = "4ch" ]; then
+  if [ ! -f models/readiness_4ch.joblib ]; then
+    echo "models/readiness_4ch.joblib missing: .venv/bin/python loadmonitor/model_search.py --fit-best --robust --invariant --channels Fz,Cz,Pz,O1 --out models/readiness_4ch.joblib"; exit 1; fi
+  MODEL_ARG="--model models/readiness_4ch.joblib"
+  echo "MODEL: 4 electrodes (Fz Cz Pz O1), C3 not used"
+fi
 if [ "$SERIAL" = "lab" ]; then
   REPLAY_FILE=$(ls -t demo/lab_eegmat_s*_raw.csv 2>/dev/null | head -1); WHO="lab"
   if [ -z "$REPLAY_FILE" ] || [ ! -f models/readiness_demo.joblib ]; then
@@ -93,6 +100,6 @@ elif [ "$SERIAL" = "replay" ]; then
   $PY loadmonitor/load_gauge.py --replay "$REPLAY_FILE" $MODEL_ARG --speed 1 --web --no-ui --alarm 50 --hold 20 --smooth 12 --log "${SESSION}_gauge.csv"
 else
   # alarm at 50 held 20 s, 12 s smoothing: on this cap Zetamac reaches about 50 and rest wobbles 0 to 36
-  $PY loadmonitor/load_gauge.py --lsl --stream "$STREAM" --web --no-ui --alarm 50 --hold 20 --smooth 12 --log "${SESSION}_gauge.csv"
+  $PY loadmonitor/load_gauge.py --lsl --stream "$STREAM" $MODEL_ARG --web --no-ui --alarm 50 --hold 20 --smooth 12 --log "${SESSION}_gauge.csv"
 fi
 cleanup
