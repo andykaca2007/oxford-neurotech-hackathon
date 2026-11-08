@@ -4,7 +4,8 @@
 
 Per electrode, over the last 2 s:
   OPEN      every sample at +/-200 mV: the amplifier is not connected to that electrode (press the amplifier in)
-  SATURATED sitting above 100 mV (near the 200 mV limit): drifting at the rail, not EEG; press in, wait 10 s
+  SATURATED within 4 mV of the 200 mV limit without touching it: pinned at the rail, not EEG; press in, wait 10 s
+            (a DC offset alone is normal on this amplifier: quiet channels in his recordings sit at a median 80 mV)
   FLAT      no signal at all
   number    1 to 40 Hz noise in uV after a 50 Hz notch: under 40 good, 40 to 100 fair, over 100 too noisy
 """
@@ -56,8 +57,8 @@ def main():
             name = c + ("*" if c in MODEL else " ")
             if np.mean(np.abs(np.abs(w) - 200000) < 1) > 0.5:
                 out.append(f"{name} OPEN")
-            elif np.median(np.abs(w)) > 100000:
-                out.append(f"{name} SATURATED")       # within reach of the 200 mV limit: an input drifting at the rail, not EEG
+            elif np.median(np.abs(w)) > 196000:
+                out.append(f"{name} SATURATED")       # pinned just under the 200 mV limit
             elif w.std() < 1e-6:
                 out.append(f"{name} FLAT")
             else:
