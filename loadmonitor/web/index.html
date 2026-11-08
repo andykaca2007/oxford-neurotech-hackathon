@@ -59,6 +59,8 @@
   .hero .row { display:flex; align-items:baseline; gap:18px; margin-top:12px; }
   .hero .row b { font-size:15px; font-weight:400; letter-spacing:.08em; text-transform:uppercase; }
   .hero .row span { font-size:11px; color:var(--dim); }
+  .why { margin-top:10px; font-size:12px; letter-spacing:.04em; color:var(--mid); min-height:1.4em; }
+  .why b { font-weight:400; color:var(--fg); }
   .bar { height:1px; background:var(--line); position:relative; margin-top:16px; }
   .bar i { position:absolute; left:0; top:-1px; height:3px; width:0; background:var(--fg); transition:width .5s; }
   .fat { margin-top:auto; padding-top:16px; border-top:1px solid var(--line2); display:grid; grid-template-columns:auto 1fr; gap:20px; align-items:baseline; }
@@ -148,6 +150,7 @@
     <div class="hero">
       <div class="n dim" id="val">—</div>
       <div class="row"><b id="label">Baseline</b><span id="sub">sit still, eyes open</span></div>
+      <div class="why" id="why" title="Measured markers shown next to the load. The load itself comes from the trained model; these are what moved alongside it."></div>
       <div class="bar" id="basebar"><i id="basefill"></i></div>
       <div class="fat">
         <div class="n dim" id="fval">—</div>
@@ -226,6 +229,22 @@ const Q_COL = { good:'#2fbf71', fair:'#fab413', bad:'#f05a24' };
 let hmView = null;   // null: automatic (contact before the baseline, while load is held, during an Alpha check)
 let hmAuto = true;
 document.getElementById('hm_unit').onclick = () => { hmView = hmAuto ? 'change' : 'contact'; };
+// "why did it move": the measured markers next to the load, smoothed over 5 s (median), from the real channel values
+const whyBuf = { a: [], t: [] };
+const med = v => { const s = [...v].sort((x, y) => x - y); return s.length ? s[s.length >> 1] : null; };
+function whyLine(s) {
+  const el = document.getElementById('why');
+  if (!s.baseline_done) { el.textContent = ''; return; }
+  const ch = n => (s.channels || []).find(c => c.name === n && !c.dead && c.alpha_db !== undefined && c.alpha_db !== null);
+  const post = ['Pz', 'O1'].map(ch).filter(Boolean).map(c => c.alpha_db);
+  const fz = ch('Fz');
+  if (post.length) { whyBuf.a.push(post.reduce((x, y) => x + y, 0) / post.length); if (whyBuf.a.length > 10) whyBuf.a.shift(); }
+  if (fz && fz.theta_db !== undefined) { whyBuf.t.push(fz.theta_db); if (whyBuf.t.length > 10) whyBuf.t.shift(); }
+  const h = s.hist || [], d = h.length > 10 ? h[h.length - 1] - h[h.length - 11] : 0;
+  const trend = d > 5 ? 'Rising' : d < -5 ? 'Falling' : 'Steady';
+  const f = v => v === null ? '—' : (v > 0 ? '+' : '') + v.toFixed(1) + ' dB';
+  el.innerHTML = '<b>' + trend + '</b> · alongside it: posterior alpha <b>' + f(med(whyBuf.a)) + '</b>, frontal theta <b>' + f(med(whyBuf.t)) + '</b> vs your rest';
+}
 let ALARM = 70, HOLD = 20;   // updated from the gauge's --alarm each poll
 let chal = { on:false, cur:4000, answers:0, errors:0, t0:0, errT:[] };
 let lastT = 0;
@@ -439,6 +458,7 @@ async function tick(){
     const fz = (s.channels||[]).find(c=>c.name==='Fz'), pz = (s.channels||[]).find(c=>c.name==='Pz');
     document.getElementById('m_theta').innerHTML = (fz && s.baseline_done && fz.theta_db !== undefined ? (fz.theta_db>0?'+':'')+fz.theta_db.toFixed(1)+'<small>dB</small>' : '—');
     document.getElementById('m_alpha').innerHTML = (pz && s.baseline_done && pz.alpha_db !== undefined ? (pz.alpha_db>0?'+':'')+pz.alpha_db.toFixed(1)+'<small>dB</small>' : '—');
+    whyLine(s);
     draw(s.hist||[]);
     drawSig(s.sig);
   } catch(e) { document.getElementById('state').textContent='waiting'; nodataOverlay('NO DATA: the page server is not answering'); document.getElementById('val').textContent = '—'; }

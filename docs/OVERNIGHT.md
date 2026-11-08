@@ -379,3 +379,10 @@ Rules for every change: it must be tested on recorded data with a split that is 
 
 - CRITIQUE #56 calib-3 DONE. Since the strict gate (6b5deb6), Calibrate keeps only windows with every model channel clean, so thin blocks became likely on this cap (103 of 115 calibration starts on his recordings had a block under 5 clean windows, tests/calib_inject.py). A result now counts only if all 8 blocks keep at least 10 of their 15 windows and all 4 folds score; otherwise "calibration incomplete: clean windows per block [...]" and the generic model stays. Checked: on his 01:03 recording it reports incomplete ([7, 6, 6, 8, 0, 0, 0, 0]); on the lab replay all blocks complete and the 4 folds score (AUC 0.44, model OFF, as expected since that file does not alternate rest and task on Calibrate's schedule). Not done: prompts on a timer independent of window quality.
 - Checks: smoke ALL PASS; 16 replays 0 failed.
+
+### Iteration 31 (8 Nov, about 12:25): "why did it move" line, lab person's markers
+
+- Paing asked for the LLM ideas that best help win; chosen: (2) a line explaining load changes and (1) a contact copilot. Built (2) first because it shows in the recorded video and must work without an API key.
+- What the lab demo person's markers actually do (demo/lab_eegmat_s09, vs the 30 s baseline, 4 s Welch, medians): posterior alpha Pz +2.8 / -2.1 / +1.2 dB and O1 +2.7 / -2.8 / +2.1 dB for rest / arithmetic / recovery; frontal theta Fz +0.2 / -0.9 / +0.3 dB. So for this person alpha drops during arithmetic and theta does NOT rise; the video narration was corrected to say "posterior alpha drops".
+- Page: under the load, after the baseline, "Rising/Steady/Falling · alongside it: posterior alpha X dB, frontal theta Y dB vs your rest" (trend = load change over 10 s; values = 5 s median of the gauge's own per-channel dB vs baseline). Tooltip says the load comes from the model and these are markers that moved alongside it. Seen in the browser on the lab replay: "Rising · posterior alpha -2.8 dB, frontal theta -0.3 dB". No LLM call, so it cannot fail on camera.
+- Checks: page script parses (node --check); smoke ALL PASS; 16 replays 0 failed.
