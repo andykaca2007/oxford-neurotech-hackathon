@@ -278,3 +278,8 @@ Rules for every change: it must be tested on recorded data with a split that is 
   - Chosen for specificity, since the check gates whether any number is trusted. Honest cost: at last night's noise, real lab-level alpha passes only 17 percent of testable checks. The variant was picked on these same recordings, so it needs validation on new data (an eyes-open vs eyes-closed dataset or a good-contact session).
   - One shared function (alpha_rule) is used by the gauge and tests/alpha_check_eval.py, which now runs the null, real-alpha and flank-attack scenarios. The result text shows the alpha and both flank changes.
 - Checks: smoke ALL PASS; 16 replays 0 failed; commit gated.
+
+### Critique iteration 18, 09:29
+
+- CRITIQUE #16 ops-adv1 (and ops-8): every bridge published the LSL name "Unicorn" and the gauge took the first one on the network, so a teammate's or another team's stream on the same Wi-Fi, or an old session, could be read. Now run_all.sh gives each session its own name (Unicorn_<stamp>) for the bridge, the connect check and the gauge, and the gauge prefers a stream from this laptop. Checked with the simulated bridge: a uniquely named stream is found (hostname PAINGs-MacBook-Pro.local) and a missing name stops with a clear message.
+- Checks: smoke ALL PASS; 16 replays 0 failed; commit gated.

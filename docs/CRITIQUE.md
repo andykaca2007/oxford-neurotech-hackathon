@@ -23,7 +23,7 @@ Ranking: severity as re-rated by the adversary, then grouped so that issues with
 | 13 | high | ops-1 | confirmed | Headset data stop freezes the whole demo silently; page keeps saying live | done (98c5ed8) |
 | 14 | high | ops-2 | confirmed | Ctrl-C cannot stop a stalled run, and the stale gauge attaches to the next session's stream and page | done (98c5ed8) |
 | 15 | high | ops-4 | confirmed | The replay fallback needs author-only steps, is not labelled on the page, and shows a flat gauge | done (ae1fc8d): launcher, VS Code task and label; the recordings themselves show no clear effect, say so on stage |
-| 16 | high | ops-adv1 | ADDED | Gauge and connect check take any 'Unicorn' LSL stream on the network, not this laptop's | open |
+| 16 | high | ops-adv1 | ADDED | Gauge and connect check take any 'Unicorn' LSL stream on the network, not this laptop's | done (df44fb4) |
 | 17 | high | serverpage-1 | confirmed | Replay mode is not shown on the page: a recorded session reads as live | done (ae1fc8d) |
 | 18 | high | serverpage-2 | confirmed | The debrief's confidence gate passes on noise; alpha-check and calibration results are never sent to the LLM | done (416d029) |
 | 19 | medium | alpha-1 | confirmed | Pass rule was set from the null only; on real alpha at last night's noise it passes 1 check in 5 | done (2a743ce): noise gate and honest FAIL text; thresholds unchanged (no noise level reaches 80 percent sensitivity under any +3/+3 variant per the adversary) |
@@ -81,7 +81,7 @@ Ranking: severity as re-rated by the adversary, then grouped so that issues with
 | 71 | low | model-4 | confirmed | OPTIMIZE.md and the gauge help describe a different live model and quote a headline AUC that is not the live model's | open |
 | 72 | low | model-5 | confirmed | optimize.py fits the Riemannian tangent space on held-out subjects and saves hard-coded AUCs | open |
 | 73 | low | ops-7 | confirmed | Raw recordings hide BLE outages, so replays splice across them and markers drift | open |
-| 74 | low | ops-8 | confirmed | Smoke test stays green through these failures; its sim stream shares the real stream's identity (plausible, not run) | open |
+| 74 | low | ops-8 | confirmed | Smoke test stays green through these failures; its sim stream shares the real stream's identity (plausible, not run) | done (df44fb4) |
 | 75 | low | serverpage-6 | confirmed | Alarm and 'take a break' stay on while the load is held or contact is lost | open |
 | 76 | low | serverpage-7 | confirmed | LLM call can block for many minutes, wrong model label, live refusal returns the full debrief, truncation unchecked | open |
 | 77 | low | serverpage-8 | confirmed | Fatigue labels 'Tiring' and 'Recovering' claim tiredness, which the overnight work says the ratio does not measure | done (ee26e5b) |
