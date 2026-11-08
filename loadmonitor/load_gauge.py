@@ -7,13 +7,16 @@
 Protocol: the first --baseline seconds (default 30) the person sits quietly: that is their
 own calm, and every later reading is relative to it (readiness_model.py showed this lifts
 held-out detection from 63 to 70 percent). Then a 4 s window every second goes through the
-same features and the trained classifier (models/readiness.joblib); the gauge shows a
-smoothed probability of "under load" as 0 to 100. When it stays above --alarm for --hold
+same features and the trained classifier (models/readiness.joblib: 5 channels, 29 amplitude-invariant
+features, gradient boosting, LOSO AUC 0.76 over 36 lab people); the gauge shows the smoothed
+model output, scored against the wearer's own rest, as 0 to 100. When it stays above --alarm for --hold
 seconds the screen goes red and the Mac speaks. Keys: B redo the baseline, Esc quit.
 
-Output rows: t, load_pct, alarm, then the 17 features. Honest reading of the number: how much
-this brain looks like the public "doing arithmetic" recordings versus its own rest; not sleepiness,
-not risk. Needs the model's channels alive (layout A: all 8).
+Output rows (--log): t, load_pct, fatigue_pct, alarm, condition, contact, then the model's 29 features.
+Load = 40 x (smoothed p minus rest mean) / rest sd, clipped at 0; alarm when it stays above --alarm for --hold
+scored seconds. Honest reading of the number: how much this brain looks like the public "doing arithmetic"
+recordings versus its own rest; not sleepiness, not risk. Needs the model's 5 channels (Fz C3 Cz Pz O1)
+connected and clean, else the load is held or, with --show-noisy, shown greyed as low confidence.
 """
 import argparse
 import json
@@ -242,6 +245,7 @@ def main():
     ap.add_argument("--quality-uv", type=float, default=100.0, help="a channel counts as clean when its RMS is under this (uV) both BEFORE the reference and burst mask (4 to 30 Hz, notched) and AFTER the full chain; fatigue needs 3 clean")
     ap.add_argument("--log")
     ap.add_argument("--no-ui", action="store_true")
+    ap.add_argument("--quiet", action="store_true", help="no spoken prompts (also set by OXN_QUIET=1; the tests use it so a background run never talks)")
     ap.add_argument("--web", action="store_true", help="post state to gauge_server.py (http://localhost:8765) every second")
     ap.add_argument("--web-port", type=int, default=8765)
     ap.add_argument("--seconds", type=float, default=0)
@@ -376,8 +380,11 @@ def main():
         small = pygame.font.SysFont("Menlo", 18)
         ui = dict(pygame=pygame, screen=screen, font=font, huge=huge, small=small, hist=deque(maxlen=600))
 
+    quiet = a.quiet or os.environ.get("OXN_QUIET") == "1"
+
     def speak(txt):
-        subprocess.Popen(["say", txt])
+        if not quiet:
+            subprocess.Popen(["say", txt])
 
     state = f"BASELINE: sit still, eyes open, {a.baseline:g} s"
     hist = deque(maxlen=600)

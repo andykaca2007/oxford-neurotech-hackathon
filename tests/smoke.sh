@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+export OXN_QUIET=1     # the gauge never speaks from a test
 # Demo smoke test: every path the Sunday demo uses, except the Bluetooth link itself.
 #   ./tests/smoke.sh          (from the repo root; takes about 2 minutes)
 # Prints PASS/FAIL per step and exits non-zero if anything failed.

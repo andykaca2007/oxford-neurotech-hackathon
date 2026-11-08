@@ -21,6 +21,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 sys.path.insert(0, HERE)
 import free_port  # noqa: E402
+os.environ["OXN_QUIET"] = "1"      # the gauge never speaks from a test
 
 PY = os.path.join(ROOT, ".venv", "bin", "python")
 SPEED = 40

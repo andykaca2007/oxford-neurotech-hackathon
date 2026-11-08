@@ -1,6 +1,8 @@
 # Model optimisation, scored honestly
 
-Layout A channels (Fz C3 Cz C4 Pz P3 P4 O1), 4 s windows, 50 percent overlap, baseline-relative. 36 subjects of PhysioNet eegmat. STRICT = the candidate is chosen on subjects 0 to 17 and reported on 18 to 35; that is the number to quote. LOSO36 is leave-one-subject-out over everyone (slightly optimistic for tuned rows). '8 s vote' averages two consecutive windows, which is what the live gauge's smoothing does.
+Layout A channels (Fz C3 Cz C4 Pz P3 P4 O1), 4 s windows, 50 percent overlap, baseline-relative. 36 subjects of PhysioNet eegmat. STRICT = the candidate is chosen on subjects 0 to 17 and reported on 18 to 35. LOSO36 is leave-one-subject-out over everyone (slightly optimistic for tuned rows).
+
+**Which number to quote (8 Nov, CRITIQUE model-4):** the table below belongs to the parked 8-channel, 1 to 40 Hz stack, not to the model that runs live. The live 5-channel model has no strict held-out number; its LOSO AUC is 0.760 (median per person 0.81) over the same 36 people on which window, overlap, feature set and classifier were chosen, so it is a tuned LOSO figure, not a strict one. Quote 0.76 LOSO, labelled as such; never the 0.867 strict figure, which is the stack's. '8 s vote' averages two consecutive windows, which is what the live gauge's smoothing does.
 
 | candidate | choose-half AUC | held-out half acc | held-out half AUC | LOSO36 acc | LOSO36 AUC | 8 s vote AUC |
 |---|---|---|---|---|---|---|
@@ -23,9 +25,9 @@ The dry Unicorn on hair gives 1 to 40 Hz amplitudes of 300 to 4000 uV that chang
 
 (Superseded, see the end of this file.) Gradient boosting on the 60 invariant features (`--fit-best --invariant`, 8 channels). Costs 0.034 AUC on clean data, immune to a gain change shared by all channels (NOT to a gain change on one electrode: with independent per-channel gains of 0.3x to 3x the LOSO AUC falls from 0.762 to 0.658, because the median reference mixes channels and the Fz minus Pz theta gradient compares absolute power across channels; CRITIQUE model-2). The stack (0.867 strict AUC) is parked in models/readiness_stack.joblib; it also uses absolute power and has the same weakness on this headset.
 
-## Final live processing (8 Nov 00:30): robust chain
+## Live processing at 8 Nov 00:30 (superseded by the section at the end; kept for the table)
 
-Common average reference (dead channels excluded), 50 Hz notch, 3 to 30 Hz order-6 band-pass, Hilbert-envelope burst masking (samples over 4x the window median blanked), median-averaged Welch over 1 s segments, bands theta/alpha/low beta/high beta only, 44 amplitude-invariant features, gradient boosting. Load shown = 15 + 20 z against the wearer's own rest (model output mean and spread measured during the baseline).
+At 00:30 the chain was: common average reference (dead channels excluded), 50 Hz notch, 3 to 30 Hz order-6 band-pass, Hilbert-envelope burst masking (samples over 4x the window median blanked), median-averaged Welch over 1 s segments, bands theta/alpha/low beta/high beta only, 44 amplitude-invariant features on 8 channels, gradient boosting, load = 15 + 20 z. None of that is what runs now. The live chain, read from models/readiness.joblib on 8 Nov: 5 channels (Fz C3 Cz Pz O1), cubic detrend, 50 Hz notch comb, MEDIAN reference, 4 to 30 Hz order 8, burst mask with protected edges, ASR k 5, median Welch; 29 amplitude-invariant features; load = 40 x (smoothed p minus rest mean) / rest sd, clipped at 0; alarm at 50 held 20 scored seconds; LOSO AUC 0.760, balanced accuracy 0.679. The table's last row is the chain at 00:30, not today's model.
 
 | model | LOSO AUC (clean lab data) | wearer's recordings, idle: median load / share above 70 |
 |---|---|---|
