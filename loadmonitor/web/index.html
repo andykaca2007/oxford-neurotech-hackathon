@@ -76,6 +76,12 @@
   .el .v { font-size:5px; font-weight:300; fill:var(--mid); }
   .el.dead circle { fill:none; stroke:var(--dim); stroke-dasharray:2 2; }
   .el.dead text { fill:var(--dim); }
+  .lbl em.tog { cursor:pointer; color:var(--mid); border-bottom:1px dotted var(--dim); }
+  .lbl em.tog:hover { color:var(--fg); }
+  #headsvg.contact .el:not(.dead) text { fill:#000; }
+  #headsvg.contact .el:not(.dead) .v { fill:#000; font-weight:400; }
+  .contactline { font-size:10.5px; line-height:1.5; color:var(--dim); text-align:center; padding-top:8px; min-height:3em; }
+  .contactline b { font-weight:400; color:var(--fg); }
   .alarmline { display:none; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent); text-align:center; padding-top:8px; }
   body.alarm .alarmline { display:block; }
 
@@ -151,7 +157,7 @@
   </section>
 
   <section class="cell">
-    <div class="lbl"><span data-i="[2]">Electrodes · change from baseline</span><em>dB</em></div>
+    <div class="lbl"><span data-i="[2]" id="hm_lbl">Electrodes · change from baseline</span><em id="hm_unit" class="tog" title="switch between contact noise and change from baseline">dB</em></div>
     <div class="head">
       <svg viewBox="0 0 200 220" id="headsvg">
         <ellipse class="ring" cx="100" cy="110" rx="82" ry="95"/>
@@ -161,6 +167,7 @@
         <line class="ring" x1="24" y1="110" x2="176" y2="110" stroke-dasharray="1 4"/>
       </svg>
     </div>
+    <div class="contactline" id="contactline"></div>
     <div class="alarmline">Load held above the alarm line</div>
   </section>
 
@@ -215,6 +222,10 @@ function heat(db){ // -6..+6 dB: dark grey .. accent
   if (x >= 0) { const [r,g,b] = hex(CSSV('--accent')); const k = 0x27; return `rgb(${k+(r-k)*x|0},${k+(g-k)*x|0},${k+(b-k)*x|0})`; }
   const k = 0x27 + (0x10-0x27)*(-x); return `rgb(${k|0},${k|0},${k|0})`;
 }
+const Q_COL = { good:'#2fbf71', fair:'#fab413', bad:'#f05a24' };
+let hmView = null;   // null: automatic (contact before the baseline, while load is held, during an Alpha check)
+let hmAuto = true;
+document.getElementById('hm_unit').onclick = () => { hmView = hmAuto ? 'change' : 'contact'; };
 let ALARM = 70, HOLD = 20;   // updated from the gauge's --alarm each poll
 let chal = { on:false, cur:4000, answers:0, errors:0, t0:0, errT:[] };
 let lastT = 0;
@@ -363,19 +374,53 @@ async function tick(){
         : 'not available';
     } else { fv.textContent='—'; fv.className='n dim'; fl.textContent='Baseline'; }
     let top=null, dead=[];
+    const autoContact = !s.baseline_done || !!s.load_held || !!(s.alpha_check||{}).active;
+    const ctc = hmView === null ? autoContact : hmView === 'contact';
+    hmAuto = ctc;
+    document.getElementById('hm_lbl').textContent = ctc ? 'Electrodes · contact noise, 1–40 Hz' : 'Electrodes · change from baseline';
+    document.getElementById('hm_unit').textContent = ctc ? 'µV · show change' : 'dB · show contact';
+    svg.classList.toggle('contact', ctc);
     const present = new Set((s.channels||[]).map(c => c.name));
     for (const [name, e] of Object.entries(els)) e.g.style.display = present.size && !present.has(name) ? 'none' : '';
     for (const ch of (s.channels||[])) {
       const e = els[ch.name]; if (!e) continue;
       e.g.classList.toggle('dead', ch.dead);
       if (ch.dead) { dead.push(ch.name); e.v.textContent='off'; e.c.setAttribute('r',10); continue; }
+      if (s.baseline_done && ch.db !== null && ch.db !== undefined && (top===null || ch.db>top.db)) top = ch;
+      if (ctc) {      // contact view: colour = 1 to 40 Hz noise after the 50 Hz notch (green under 40 µV, red over 100)
+        e.c.setAttribute('r', 10);
+        if (ch.uv === undefined) { e.c.setAttribute('fill', '#2a2a2c'); e.v.textContent = ''; continue; }
+        e.c.setAttribute('fill', Q_COL[ch.q] || '#2a2a2c');
+        e.v.textContent = ch.uv >= 1000 ? (ch.uv/1000).toFixed(1) + 'k' : String(ch.uv);
+        continue;
+      }
       if (s.baseline_done && (ch.db === null || ch.db === undefined)) {   // no baseline for this channel (dead during it)
         e.c.setAttribute('fill', '#2a2a2c'); e.c.setAttribute('r', 10); e.v.textContent = 'no base'; continue; }
       const db = s.baseline_done ? ch.db : 0;
       e.c.setAttribute('fill', s.baseline_done ? heat(db) : '#2a2a2c');
       e.c.setAttribute('r', 10 + Math.min(6, Math.max(0, db)));
       e.v.textContent = s.baseline_done ? (db>0?'+':'')+db.toFixed(1) : '';
-      if (s.baseline_done && (top===null || db>top.db)) top = ch;
+    }
+    { // what to fix first, and whether the back row is quiet enough for the Alpha check
+      const el = document.getElementById('contactline'), chs = s.channels || [];
+      if (!ctc || !chs.length) el.innerHTML = '';
+      else {
+        const GOOD = s.contact_good_uv || 40, AMAX = s.alpha_noise_max_uv || 15;
+        const k = v => v >= 1000 ? (v/1000).toFixed(1) + 'k' : String(v);
+        const off = chs.filter(c => c.dead).map(c => c.name);
+        const noisy = chs.filter(c => !c.dead && c.uv !== undefined && c.uv >= GOOD).sort((a, b) => b.uv - a.uv).slice(0, 3);
+        const back = chs.filter(c => ['Pz','O1','P3','P4'].includes(c.name) && !c.dead && c.a_uv !== undefined);
+        const ready = back.filter(c => c.a_uv <= AMAX).map(c => c.name);
+        const lines = [];
+        if (off.length) lines.push('not connected: <b>' + off.join(' ') + '</b> · seat the amplifier, push the pin to the scalp');
+        if (noisy.length) lines.push('noisy: ' + noisy.map(c => '<b>' + c.name + '</b> ' + k(c.uv) + ' µV' + (c.hum >= 500 ? ' (hum ' + k(c.hum) + ')' : '')).join(' · ')
+                                     + (noisy.some(c => c.hum >= 500) ? ' · hum = poor skin contact: part the hair, press' : ' · sit still, relax jaw'));
+        if (!off.length && !noisy.length) lines.push('all electrodes under ' + GOOD + ' µV');
+        lines.push(ready.length ? 'alpha band quiet enough to test at <b>' + ready.join(' ') + '</b> (under ' + AMAX + ' µV, 8–13 Hz)'
+                   : 'Alpha check needs a back electrode under ' + AMAX + ' µV in 8–13 Hz' + (back.length ? ' (now ' + back.map(c => c.name + ' ' + Math.round(c.a_uv)).join(', ') + ')' : ''));
+        const txt = lines.join('<br>');
+        el.innerHTML = txt;
+      }
     }
     document.getElementById('m_top').textContent = top ? `${top.name} +${top.db.toFixed(1)} dB` : '—';
     document.getElementById('m_dead').textContent = dead.length ? dead.join(' ') : 'none';

@@ -27,7 +27,8 @@ tight, two minutes to settle.
 ## Segments, with the page's condition buttons
 | step | condition button | duration | what the wearer does |
 |---|---|---|---|
-| 0 | | 40 s | after the baseline: press **Alpha check** on the page, follow the spoken prompts (20 s eyes open, 20 s eyes closed). FAIL means fix contact before anything else |
+| 0a | | until green | (amendment 8 Nov morning) before the baseline the head map shows **contact noise** per electrode, 1 to 40 Hz after the 50 Hz notch: green under 40 uV, amber 40 to 100, red over 100, dashed = not connected. The line under the map names what to fix first. Get Pz and O1 green (part the hair, press; seat the amplifier) before going on |
+| 0 | | 40 s | after the baseline: press **Alpha check** on the page, follow the spoken prompts (20 s eyes open, 20 s eyes closed). FAIL means fix contact before anything else. The result also tests every electrode on its own and says where alpha appeared: alpha only at the front or centre means the cap is probably not in layout A |
 | 1 | baseline | 30 s | sits still, eyes open, looks at a blank wall |
 | 1b | | 160 s | optional, after the Alpha check passes: press **Calibrate**. Spoken prompts alternate 20 s rest and 20 s silent counting down in sevens, 4 times each. The page shows the held-out score; the personal model switches on only at 0.80 or above, otherwise the generic model stays |
 | 2 | mental | 3 min | **silent serial subtraction**: eyes on one fixed point, count down from 4000 in 7s in your head, no typing, no talking; say the last number at the end. (Changed 8 Nov: Zetamac's typing and gaze shifts make ASR fire on every window, so it measures movement, not effort; the model was trained on silent subtraction) |

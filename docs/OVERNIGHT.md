@@ -283,3 +283,11 @@ Rules for every change: it must be tested on recorded data with a split that is 
 
 - CRITIQUE #16 ops-adv1 (and ops-8): every bridge published the LSL name "Unicorn" and the gauge took the first one on the network, so a teammate's or another team's stream on the same Wi-Fi, or an old session, could be read. Now run_all.sh gives each session its own name (Unicorn_<stamp>) for the bridge, the connect check and the gauge, and the gauge prefers a stream from this laptop. Checked with the simulated bridge: a uniquely named stream is found (hostname PAINGs-MacBook-Pro.local) and a missing name stops with a clear message.
 - Checks: smoke ALL PASS; 16 replays 0 failed; commit gated.
+
+### Morning fix, "alpha is not showing" (8 Nov)
+
+- He asked to fix the missing alpha. The causes are mostly physical (no eyes-closed test ever run, mains hum and drift far above the brain signal, back electrodes often disconnected, possibly a different cap layout), so software cannot make alpha appear. Added what software can do:
+  - Contact view on the head map (automatic before the baseline, while load is held and during an Alpha check; toggle in the map's label): per electrode, 1 to 40 Hz RMS after the notch, median of 5 s. Thresholds measured on data: lab gel-cap rest EEG 7 to 17 uV (10th to 90th percentile); his dry cap, live channels, median 140 to 290 uV, best tenth 16 to 52 uV. Green under 40, red over 100 (the model's clean limit). The line under the map lists not-connected and noisy electrodes with hum, and whether a back electrode is quiet enough in 8 to 13 Hz for the Alpha check (the 15 uV gate).
+  - Layout check inside the Alpha check: the same band-specific rule on each of the 8 electrodes alone; the verdict adds where alpha passed. Chance on his recordings (67 non-overlapping 40 s checks, no eye closure): any of 8 passed in 1 (1.5 percent), front or centre alone in 0. The official PASS still uses the back four only.
+  - Checked on a replay (port 8797): contact colours and fix line correct (C3 and O1 about 35 uV green, Fz and Cz red with 3 to 4k hum); Alpha check on the replay FAILs as it should (no eye closure) and prints the per-electrode rises.
+

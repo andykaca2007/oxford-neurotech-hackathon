@@ -44,6 +44,41 @@ ALPHA_BAND_SOS = _butter(4, [8, 13], btype="band", fs=FS, output="sos")
 # 8 to 30 uV, about half at 2 to 8 uV. Above this level a FAIL cannot tell "no brain" from "too noisy".
 ALPHA_NOISE_MAX_UV = 15.0
 POSTERIOR = ["Pz", "O1", "P3", "P4"]
+# Contact view (page head map before the baseline): per electrode, 1 to 40 Hz RMS after a 50 Hz notch, median of the last
+# 5 s. Measured 8 Nov: lab gel-cap rest EEG (eegmat) 7 to 17 uV (10th to 90th percentile); his dry cap, live channels,
+# median 140 to 290 uV, best tenth 16 to 52 uV. Under 40 uV looks like EEG; over 100 uV (the model's clean limit,
+# --quality-uv) is artefact. Mains hum (48 to 52 Hz) is shown as a contact hint: high hum = high skin impedance.
+CONTACT_GOOD_UV, CONTACT_FAIR_UV = 40.0, 100.0
+from scipy.signal import iirnotch as _iirnotch, tf2sos as _tf2sos  # noqa: E402
+NOTCH_SOS = _tf2sos(*_iirnotch(50.0, 30.0, fs=FS))
+HUM_SOS = _butter(4, [48, 52], btype="band", fs=FS, output="sos")
+
+
+def contact_metrics(x):
+    """Per channel (hum, broadband, alpha band) RMS in uV of a raw window (channels x samples); filter edges dropped."""
+    x = x - x.mean(1, keepdims=True)
+    e = FS // 2
+    hum = sosfiltfilt(HUM_SOS, x, axis=1)[:, e:-e].std(1)
+    xn = sosfiltfilt(NOTCH_SOS, x, axis=1)
+    return hum, sosfiltfilt(SIG_SOS, xn, axis=1)[:, e:-e].std(1), sosfiltfilt(ALPHA_BAND_SOS, xn, axis=1)[:, e:-e].std(1)
+
+
+def layout_note(per):
+    """Where eyes-closed alpha passed. Alpha is largest at the back of the head (Pz O1 P3 P4 in layout A); a pass only at
+    Fz/C3/Cz/C4 suggests the cap is on another layout or rotated, or the back row is not touching. Advisory only.
+    Chance on his recordings (no eye closure, 67 non-overlapping 40 s checks, no noise gate): any of the 8 passed in 1
+    (1.5 percent), a front or central electrode alone in 0 (scratch measurement 8 Nov, method as tests/alpha_check_eval.py)."""
+    if not per:
+        return ""
+    passing = [c for c, r in per.items() if r["ok"]]
+    if not passing:
+        top = max(per, key=lambda c: per[c]["rise"])
+        return f"layout: no electrode passed; largest alpha change {per[top]['rise']:+.1f} dB at {top}"
+    back = [c for c in passing if c in POSTERIOR]
+    if back:
+        return "layout: alpha at the back (" + " ".join(back) + "), as layout A expects"
+    return ("layout: alpha passed only at " + " ".join(passing) + ", not at the back. Check the cap is in layout A "
+            "(Pz O1 P3 P4 at the back of the head) and that the back electrodes touch the scalp")
 
 
 def alpha_height(x, bands=False):
@@ -236,6 +271,7 @@ def main():
     ema, above_since, alarmed = None, None, False
     base_fat, fat_base, fat_ema, fatigue_pct, contact = [], 0.0, None, 0.0, False
     amp_hist = deque(maxlen=40)
+    contact_hist = deque(maxlen=5)          # last 5 s of contact_metrics, for the contact view
     fat_start = 0.0
     fat_sd = 0.1
     rest_mean, rest_sd = 0.3, 0.2
@@ -282,7 +318,7 @@ def main():
     # separable for this person", not "load is measured". (The earlier "none of 81 reach 0.80" counted overlapping positions.)
     CAL_BLOCKS, CAL_BLOCK_S, CAL_SKIP_S, CAL_MIN_AUC = 8, 20, 5, 0.80
     # eyes-closed alpha check: 20 s eyes open, 20 s eyes closed; PASS when posterior alpha rises 3 dB to a peak of +3 dB or more
-    ac = dict(active=False, t0=None, open=[], closed=[], noise=[], result=None, said=set())
+    ac = dict(active=False, t0=None, open=[], closed=[], open8=[], closed8=[], noise=[], result=None, said=set())
     alpha_now = None
 
     ui = None
@@ -310,6 +346,11 @@ def main():
         if chan_now is not None:
             for i, n in enumerate(CH8):
                 d = dict(name=n, dead=bool(chan_now["dead"][i]))
+                with np.errstate(all="ignore"):
+                    hum_c, bb_c, al_c = (np.nanmedian(np.array(contact_hist), axis=0)[:, i] if contact_hist else (np.nan,) * 3)
+                if not d["dead"] and np.isfinite(bb_c):             # seconds where it was dead are left out (NaN)
+                    d.update(uv=round(float(bb_c)), hum=round(float(hum_c)), a_uv=round(float(al_c), 1),
+                             q="good" if bb_c < CONTACT_GOOD_UV else "fair" if bb_c < CONTACT_FAIR_UV else "bad")
                 if chan_base is not None and not d["dead"] and chan_base_n[i] >= 10:
                     d["db"] = round(10 * float(chan_now["tot"][i] - chan_base["tot"][i]), 1)       # change vs baseline, dB
                     d["theta_db"] = round(10 * float(chan_now["th"][i] - chan_base["th"][i]), 1)
@@ -331,7 +372,7 @@ def main():
                                calibration=dict(active=cal["active"], block=None if (not cal["active"] or cal["t0"] is None) else int((t_now - cal["t0"]) // CAL_BLOCK_S) + 1,
                                                 blocks=CAL_BLOCKS, result=cal["result"]), alpha_now=None if alpha_now is None else round(alpha_now, 1),
                                alpha_check=dict(active=ac["active"], elapsed=None if (not ac["active"] or ac["t0"] is None) else round(t_now - ac["t0"]), result=ac["result"]), personal=personal is not None, calib=len(calib_task), calib_s=a.calib_s, replay=(os.path.basename(a.replay) if a.replay else False), channels=chans, sig=sig,
-                               baseline_done=base is not None, baseline_s=a.baseline,
+                               baseline_done=base is not None, baseline_s=a.baseline, contact_good_uv=CONTACT_GOOD_UV, contact_fair_uv=CONTACT_FAIR_UV, alpha_noise_max_uv=ALPHA_NOISE_MAX_UV,
                                baseline_progress=min(1.0, len(base_feats) / a.baseline) if base is None else 1.0,
                                hist=list(hist))).encode()
         try:
@@ -365,7 +406,7 @@ def main():
             ac_n = int(reply.get("alpha_check", 0))
             if ac_n != cond["alpha_check"]:
                 cond["alpha_check"] = ac_n
-                ac.update(active=True, t0=None, open=[], closed=[], noise=[], result=None, said=set())
+                ac.update(active=True, t0=None, open=[], closed=[], open8=[], closed8=[], noise=[], result=None, said=set())
             cal_n = int(reply.get("calibrate", 0))
             if cal_n != cond["calibrate"]:
                 cond["calibrate"] = cal_n
@@ -440,8 +481,17 @@ def main():
             rail = np.any(np.abs(np.abs(X8) - 200000) < 1, axis=1)   # ANY sample on the +/-200 mV rail = open input (per sample, CRITIQUE dsp-2)
             dead = dead | rail
             chan_now["dead"] = dead
+            hum_u, bb_u, al_u = contact_metrics(X8)
+            bb_u[dead] = np.nan; hum_u[dead] = np.nan; al_u[dead] = np.nan
+            contact_hist.append(np.stack([hum_u, bb_u, al_u]))
             post = [MONTAGE.index(c) for c in POSTERIOR if c in MONTAGE and not dead[MONTAGE.index(c)]]
-            ah, abands = alpha_height(X8[post], bands=True) if post else (None, None)
+            live8 = [i for i in range(8) if not dead[i]]
+            rec8 = {}
+            if live8:
+                ah8, ab8 = alpha_height(X8[live8], bands=True)       # per-row steps only, so the posterior rows equal a
+                rec8 = {MONTAGE[i]: (ah8[j], ab8[j]) for j, i in enumerate(live8)}   # posterior-only call
+            ah = np.array([rec8[MONTAGE[i]][0] for i in post]) if post else None
+            abands = np.array([rec8[MONTAGE[i]][1] for i in post]) if post else None
             alpha_now = float(np.max(ah)) if post else None
             # the check's clock, prompts and verdict run whether or not a posterior channel is live, so a dead back
             # row gets an answer instead of a check that starts minutes later (CRITIQUE alpha-2)
@@ -452,6 +502,10 @@ def main():
                         speak("Alpha check. Eyes open, look at one point.")
                         print(f"t={t:6.1f} ALPHA CHECK started: 20 s eyes open, then 20 s eyes closed", flush=True)
                     el = t - ac["t0"]
+                    if 4 <= el < 20 and rec8:
+                        ac["open8"].append(rec8)
+                    if 24 <= el < 40 and rec8:
+                        ac["closed8"].append(rec8)
                     if 4 <= el < 20 and post:
                         ac["open"].append({MONTAGE[i]: (ah[j], abands[j]) for j, i in enumerate(post)})
                         xa = X8[post] - X8[post].mean(1, keepdims=True)
@@ -478,8 +532,20 @@ def main():
                                                 text=(f"{'PASS' if ok else 'FAIL'}: at {best['ch']} eyes closed vs open, alpha 8 to 13 Hz {best['rise']:+.1f} dB, "
                                                       f"3 to 7 Hz {best['d_low']:+.1f} dB, 15 to 30 Hz {best['d_high']:+.1f} dB closed windows above the open range {best['sep']:.0%} (pass needs alpha +3, 3 dB above both flanks, and 80%); noise {noise:.0f} uV"
                                                       + ("" if ok else ". Repeat once before changing anything")))
+                        # layout check: the same rule on each of the 8 electrodes on its own
+                        per = {}
+                        for ch in MONTAGE:
+                            r8 = alpha_rule(ac["open8"], ac["closed8"], [ch])
+                            if r8 is not None:
+                                per[ch] = dict(rise=round(r8["rise"], 1), margin=round(r8["margin"], 1), ok=bool(r8["ok"]))
+                        ac["result"]["per_ch"] = per
+                        ac["result"]["layout"] = layout_note(per)
+                        if ac["result"]["layout"]:
+                            ac["result"]["text"] += ". " + ac["result"]["layout"]
                         ac["active"] = False
                         print(f"t={t:6.1f} ALPHA CHECK {ac['result']['text']}", flush=True)
+                        if per:
+                            print("#   alpha rise per electrode, eyes closed vs open: " + "  ".join(f"{c} {r['rise']:+.1f}{'*' if r['ok'] else ''}" for c, r in per.items()), flush=True)
                         speak("Open your eyes. " + ("Alpha rhythm found." if ac["result"]["ok"] else
                                                     ("Too noisy to test. Improve the back electrodes." if "NOISY" in ac["result"]["text"] else "No back electrode connected.") if ac["result"].get("untestable") else
                                                     "No alpha change found."))
