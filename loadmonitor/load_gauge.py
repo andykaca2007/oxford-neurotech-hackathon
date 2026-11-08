@@ -864,15 +864,16 @@ def main():
                         load_pct = float(np.clip(a.gain * (ema - pers_anchor[0]) / pers_anchor[1], 0, 100))   # 0 at his out-of-fold rest
                     else:
                         load_pct = float(np.clip(a.gain * (ema - rest_mean) / rest_sd, 0, 100))   # 0 at his own rest; --gain points per spread above it
-                # fatigue: slow EMA (about 2 min) of the ratio drift, starting AT the baseline; +0.5 log10 (ratio x3) reads as 100
+                # fatigue: slow EMA of the ratio (divisor 180 at 1 Hz, so a 180 s time constant), starting AT the baseline ratio
                 if fat_now is not None:
                     fat_recent.append(fat_now)
                     fat_robust = float(np.median(fat_recent))        # median of the last clean windows: one bad window cannot move it
                     fat_ema = fat_base if fat_ema is None else fat_ema + (fat_robust - fat_ema) / 180.0
                 elif fat_ema is None:
                     fat_ema = fat_base
-                # percentile start, then drift scored against his own baseline spread: +10 points per spread above rest,
-                # capped at 25 points per doubling of the ratio so a noisy baseline cannot make it hypersensitive
+                # fixed start of 50, then drift scored against his own baseline spread: +10 points per spread above rest,
+                # capped at 25 points per doubling of the ratio so a noisy baseline cannot make it hypersensitive. A sustained
+                # +0.5 log10 therefore tops out at 50 + 41.5 = 91.5 (and lower when the spread is wide: 64 at sd 0.36)
                 if fat_ok:
                     z = (fat_ema - fat_base) / fat_sd
                     fatigue_pct = float(np.clip(fat_start + min(10 * z, (fat_ema - fat_base) / 0.301 * 25) if z > 0 else fat_start + 10 * z, 0, 100))

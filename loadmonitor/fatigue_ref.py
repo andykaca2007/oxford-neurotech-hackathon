@@ -2,9 +2,12 @@
 
     .venv/bin/python loadmonitor/fatigue_ref.py     # writes loadmonitor/fatigue_ref.json
 
-Per subject: rest recording, 0 to 60 s, 4 s windows, per channel log10((theta + alpha) / beta) from a Welch PSD
-(same bands and same channel set as the live gauge), median over channels, mean over windows. The live gauge
-places the wearer's baseline ratio in this distribution (percentile) as the fatigue starting point, then drifts.
+Per subject: rest recording, 0 to 60 s, 4 s windows through the live cleaning chain (clean_window + ASR), per channel
+log10((theta + alpha) / beta) from Hilbert band envelopes (median over time), median over the 8 channels listed in CH,
+mean over windows. The live gauge computes the same ratio over its 5 model channels only, so the two are not on the
+same channel set; the gauge prints the wearer's percentile in this distribution for information and does not use it
+(the fatigue start is a fixed 50 and the drift is scored against the wearer's own baseline spread; CRITIQUE fatigue-2,
+fatigue-7).
 """
 import glob
 import json

@@ -71,7 +71,7 @@ Ranking: severity as re-rated by the adversary, then grouped so that issues with
 | 61 | low | claims-6 | confirmed | The calibration and alpha-check null tests count overlapping windows as independent, and the 91 percent drops its own caveat | done (625ba64) |
 | 62 | low | claims-adv2 | ADDED | The alpha check says 'Brain signal confirmed' out loud, and the button claims it 'proves' brain contact | done (2a743ce): spoken result now 'Alpha rhythm found', not 'Brain signal confirmed' |
 | 63 | low | claims-adv3 | ADDED | OPTIMIZE.md describes a live chain and load mapping that the code no longer runs | open |
-| 64 | low | fatigue-7 | confirmed | Stale docstrings and comments describe a different fatigue index | open |
+| 64 | low | fatigue-7 | confirmed | Stale docstrings and comments describe a different fatigue index | done (docstring and comments corrected; fatigue_ref.json kept as a printed, unused reference) |
 | 65 | low | gauge-4 | confirmed | The smoothing EMA starts at 0.2, not at the wearer's rest output, so load is held near 0 for the first 20 to 45 s after every baseline | done (iteration 36): EMA starts at rest_mean; lab demo unchanged (rest 0, peak 88.7, alarm 35 s) |
 | 66 | low | gauge-5 | confirmed | Alarm hold counts held (unscored) seconds, so the alarm can fire after 1 to 2 scored seconds above threshold | done (iteration 37): hold counts scored seconds above the line, reset by every held branch; lab demo alarm unchanged (t 138, 20 scored seconds) |
 | 67 | low | gauge-6 | confirmed | Calibrate block prompts are tied to scored seconds, but block labels follow the clock | done (iteration 38): clock and prompts run on wall time every second; samples gated on each block's prompt time; Alpha check and Calibrate refuse to overlap |
