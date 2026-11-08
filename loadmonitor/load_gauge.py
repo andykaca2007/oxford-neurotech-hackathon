@@ -86,6 +86,7 @@ def main():
     ap.add_argument("--smooth", type=float, default=8.0, help="s of smoothing on the gauge")
     ap.add_argument("--gain", type=float, default=40.0, help="load points per spread of the model output above the wearer's rest (36-subject sweep: 40 = task median 45, rest false alarm 2 percent)")
     ap.add_argument("--strict", action="store_true", help="contact gate + settle check before the baseline, and freeze on contact loss (off: the plain behaviour)")
+    ap.add_argument("--load-min-clean", type=int, default=2, help="hold the load (label Held, noisy) when fewer channels than this are clean after the chain")
     ap.add_argument("--quality-uv", type=float, default=100.0, help="a channel counts as clean when its RMS AFTER the cleaning chain is under this (uV); fatigue needs 3 clean")
     ap.add_argument("--log")
     ap.add_argument("--no-ui", action="store_true")
@@ -192,7 +193,7 @@ def main():
             sig = [[int(v) for v in row] for row in Xs]
         except Exception:
             pass
-        body = json.dumps(dict(t=round(t_now, 1), state=state, load=round(load_pct, 1), fatigue=round(fatigue_pct, 1), clean=int(clean_n), fatigue_held=bool(clean_n < 3 and not a.fake), contact=bool(contact or not a.strict), alarm=bool(alarmed), alarm_at=a.alarm, hold_s=a.hold, channels=chans, sig=sig,
+        body = json.dumps(dict(t=round(t_now, 1), state=state, load=round(load_pct, 1), fatigue=round(fatigue_pct, 1), clean=int(clean_n), fatigue_held=bool(clean_n < 3 and not a.fake), load_held=bool(clean_n < a.load_min_clean and not a.fake), contact=bool(contact or not a.strict), alarm=bool(alarmed), alarm_at=a.alarm, hold_s=a.hold, channels=chans, sig=sig,
                                baseline_done=base is not None, baseline_s=a.baseline,
                                baseline_progress=min(1.0, len(base_feats) / a.baseline) if base is None else 1.0,
                                hist=list(hist))).encode()
@@ -370,6 +371,15 @@ def main():
                     print(f"# {state}", flush=True)
                 if log and header_written[0]:
                     log.write(f"{t:.1f},{load_pct:.1f},{fatigue_pct:.1f},{int(alarmed)},{cond['now']},0," + ",".join("nan" for _ in f) + "\n")
+                hist.append(round(load_pct, 1))
+                post_state(t)
+            elif clean_n < a.load_min_clean and not a.fake:
+                # too few channels survive the cleaning chain: the model would be reading noise. Hold the load, say so.
+                state = f"NOISY: {clean_n}/8 clean, load held"
+                if int(t) % 5 == 0:
+                    print(f"# {state}", flush=True)
+                if log and header_written[0]:
+                    log.write(f"{t:.1f},{load_pct:.1f},{fatigue_pct:.1f},{int(alarmed)},{cond['now']},1," + ",".join("nan" for _ in f) + "\n")
                 hist.append(round(load_pct, 1))
                 post_state(t)
             else:

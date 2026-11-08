@@ -314,8 +314,8 @@ async function tick(){
     if (s.baseline_done) {
       const v = Math.max(0, Math.min(100, s.load));
       val.textContent = Math.round(v); val.className = 'n' + (v >= ALARM-20 ? ' hot' : '');
-      label.textContent = lost ? 'Contact lost' : s.alarm ? 'High load' : v >= ALARM ? 'Load rising' : v >= ALARM-30 ? 'Working' : 'Calm';
-      sub.textContent = lost ? (s.state||'').replace('CONTACT LOST: ','') + ' · frozen until the cap is back' : 'alarm after ' + HOLD + ' s above ' + ALARM;
+      label.textContent = lost ? 'Contact lost' : s.load_held ? 'Held · noisy' : s.alarm ? 'High load' : v >= ALARM ? 'Load rising' : v >= ALARM-30 ? 'Working' : 'Calm';
+      sub.textContent = lost ? (s.state||'').replace('CONTACT LOST: ','') + ' · frozen until the cap is back' : s.load_held ? (s.clean||0) + ' of 8 channels clean · fix the cap, press Rebaseline when clean reads 3 or more' : 'alarm after ' + HOLD + ' s above ' + ALARM;
       document.getElementById('basebar').style.display='none';
     } else {
       const waiting = (s.state||'').startsWith('WAITING') || (s.state||'').startsWith('SETTLING');
