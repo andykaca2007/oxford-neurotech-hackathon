@@ -25,7 +25,7 @@ INK = "#EDEDED"
 INK2 = "#8A8A8A"          # subtitle, ticks, source, de-emphasised text
 GRID = "#1E1E1E"
 GREY = "#4A4A4A"          # context series
-ACCENT = "#F05A24"        # the one important thing (the page's alarm orange)
+ACCENT = "#2FBF71"        # the one important thing (the page's green)
 LEAD = "#EDEDED"          # lead series: ink, so colour is spent only on the accent
 BAND = "#141414"          # shaded spans (task phase, brain bands)
 

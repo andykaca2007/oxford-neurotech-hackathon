@@ -222,7 +222,7 @@ a.set_xlim(1, n_est); a.set_ylim(0.45, 1.0); a.set_xlabel("boosting trees"); a.s
 F.source(fig, "Source: PhysioNet EEG during mental arithmetic, 36 people. Live recipe: 5 channels, cleaning chain, 29 amplitude-invariant features, 200 trees of depth 2.")
 out(fig, 5, "training_curve.png")
 
-fig = F.page(f"On people it has never seen, the model reaches an AUROC of {pooled:.2f}", "Each of 36 people scored by a model trained on the other 35, one 4 s window at a time; grey = one person, orange = all pooled")
+fig = F.page(f"On people it has never seen, the model reaches an AUROC of {pooled:.2f}", "Each of 36 people scored by a model trained on the other 35, one 4 s window at a time; grey = one person, green = all pooled")
 a = fig.add_axes([0.30, 0.15, 0.40, 0.63]); a.tick_params(axis="y", length=0); a.grid(True, axis="both")
 for fpr, tpr in per_curves:
     a.plot(fpr, tpr, color=F.GREY, lw=0.8, alpha=0.6)
