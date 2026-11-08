@@ -201,6 +201,7 @@ def main():
     fat_sd = 0.1
     rest_mean, rest_sd = 0.3, 0.2
     lost = []
+    chan_base_n = np.zeros(8, int)
     # fatigue: a baseline of at least 15 clean windows, and nothing shown before 20 min of monitoring. The ratio's
     # 180 s smoothing cannot reach 'Tiring' honestly in a short demo; what moves it in minutes is artefact and
     # baseline steps (CRITIQUE fatigue-3: lab rest stays 45 to 55, his sessions step 0.2 to 0.4 log10 with no task).
@@ -264,12 +265,12 @@ def main():
         if chan_now is not None:
             for i, n in enumerate(CH8):
                 d = dict(name=n, dead=bool(chan_now["dead"][i]))
-                if chan_base is not None and not d["dead"]:
+                if chan_base is not None and not d["dead"] and chan_base_n[i] >= 10:
                     d["db"] = round(10 * float(chan_now["tot"][i] - chan_base["tot"][i]), 1)       # change vs baseline, dB
                     d["theta_db"] = round(10 * float(chan_now["th"][i] - chan_base["th"][i]), 1)
                     d["alpha_db"] = round(10 * float(chan_now["al"][i] - chan_base["al"][i]), 1)
                 else:
-                    d["db"] = 0.0
+                    d["db"] = None if chan_base is not None else 0.0          # None: this channel has no baseline of its own
                 chans.append(d)
         # last 2 s of every channel, 1 to 40 Hz, 50 samples per second, for the live traces on the page
         sig = []
@@ -531,7 +532,14 @@ def main():
                     print(f"# rest calibration: model output on your rest = {rest_mean:.2f} +/- {rest_sd:.2f}; load = {a.gain:.0f} x (p - rest) / sd, 0 at rest", flush=True)
                     if riem is not None:
                         riem.set_baseline(base_covs)
-                    chan_base = {k: np.mean([c[k] for c in base_chan], axis=0) for k in ("tot", "th", "al")}
+                    # per-channel baseline over that channel's LIVE seconds only: a dead second is log10(0) = -12 and made
+                    # the head map read +100 to +200 dB later (CRITIQUE gauge-2); fewer than 10 live seconds = no baseline
+                    live_b = np.array([~c["dead"] for c in base_chan])                     # (seconds, 8)
+                    chan_base_n = live_b.sum(0)
+                    chan_base = {}
+                    for k in ("tot", "th", "al"):
+                        vals = np.array([c[k] for c in base_chan])
+                        chan_base[k] = np.where(chan_base_n > 0, (vals * live_b).sum(0) / np.maximum(chan_base_n, 1), np.nan)
                     # fatigue needs its own baseline: at least FAT_MIN_BASE clean windows. No lab-mean fallback and no
                     # invented spread (a dry-cap resting ratio sits above every lab subject; CRITIQUE fatigue-2)
                     fat_ok = len(base_fat) >= FAT_MIN_BASE
