@@ -9,7 +9,7 @@ Ranking: severity as re-rated by the adversary, then grouped so that issues with
 | # | severity | id | source | title | status |
 |---|---|---|---|---|---|
 | 1 | critical | fatigue-1 | confirmed | Flat or railed baseline makes ASR zero every later window; zeros pass the clean gate and drive fatigue to 0 'Recovering' instead of 'Held' | done (0c25f19) |
-| 2 | high | alpha-adv1 | ADDED | Alpha check passes with NO alpha when eye closure changes the 1/f fit bands (muscle relax or blinks stop) | open |
+| 2 | high | alpha-adv1 | ADDED | Alpha check passes with NO alpha when eye closure changes the 1/f fit bands (muscle relax or blinks stop) | done (a1f5027): attack pass 93 to 10 percent; sensitivity at his noise 32 to 17 percent; rule picked on these recordings |
 | 3 | high | claims-1 | confirmed | Headline pitch numbers belong to a model that does not run live, and 'shows it live' has no evidence on a real head | done (ae1fc8d) |
 | 4 | high | claims-2 | confirmed | Replay fallback shows 'live' on the page; the claimed REPLAY label does not exist | done (ae1fc8d) |
 | 5 | high | dsp-1 | confirmed | A dead model channel is turned into a copy of the negated reference and still scored, adding about +0.29 to p | done (0c25f19) |
