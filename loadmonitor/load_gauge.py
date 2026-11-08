@@ -185,6 +185,7 @@ def main():
     fat_start = 0.0
     fat_sd = 0.1
     rest_mean, rest_sd = 0.3, 0.2
+    lost = []
     personal, calib_task = None, []
     replay_marks = []
     if a.replay:
@@ -258,7 +259,7 @@ def main():
             sig = [[int(v) for v in row] for row in Xs]
         except Exception:
             pass
-        body = json.dumps(dict(t=round(t_now, 1), state=state, load=round(load_pct, 1), fatigue=round(fatigue_pct, 1), clean=int(clean_n), fatigue_held=bool(clean_n < 3 and not a.fake), load_held=bool(clean_n < a.load_min_clean and not a.fake), contact=bool(contact or not a.strict), alarm=bool(alarmed), alarm_at=a.alarm, hold_s=a.hold, n_model_ch=len(IDX),
+        body = json.dumps(dict(t=round(t_now, 1), state=state, load=round(load_pct, 1), fatigue=round(fatigue_pct, 1), clean=int(clean_n), fatigue_held=bool(clean_n < 3 and not a.fake), load_held=bool((clean_n < a.load_min_clean or bool(lost)) and not a.fake), contact=bool(contact or not a.strict), alarm=bool(alarmed), alarm_at=a.alarm, hold_s=a.hold, n_model_ch=len(IDX),
                                calibration=dict(active=cal["active"], block=None if (not cal["active"] or cal["t0"] is None) else int((t_now - cal["t0"]) // CAL_BLOCK_S) + 1,
                                                 blocks=CAL_BLOCKS, result=cal["result"]), alpha_now=None if alpha_now is None else round(alpha_now, 1),
                                alpha_check=dict(active=ac["active"], elapsed=None if (not ac["active"] or ac["t0"] is None) else round(t_now - ac["t0"]), result=ac["result"]), personal=personal is not None, calib=len(calib_task), calib_s=a.calib_s, replay=bool(a.replay), channels=chans, sig=sig,
@@ -343,7 +344,7 @@ def main():
             chan_now = dict(tot=np.log10(tot + 1e-12), th=np.log10(th + 1e-12), al=np.log10(al + 1e-12), dead=dead)
             # fatigue index: log10((theta + alpha) / beta) over the live model channels (Jap et al. 2009 ratio);
             # it drifts UP over minutes as someone tires. Not a trained model: a published ratio against the baseline.
-            rail = np.abs(np.abs(X8.mean(1)) - 200000) < 1          # +/-200 mV = open input
+            rail = np.any(np.abs(np.abs(X8) - 200000) < 1, axis=1)   # ANY sample on the +/-200 mV rail = open input (per sample, CRITIQUE dsp-2)
             dead = dead | rail
             chan_now["dead"] = dead
             post = [MONTAGE.index(c) for c in POSTERIOR if c in MONTAGE and not dead[MONTAGE.index(c)]]
@@ -384,7 +385,8 @@ def main():
                         speak("Open your eyes. " + ("Brain signal confirmed." if ac["result"]["ok"] else "No alpha change. Fix the contact."))
             live = [i for i in IDX if not dead[i]] or list(IDX)
             live_n = int(sum(not dead[i] for i in IDX))
-            contact = live_n >= 6 or a.fake
+            contact = live_n == len(IDX) or a.fake                    # every model channel live (was >= 6 of a 5-channel model, CRITIQUE gauge-1)
+            lost = [MONTAGE[i] for i in IDX if dead[i]] if not a.fake else []
             # signal quality: 1 to 40 Hz RMS per channel; dry electrodes on hair give hundreds to thousands of uV of
             # artefact, and the fatigue ratio reads artefact as theta. Fatigue uses clean channels only, else holds.
             # quality is judged on what survives the chain (detrend, notch, reference, band-pass, burst mask, ASR):
@@ -397,7 +399,7 @@ def main():
             else:
                 Xc = sosfiltfilt(SIG_SOS, Xc - Xc.mean(1, keepdims=True), axis=1)
             rms_c = Xc.std(1)
-            clean = [i for k, i in enumerate(IDX) if (not dead[i]) and rms_c[k] < a.quality_uv]
+            clean = [i for k, i in enumerate(IDX) if (not dead[i]) and 0.5 < rms_c[k] < a.quality_uv]   # zeroed by ASR is not clean
             clean_n = len(clean)
             # fatigue ratio from Hilbert band envelopes: band-pass theta, alpha, beta, take the analytic-signal envelope,
             # and use its MEDIAN over the window as the band amplitude (a burst cannot set it); median over clean channels
@@ -432,7 +434,7 @@ def main():
                     amp_hist.clear()
                     base_feats.clear(); base_chan.clear(); base_fat.clear()
                     names = [MONTAGE[i] for i in IDX if dead[i] or rail[i]]
-                    state = f"WAITING FOR CONTACT: {live_n}/8 live, dead {' '.join(names)}"
+                    state = f"WAITING FOR CONTACT: {live_n}/{len(IDX)} live, dead {' '.join(names)}"
                     if int(t) % 5 == 0:
                         print(f"# {state}", flush=True)
                     post_state(t)
@@ -446,6 +448,13 @@ def main():
                             print(f"# {state}", flush=True)
                         post_state(t)
                         continue
+                if lost:
+                    # a window with a dead model channel never enters the baseline or the ASR fit (CRITIQUE dsp-3, fatigue-1)
+                    state = f"BASELINE paused: {' '.join(lost)} not connected ({len(base_feats)}/{int(a.baseline)} s collected)"
+                    if int(t) % 5 == 0:
+                        print(f"# {state}", flush=True)
+                    post_state(t)
+                    continue
                 base_feats.append(f)
                 if asr is not None:
                     asr_cal.append(X8[IDX].copy())
@@ -499,9 +508,10 @@ def main():
                     log.write(f"{t:.1f},{load_pct:.1f},{fatigue_pct:.1f},{int(alarmed)},{cond['now']},0," + ",".join("nan" for _ in f) + "\n")
                 hist.append(round(load_pct, 1))
                 post_state(t)
-            elif clean_n < a.load_min_clean and not a.fake:
-                # too few channels survive the cleaning chain: the model would be reading noise. Hold the load, say so.
-                state = f"NOISY: {clean_n}/{len(IDX)} clean, load held"
+            elif (clean_n < a.load_min_clean or lost) and not a.fake:
+                # too few channels survive the cleaning chain, or a model channel is not connected: the model would be
+                # reading noise or an empty channel (a lost Fz moved p by +0.29, CRITIQUE dsp-1). Hold the load, say so.
+                state = (f"CHANNEL LOST: {' '.join(lost)}, load held" if lost else f"NOISY: {clean_n}/{len(IDX)} clean, load held")
                 if int(t) % 5 == 0:
                     print(f"# {state}", flush=True)
                 if log and not header_written[0]:

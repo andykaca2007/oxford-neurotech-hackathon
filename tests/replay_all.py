@@ -68,10 +68,13 @@ def main():
                         continue
                     by.setdefault(p[4], []).append(load)
                     al.setdefault(p[4], []).append(int(p[3]) if p[3].isdigit() else 0)
-            ok = (not crash) and rows > 0 and bad == 0
+            # a recording whose model channels are never all connected for 30 s gets no baseline and no scored rows:
+            # that is the correct behaviour (holding), not a failure, as long as the gauge said so
+            no_baseline = rows == 0 and not crash and "BASELINE paused" in out
+            ok = (not crash) and (rows > 0 or no_baseline) and bad == 0
             fails += 0 if ok else 1
             conds = "  ".join(f"{k} {len(v)}s mean {sum(v) / len(v):.0f} alarm {sum(al[k])}s" for k, v in sorted(by.items()))
-            reason = "" if ok else (" CRASH" if crash else "") + (" NO ROWS" if rows == 0 else "") + (f" {bad} BAD ROWS" if bad else "")
+            reason = " (no clean 30 s baseline: held, never scored)" if no_baseline else "" if ok else (" CRASH" if crash else "") + (" NO ROWS" if rows == 0 else "") + (f" {bad} BAD ROWS" if bad else "")
             print(f"{'ok  ' if ok else 'FAIL'} {os.path.basename(path)[:21]} {dur:5.0f} s  rows {rows:4d}  {conds}{reason}", flush=True)
             if crash:
                 print("     " + out[out.index("Traceback"):].strip().splitlines()[-1])

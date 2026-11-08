@@ -43,6 +43,10 @@ ROBUST_CFG = dict(lo=4.0, hi=30.0, notch=True, order=8, drop_delta=True, median=
 def clean_window(x, fs, cfg):
     """Everything before the spectrum: re-reference, notch comb, band-pass, burst masking. Shared by feats() and ASR."""
     from scipy.signal import iirnotch, tf2sos
+    # dead channels judged on the RAW window, per sample: flat, or ANY sample on the +/-200 mV rail (open input).
+    # (Testing the mean after mean removal never fired; a channel that rails for part of a window injected a
+    # 200 mV step. CRITIQUE dsp-1, dsp-2.)
+    ok = (x.std(1) > 1e-6) & ~np.any(np.abs(np.abs(x) - 200000) < 1, axis=1)
     x = x - x.mean(1, keepdims=True)
     if cfg.get("detrend"):
         # polynomial detrend: fit and subtract a low-order polynomial per channel, the slow electrode drift and sweat
@@ -59,10 +63,10 @@ def clean_window(x, fs, cfg):
     if cfg.get("car"):
         # common reference: noise shared by all electrodes (mains through a poor ground, body drift) cancels;
         # median across channels resists one bad electrode; dead or railed channels are left out
-        ok = (x.std(1) > 1e-6) & (np.abs(np.abs(x.mean(1)) - 200000) > 1)
         if ok.sum() >= 2:
             ref = np.median(x[ok], axis=0, keepdims=True) if cfg["car"] == "median" else x[ok].mean(0, keepdims=True)
             x = x - ref
+    x[~ok] = 0.0          # a dead channel stays empty; before, referencing turned it into -ref, a plausible fake trace
     sos = butter(cfg.get("order", 4), [cfg["lo"], cfg["hi"]], btype="band", fs=fs, output="sos")
     x = sosfiltfilt(sos, x, axis=1)
     if cfg.get("burst"):
@@ -94,7 +98,10 @@ class ASR:
         w, V = np.linalg.eigh(C)
         self.V = V
         proj = V.T @ X
-        self.ref = proj.std(1) + 1e-9
+        sd = proj.std(1)
+        # floor: a near-zero component (a dead or flat channel in the baseline) would otherwise make every later
+        # window "artefact" and ASR would delete the whole signal (CRITIQUE fatigue-1, gauge-adv1)
+        self.ref = np.maximum(sd, 0.01 * float(np.median(sd)) + 1e-9)
 
     def __call__(self, x):
         if self.V is None:
