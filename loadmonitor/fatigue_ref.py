@@ -21,9 +21,15 @@ import readiness_model  # noqa: E402
 CH = ["Fz", "C3", "Cz", "C4", "Pz", "P3", "P4", "O1"]
 
 
-def ratio(x, fs):
-    """log10((theta + alpha) / beta) from Hilbert band envelopes (median over time), median over channels."""
+def ratio(x, fs, cfg=None, asr=None):
+    """log10((theta + alpha) / beta) from Hilbert band envelopes (median over time), median over channels,
+    on the same cleaned window as the live gauge (model_search.clean_window + ASR) when cfg is given."""
     from scipy.signal import butter, sosfiltfilt, hilbert
+    if cfg:
+        from model_search import clean_window
+        x = clean_window(x, fs, cfg)
+        if asr is not None:
+            x = asr(x)
     x = x - x.mean(1, keepdims=True)
     env = []
     for lo, hi in ((4, 8), (8, 13), (13, 30)):
@@ -39,7 +45,10 @@ def main():
         sid = re.search(r"Subject(\d+)_1", path).group(1)
         x, fs = readiness_model.load_edf(path)
         n = int(4 * fs)
-        r = [ratio(x[:, i:i + n], fs) for i in range(0, min(int(60 * fs), x.shape[1]) - n + 1, n // 2)]
+        from model_search import ROBUST_CFG, ASR, clean_window
+        cfg = ROBUST_CFG
+        asr = ASR(cfg["asr"]); asr.fit([clean_window(x[:, i:i + n], fs, cfg) for i in range(0, int(28 * fs) - n + 1, n // 2)])
+        r = [ratio(x[:, i:i + n], fs, cfg, asr) for i in range(0, min(int(60 * fs), x.shape[1]) - n + 1, n // 2)]
         vals[sid] = float(np.mean(r))
     arr = np.array(list(vals.values()))
     out = dict(channels=CH, bands=dict(theta=[4, 8], alpha=[8, 13], beta=[13, 30]), n=len(arr),

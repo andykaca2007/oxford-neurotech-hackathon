@@ -118,8 +118,8 @@ def main():
     if feat_cfg:
         print(f"# processing: {feat_cfg['lo']:.0f} to {feat_cfg['hi']:.0f} Hz order {feat_cfg.get('order', 4)}{', 50 Hz notch' if feat_cfg.get('notch') else ''}{', common average reference' if feat_cfg.get('car') else ''}{', burst masking' if feat_cfg.get('burst') else ''}{', median Welch' if feat_cfg.get('median') else ''}{', no delta' if feat_cfg.get('drop_delta') else ''}{', no gamma' if feat_cfg.get('drop_gamma') else ''}{', polynomial detrend' if feat_cfg.get('detrend') else ''}", flush=True)
     asr = None
+    from model_search import ASR, clean_window
     if feat_cfg and feat_cfg.get("asr"):
-        from model_search import ASR, clean_window
         asr = ASR(feat_cfg["asr"])
         print(f"# artefact subspace reconstruction: components over {feat_cfg['asr']:.0f}x their resting power are removed (calibrated on your baseline)", flush=True)
     asr_cal = []
@@ -134,6 +134,7 @@ def main():
     base_fat, fat_base, fat_ema, fatigue_pct, contact = [], 0.0, None, 0.0, False
     amp_hist = deque(maxlen=40)
     fat_start = 0.0
+    fat_sd = 0.1
     rest_mean, rest_sd = 0.3, 0.2
     p_recent = deque(maxlen=5)
     fat_recent = deque(maxlen=5)
@@ -268,9 +269,17 @@ def main():
             if clean_n >= 3 or a.fake:
                 from scipy.signal import hilbert as _hilbert
                 idxs = clean if clean_n >= 3 else live
+                # the fatigue ratio runs on the SAME cleaned window as the model (detrend, notch, reference, band-pass,
+                # burst mask, artefact subspace reconstruction), so drift and hum cannot ramp it
+                Xc = X8[IDX]
+                if feat_cfg:
+                    Xc = clean_window(Xc, FS, feat_cfg)
+                    if asr is not None:
+                        Xc = asr(Xc)
+                rowsel = [IDX.index(i) for i in idxs]
                 env = []
                 for sos_b in (FAT_SOS_TH, FAT_SOS_AL, FAT_SOS_BE):
-                    xb = sosfiltfilt(sos_b, X8[idxs] - X8[idxs].mean(1, keepdims=True), axis=1)
+                    xb = sosfiltfilt(sos_b, Xc[rowsel], axis=1)
                     env.append(np.median(np.abs(_hilbert(xb, axis=1))[:, FS // 2:-FS // 2], axis=1))     # drop the filter edges
                 fat_now = float(np.median(np.log10((env[0] ** 2 + env[1] ** 2) / (env[2] ** 2 + 1e-12) + 1e-12)))
             else:
@@ -331,6 +340,7 @@ def main():
                     if riem is not None:
                         riem.set_baseline(base_covs)
                     chan_base = {k: np.mean([c[k] for c in base_chan], axis=0) for k in ("tot", "th", "al")}
+                    fat_sd = max(float(np.std(base_fat)), 0.05) if len(base_fat) >= 3 else 0.1
                     if len(base_fat) >= 5 and FAT_REF:
                         fat_base = float(np.median(base_fat))
                         # fatigue starting point: where this baseline ratio sits among 36 rested people (percentile)
@@ -369,11 +379,13 @@ def main():
                 if fat_now is not None:
                     fat_recent.append(fat_now)
                     fat_robust = float(np.median(fat_recent))        # median of the last clean windows: one bad window cannot move it
-                    fat_ema = fat_base if fat_ema is None else fat_ema + (fat_robust - fat_ema) / 120.0
+                    fat_ema = fat_base if fat_ema is None else fat_ema + (fat_robust - fat_ema) / 180.0
                 elif fat_ema is None:
                     fat_ema = fat_base
-                # percentile start, then drift: a doubling of the ratio (+0.301 log10) adds 50 points
-                fatigue_pct = float(np.clip(fat_start + (fat_ema - fat_base) / 0.301 * 50, 0, 100))
+                # percentile start, then drift scored against his own baseline spread: +10 points per spread above rest,
+                # capped at 25 points per doubling of the ratio so a noisy baseline cannot make it hypersensitive
+                z = (fat_ema - fat_base) / fat_sd
+                fatigue_pct = float(np.clip(fat_start + min(10 * z, (fat_ema - fat_base) / 0.301 * 25) if z > 0 else fat_start + 10 * z, 0, 100))
                 if load_pct >= a.alarm:
                     above_since = above_since or t
                     if not alarmed and t - above_since >= a.hold:
