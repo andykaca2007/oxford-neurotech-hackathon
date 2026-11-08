@@ -3,7 +3,7 @@
     .venv/bin/python tests/alpha_check_eval.py            # about 2 minutes
 
 For each of his recordings and every 10 s start position, the check is replayed as the gauge runs it: 4 s windows each
-second, heights from load_gauge.alpha_height, eyes-open phase = windows ending at 4 to 19 s, eyes-closed = 24 to 39 s,
+second, heights from load_gauge.alpha_height, eyes-open phase = windows ending at 4 to 19 s, eyes-closed = 26 to 41 (each window starts 2 s or more after the spoken prompt) s,
 the noise gate on the quietest channel's 8 to 13 Hz RMS in the open phase, the +3/+3 rule on the best channel.
   null: his data as recorded (he never closed his eyes on cue)
   injected: real lab rest EEG (eegmat, eye state not stated; resampled to 250 Hz, same channel names) added to his
@@ -54,12 +54,12 @@ def check(x, t0, chans, inject=None, attack=False):
     """Returns (new verdict, old verdict), each 'pass', 'fail', 'noisy', or None when no channel is usable."""
     slots = [MONTAGE.index(c) for c in chans]
     o, c, noise = [], [], []
-    for s in range(4, 40):
+    for s in range(4, 42):
         e = (t0 + s) * FS
         w = x[slots, e - 4 * FS:e].copy()
         if w.shape[1] < 4 * FS:
             return None, None
-        if s >= 24:
+        if s >= 26:
             if inject is not None:
                 for j, ch in enumerate(chans):
                     w[j] = w[j] + inject[ch][(s - 4) * FS:s * FS]
@@ -75,7 +75,7 @@ def check(x, t0, chans, inject=None, attack=False):
             o.append(rec)
             xa = w[live] - w[live].mean(1, keepdims=True)
             noise.append(float(np.min(sosfiltfilt(lg.ALPHA_BAND_SOS, xa, axis=1)[:, FS // 2:-FS // 2].std(1))))
-        elif s >= 24:
+        elif s >= 26:
             c.append(rec)
     best = lg.alpha_rule(o, c, chans)
     if best is None:
@@ -104,7 +104,7 @@ for name, chans in list(SETS.items())[:1]:
     res = {"null": [], "injected real alpha": [], "flank-only attack (no alpha)": []}
     k = 0
     for x in recs:
-        for t0 in range(0, x.shape[1] // FS - 40, 10):
+        for t0 in range(0, x.shape[1] // FS - 42, 10):
             for key, kw in (("null", {}), ("injected real alpha", dict(inject=donors[k % len(donors)])), ("flank-only attack (no alpha)", dict(attack=True))):
                 r = check(x, t0, chans, **kw)
                 if r[0] is not None:

@@ -368,3 +368,9 @@ Rules for every change: it must be tested on recorded data with a split that is 
 - Andy merged his load model v2 work into the branch (PR 8: andy_model.py, compare_models.py, rest_markers.py, ANDY_MODEL.md); my commits were rebased on top, nothing of his changed; his files parse; the live gauge does not use them.
 - CRITIQUE #54 alpha-6 DONE. The live "alpha at Pz/O1" readout was the max of up to four posterior heights in one 4 s window; on his eyes-open recordings (3,483 s) it read +3 dB or more in 14.6 percent of seconds and +5 dB in 3.5 percent. It is now the 8 s median of the mean of Pz and O1: +3 dB or more in 1.5 percent, +5 dB in 0.2 percent. On the lab replay at rest it reads +6.3 dB (lab expectation about +6). The Alpha check keeps its own rule. Page label says "8 s median".
 - Checks: smoke ALL PASS and 16 replays 0 failed.
+
+### Critique iteration 29 (8 Nov, about 11:55)
+
+- CRITIQUE #55 alpha-adv2 DONE. The Alpha check's eyes-closed windows ran 24 to 40 s, so the first ones covered the spoken "Close your eyes" and the closing blink. Now 26 to 42 s (still 16 windows; the check ends at 42 s; page countdown and tests/alpha_check_eval.py updated together). On the same start positions: chance 1.8 percent both, injected lab alpha 12.0 (new) vs 13.3 (old), flank-only attack 10.1 vs 11.2: no measurable cost. The benefit (no closing blink in the closed phase) cannot show in this test, which injects lab alpha without a blink. Correction: the logged "17 percent" for injected alpha came from a different set of start positions; like for like it is 12 to 13 percent.
+- Smoke: the simulated-headset gauge step now runs 12 s of data instead of 6 (its baseline finished at about 6 s, so it passed or failed by a fraction of a second).
+- Checks: 16 replays 0 failed; smoke ALL PASS.

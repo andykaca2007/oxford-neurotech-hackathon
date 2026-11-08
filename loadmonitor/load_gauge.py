@@ -522,7 +522,7 @@ def main():
                     el = t - ac["t0"]
                     if 4 <= el < 20 and rec8:
                         ac["open8"].append(rec8)
-                    if 24 <= el < 40 and rec8:
+                    if 26 <= el < 42 and rec8:
                         ac["closed8"].append(rec8)
                     if 4 <= el < 20 and post:
                         ac["open"].append({MONTAGE[i]: (ah[j], abands[j]) for j, i in enumerate(post)})
@@ -530,9 +530,9 @@ def main():
                         ac["noise"].append(float(np.min(sosfiltfilt(ALPHA_BAND_SOS, xa, axis=1)[:, FS // 2:-FS // 2].std(1))))   # quietest posterior channel
                     if el >= 20 and "close" not in ac["said"]:
                         ac["said"].add("close"); speak("Close your eyes.")
-                    if 24 <= el < 40 and post:
+                    if 26 <= el < 42 and post:
                         ac["closed"].append({MONTAGE[i]: (ah[j], abands[j]) for j, i in enumerate(post)})
-                    if el >= 40:
+                    if el >= 42:          # closed windows 26 to 42 s: each starts 2 s or more after the spoken prompt (CRITIQUE alpha-adv2)
                         best = alpha_rule(ac["open"], ac["closed"], POSTERIOR)
                         noise = float(np.median(ac["noise"])) if ac["noise"] else float("nan")
                         if best is None:

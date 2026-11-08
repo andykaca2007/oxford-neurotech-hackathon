@@ -63,7 +63,7 @@ sleep 5
 if $PY -c "from pylsl import resolve_byprop; import sys; sys.exit(0 if resolve_byprop('name','Unicorn',timeout=5) else 1)" 2>/dev/null; then ok; else bad "no LSL stream from --sim"; fi
 
 step "gauge --lsl reads the sim stream and posts state"
-$PY loadmonitor/load_gauge.py --lsl --web --web-port $PORT --no-ui --baseline 3 --seconds 6 >${T}_lsl.log 2>&1
+$PY loadmonitor/load_gauge.py --lsl --web --web-port $PORT --no-ui --baseline 3 --seconds 12 >${T}_lsl.log 2>&1
 if grep -q "baseline done" ${T}_lsl.log; then ok; else bad "see ${T}_lsl.log"; fi
 sleep 8
 fi

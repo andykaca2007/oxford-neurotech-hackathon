@@ -430,7 +430,7 @@ async function tick(){
     document.getElementById('m_clean').textContent = s.clean === undefined ? '—' : s.clean + ' / ' + (s.n_model_ch || 8);
     { const ac = s.alpha_check || {}, el = document.getElementById('m_alpha_chk');
       const now = (s.alpha_now === null || s.alpha_now === undefined) ? '—' : (s.alpha_now > 0 ? '+' : '') + s.alpha_now + ' dB';
-      if (ac.active) el.textContent = now + (ac.elapsed === null ? ' · starting' : ac.elapsed < 20 ? ' · eyes OPEN ' + (20 - ac.elapsed) + ' s' : ' · eyes CLOSED ' + Math.max(0, 40 - ac.elapsed) + ' s');
+      if (ac.active) el.textContent = now + (ac.elapsed === null ? ' · starting' : ac.elapsed < 20 ? ' · eyes OPEN ' + (20 - ac.elapsed) + ' s' : ' · eyes CLOSED ' + Math.max(0, 42 - ac.elapsed) + ' s');
       else if (ac.result) el.textContent = ac.result.text;
       else el.textContent = now; }
     { const c = s.calibration || {}, el = document.getElementById('m_calib');
