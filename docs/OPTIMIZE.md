@@ -21,7 +21,7 @@ The dry Unicorn on hair gives 1 to 40 Hz amplitudes of 300 to 4000 uV that chang
 | all 109 (log band powers + relative + ratios + entropy + gradient + blink) | 0.841 | 0.719 |
 | 60 amplitude-invariant (relative powers, ratios, entropy, Fz-Pz theta gradient) | 0.807 | 0.807 |
 
-(Superseded, see the end of this file.) Gradient boosting on the 60 invariant features (`--fit-best --invariant`, 8 channels). Costs 0.034 AUC on clean data, immune to gain changes. The stack (0.867 strict AUC) is parked in models/readiness_stack.joblib; it also uses absolute power and has the same weakness on this headset.
+(Superseded, see the end of this file.) Gradient boosting on the 60 invariant features (`--fit-best --invariant`, 8 channels). Costs 0.034 AUC on clean data, immune to a gain change shared by all channels (NOT to a gain change on one electrode: with independent per-channel gains of 0.3x to 3x the LOSO AUC falls from 0.762 to 0.658, because the median reference mixes channels and the Fz minus Pz theta gradient compares absolute power across channels; CRITIQUE model-2). The stack (0.867 strict AUC) is parked in models/readiness_stack.joblib; it also uses absolute power and has the same weakness on this headset.
 
 ## Final live processing (8 Nov 00:30): robust chain
 
@@ -39,7 +39,7 @@ Trade: 0.08 AUC on clean data for a gauge that sits low at rest on a dry headset
 
 ## Live model and how to rebuild it exactly (8 Nov)
 
-5 channels (Fz C3 Cz Pz O1), robust chain (detrend, notch comb, median reference, 4 to 30 Hz order 8, burst mask with protected edges, ASR, median Welch), 29 amplitude-invariant features, gradient boosting. LOSO AUC 0.760, balanced accuracy 0.679 (lab only). Rebuild, about 5 minutes:
+5 channels (Fz C3 Cz Pz O1), robust chain (detrend, notch comb, median reference, 4 to 30 Hz order 8, burst mask with protected edges, ASR, median Welch), 29 amplitude-invariant features (invariant to a common gain only, see the note above), gradient boosting. LOSO AUC 0.760, balanced accuracy 0.679 (lab only). Rebuild, about 5 minutes:
 
 ```
 .venv/bin/python loadmonitor/model_search.py --fit-best --robust --invariant --channels Fz,C3,Cz,Pz,O1 --out models/readiness.joblib

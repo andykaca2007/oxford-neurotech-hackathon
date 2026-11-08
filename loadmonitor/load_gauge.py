@@ -251,7 +251,7 @@ def main():
     clf = m["model"]
     fmask = m.get("feature_mask")
     if fmask is not None:
-        print(f"# amplitude-invariant features: {int(fmask.sum())} of {len(fmask)} (absolute power dropped, contact quality cannot push the needle)", flush=True)
+        print(f"# amplitude-invariant features: {int(fmask.sum())} of {len(fmask)} (absolute power dropped: a gain shared by all channels cannot move the needle; a change on ONE electrode still can, CRITIQUE model-2)", flush=True)
     riem = None
     if m.get("riem"):
         from riem_live import RiemFB

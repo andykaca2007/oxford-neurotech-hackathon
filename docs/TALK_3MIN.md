@@ -65,7 +65,7 @@ slide 10 (limitations) is back in the spoken path because the fifth criterion as
 |---|---|---|---|
 | 0:00 | 0 title | | silent, 2 s |
 | 0:02 | 1 problem | impact | "Surgeons, pilots, controllers and shift workers overload quietly, and the mistakes come after. There is no gauge for it. The brain shows it within seconds, but dry electrodes drown thirty microvolts of brain in six thousand of noise." |
-| 0:14 | 2 solution | originality | "Our contribution is not a new headset. It is trust: six filters, features that ignore the electrode's gain, a model trained on thirty-six public brains, and a gauge that refuses to score a dirty signal instead of guessing. Here it is running." |
+| 0:14 | 2 solution | originality | "Our contribution is not a new headset. It is trust: six filters, features built from ratios rather than raw amplitude, a model trained on thirty-six public brains, and a gauge that refuses to score a dirty signal instead of guessing. Here it is running." |
 | 0:28 | 4 video | demonstration | "A real recording from a public dataset, through our live system, at real time. Watch the number climb under arithmetic and fall back." Then play; silence 0:34 to 2:12. |
 | 2:12 | 5 filters | validity | "Validity first: every stage of that chain is checked against the live code, six thousand microvolts in, thirty-four out." |
 | 2:20 | 8 ROC | validity | "Tested one held-out person at a time: AUROC zero point seven four pooled, zero point eight one median, good for twenty-three of thirty-six." |
