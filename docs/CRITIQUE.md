@@ -42,8 +42,8 @@ Ranking: severity as re-rated by the adversary, then grouped so that issues with
 | 32 | medium | dsp-adv2 | ADDED | Noisy model channels are still fed to the classifier; the clean count only decides whether to hold | open |
 | 33 | medium | fatigue-4 | confirmed | Page calls the drift 'fatigue', 'Tiring' and 'Recovering' and colours it red, though its downward moves come from muscle and from the arithmetic task itself | done (ee26e5b) |
 | 34 | medium | fatigue-adv2 | ADDED | replay_all.py marks the zeroed sessions 'ok', and OVERNIGHT.md tells him nothing is blocking | open |
-| 35 | medium | gauge-2 | confirmed | Head-map dB vs baseline reads +100 to +200 dB for any channel that was dead during part of the baseline | open |
-| 36 | medium | gauge-3 | confirmed | Fatigue falls back to the lab-cap mean as its zero, then shows 'Tiring' or 'Recovering' driven by the cap offset | open |
+| 35 | medium | gauge-2 | confirmed | Head-map dB vs baseline reads +100 to +200 dB for any channel that was dead during part of the baseline | done (4332925) |
+| 36 | medium | gauge-3 | confirmed | Fatigue falls back to the lab-cap mean as its zero, then shows 'Tiring' or 'Recovering' driven by the cap offset | done (9deb14d, 0c25f19): the lab-mean fallback and invented sd were removed with fatigue-2, and the dead-baseline ASR collapse with the dead-channel fix |
 | 37 | medium | gauge-adv2 | ADDED | A model channel that rails after the baseline still feeds the model and moves the load by up to 14 points | done (0c25f19) |
 | 38 | medium | model-3 | confirmed | Live 5-channel model cannot be rebuilt from committed code; the documented rebuild commands overwrite it with a different model | open |
 | 39 | medium | model-adv1 | ADDED | A dead or railed model channel is not removed: after the common reference it becomes a copy of the negated reference and is scored as if it were real EEG | done (0c25f19) |

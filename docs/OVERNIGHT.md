@@ -218,3 +218,9 @@ Rules for every change: it must be tested on recorded data with a split that is 
   - Effect on his live windows (n 584): fully zeroed samples 9.4 to 3.2 percent; alpha power lost through the mask -2.15 to -1.71 dB (the rest is the mask working on mid-window artefact).
   - The change moves some lab features (up to 1.7 within-subject sd; model output up to 0.12 at the 99th percentile), so the 5-channel model was retrained on the corrected chain: LOSO AUC 0.760, balanced accuracy 0.679 (was 0.762, 0.681; same within noise). Previous model kept as models/readiness_5ch_pre_edgefix.joblib (models/ is local, not in git).
 - Checks: smoke ALL PASS; 16 replays 0 failed; commit gated.
+
+### Critique iteration 11, 08:19
+
+- CRITIQUE #35 gauge-2: the head map's per-channel baseline averaged dead seconds as log10(0) = -12, so a channel that was dead for part of the baseline later read +100 to +200 dB as a "change from baseline" (critic: top channel median +147 dB on 01:03, +119 dB on 01:15). Now each channel's baseline uses only its live seconds, and a channel with fewer than 10 live baseline seconds shows "no base". Sampled live on replay: the top channel now reads -24 to +13 dB on 01:03 and -14 to +13 dB on 01:15. Display only; load, fatigue and alarm never used it.
+- CRITIQUE #36 gauge-3: already fixed by iteration 3 (no lab-mean fallback, 15 clean windows) and the dead-channel fix (ASR on a dead baseline); marked done with those commits.
+- Checks: page JavaScript parses; smoke ALL PASS; 16 replays 0 failed; commit gated.
