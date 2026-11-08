@@ -47,6 +47,29 @@ limits follow once they have seen it work.
 | 2:35 | 7 Next | "A personal number, proven on people the system had never seen. Next: better electrodes, more people, and the slow fatigue trend on the same page." |
 | 3:00 | end | |
 
+## Deck order (8 Nov afternoon, `deck/index.html`)
+
+The web deck adds three illustrated slides in front: 0 title (Team Avengers), 1 problem, 2 solution. The talk
+above maps onto it as: title (silent, 0:00) -> problem (0:05, the Problem line) -> solution (0:15, "We built a
+gauge for it from a consumer brain headset. Here it is running.") -> 4 video (0:25, the disclosure line, then
+1:30 of silence) -> 5 filters (1:55) -> 8 ROC (2:20) -> 10 next (2:40). Skip slides 3, 6, 7 and 9 with the hash
+keys if time is short; they stay in for questions.
+
+## FINAL script (8 Nov, 17:00): 82 s of talk around the 98 s video, about 140 words
+
+| Time | Slide | Say |
+|---|---|---|
+| 0:00 | 0 title | silent, 3 s |
+| 0:03 | 1 problem | "Surgeons, pilots and shift workers overload quietly, and the mistakes come after. There is no gauge for it. The brain shows it within seconds, but no wearable reads it: dry electrodes give six thousand microvolts of noise around thirty of brain." |
+| 0:20 | 2 solution | "So we built a gauge from a consumer headset. Eight dry electrodes, six filters, a model trained on thirty-six people, and a number that is zero at your own rest. Here it is running." |
+| 0:35 | 4 video | Before play: "A real recording from a public dataset, through our live system. Rest reads zero. Watch the number climb when they start calculating, and fall when they stop." Then silence; the video runs 0:40 to 2:18. |
+| 2:18 | 5 filters | "That only works because the raw signal, nearly all noise, is stripped layer by layer until what is left is the brain." |
+| 2:30 | 8 ROC | "Tested on people the system had never seen, it separates rest from hard thinking well for most of them." |
+| 2:42 | 10 next | "A personal number, proven on people it had never met. Next: better electrodes, more people, and the slow fatigue trend on the same page. We are Team Avengers." |
+| 3:00 | end | |
+
+If you overrun, drop the second sentence of the problem slide. Never skip the line before the video.
+
 Paing's call (8 Nov): no limits slide in the pitch. The one disclosure that must stay is the line before the video,
 "a real recording from a public dataset, through our live system", since nothing on screen says it. If a judge asks
 about the dry cap, the honest answer is in docs/OVERNIGHT.md: four of eight electrodes rarely connected and the gauge
