@@ -493,6 +493,7 @@ def main():
                     if not nodata_said:
                         speak("No data from the headset.")
                         nodata_said = True
+                    above_since, above_n, alarmed = None, 0, False   # no data is no evidence: the page must not stay red (CRITIQUE serverpage-6)
                     post_state(last_t)
                 if a.seconds and gap > max(10.0, a.seconds):        # a time-limited run (tests) must end even if the stream died
                     print(f"# stopping: no data for {gap:.0f} s and --seconds {a.seconds:g} was set", flush=True)
@@ -769,9 +770,9 @@ def main():
                 state = f"CONTACT LOST: {live_n}/8 live, dead {' '.join(names)}"
                 if int(t) % 5 == 0:
                     print(f"# {state}", flush=True)
+                above_since, above_n, alarmed = None, 0, False   # held: no evidence, so no alarm; it needs --hold fresh scored seconds to refire (CRITIQUE serverpage-6)
                 if log and header_written[0]:
                     log.write(f"{t:.1f},{load_pct:.1f},{fatigue_pct:.1f},{int(alarmed)},{cond['now']},0," + ",".join("nan" for _ in f) + "\n")
-                above_since, above_n = None, 0            # held: evidence toward the alarm stops here
                 hist.append(round(load_pct, 1))
                 post_state(t)
             elif (lost or (clean_n < a.load_min_clean and not a.show_noisy)) and not a.fake:
@@ -783,9 +784,9 @@ def main():
                 if log and not header_written[0]:
                     log.write("t,load_pct,fatigue_pct,alarm,condition,contact," + ",".join(f"f{i}" for i in range(len(f))) + "\n")
                     header_written[0] = True
+                above_since, above_n, alarmed = None, 0, False   # held: no evidence, so no alarm (CRITIQUE serverpage-6)
                 if log and header_written[0]:
                     log.write(f"{t:.1f},{load_pct:.1f},{fatigue_pct:.1f},{int(alarmed)},{cond['now']},1," + ",".join("nan" for _ in f) + "\n")
-                above_since, above_n = None, 0            # held: evidence toward the alarm stops here
                 hist.append(round(load_pct, 1))
                 post_state(t)
             else:

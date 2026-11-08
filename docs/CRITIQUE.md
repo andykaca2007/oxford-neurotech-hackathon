@@ -82,7 +82,7 @@ Ranking: severity as re-rated by the adversary, then grouped so that issues with
 | 72 | low | model-5 | confirmed | optimize.py fits the Riemannian tangent space on held-out subjects and saves hard-coded AUCs | open |
 | 73 | low | ops-7 | confirmed | Raw recordings hide BLE outages, so replays splice across them and markers drift | open |
 | 74 | low | ops-8 | confirmed | Smoke test stays green through these failures; its sim stream shares the real stream's identity (plausible, not run) | done (df44fb4) |
-| 75 | low | serverpage-6 | confirmed | Alarm and 'take a break' stay on while the load is held or contact is lost | open |
+| 75 | low | serverpage-6 | confirmed | Alarm and 'take a break' stay on while the load is held or contact is lost | done (alarm cleared in both held branches and on NO DATA; page keys red theme, status and label on alarm and not held; tests/test_alarm_hold.py: held rows with alarm 21 of 21 before, 0 of 21 after) |
 | 76 | low | serverpage-7 | confirmed | LLM call can block for many minutes, wrong model label, live refusal returns the full debrief, truncation unchecked | open |
 | 77 | low | serverpage-8 | confirmed | Fatigue labels 'Tiring' and 'Recovering' claim tiredness, which the overnight work says the ratio does not measure | done (ee26e5b) |
 | 78 | low | serverpage-adv2 | ADDED | An Alpha check PASS stays on the page after Rebaseline and after the cap is moved | open |

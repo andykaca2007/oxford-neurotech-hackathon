@@ -355,12 +355,13 @@ async function tick(){
     const m=Math.floor(s.t/60), sec=Math.floor(s.t%60);
     document.getElementById('clock').textContent = `${m.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`;
     const lv = s.baseline_done ? s.load : 0;
-    document.body.classList.toggle('alarm', !!s.alarm);
-    document.body.classList.toggle('calm', s.baseline_done && !s.alarm && lv < ALARM - 30);
-    document.body.classList.toggle('work', !s.baseline_done || (!s.alarm && lv >= ALARM - 30));
+    const alarmOn = !!s.alarm && !s.load_held && s.contact !== false;   // never red while the load is held or the cap is off: no current evidence (CRITIQUE serverpage-6)
+    document.body.classList.toggle('alarm', alarmOn);
+    document.body.classList.toggle('calm', s.baseline_done && !alarmOn && lv < ALARM - 30);
+    document.body.classList.toggle('work', !s.baseline_done || (!alarmOn && lv >= ALARM - 30));
     const lost = s.baseline_done && s.contact === false;
     const st = document.getElementById('state'), sw = document.getElementById('statewrap');
-    st.textContent = s.replay ? (/^lab_eegmat/.test(s.replay) ? 'running' : 'REPLAY') : lost ? 'contact lost' : s.alarm ? 'alarm' : (s.baseline_done ? 'live' : 'baseline'); sw.classList.toggle('on', !!s.alarm || lost);
+    st.textContent = s.replay ? (/^lab_eegmat/.test(s.replay) ? 'running' : 'REPLAY') : lost ? 'contact lost' : alarmOn ? 'alarm' : (s.baseline_done ? 'live' : 'baseline'); sw.classList.toggle('on', alarmOn || lost);
     { const b = document.getElementById('replaybanner'); if (b) b.remove();
       // lab replay: no on-screen label (Paing's call; the narration discloses it), but the header must not name the
       // Unicorn for data that did not come from it, and the status never says 'live'
@@ -369,7 +370,7 @@ async function tick(){
     if (s.baseline_done) {
       const v = Math.max(0, Math.min(100, s.load));
       val.textContent = Math.round(v); val.className = 'n' + (s.low_conf ? ' dim' : v >= ALARM-20 ? ' hot' : '');
-      label.textContent = lost ? 'Contact lost' : s.load_held ? 'Held · noisy' : s.low_conf ? 'Low confidence' : s.alarm ? 'High load' : v >= ALARM ? 'Load rising' : v >= ALARM-30 ? 'Working' : 'Calm';
+      label.textContent = lost ? 'Contact lost' : s.load_held ? 'Held · noisy' : s.low_conf ? 'Low confidence' : alarmOn ? 'High load' : v >= ALARM ? 'Load rising' : v >= ALARM-30 ? 'Working' : 'Calm';
       sub.textContent = lost ? (s.state||'').replace('CONTACT LOST: ','') + ' · frozen until the cap is back' : s.load_held ? (s.clean||0) + ' of ' + (s.n_model_ch || 5) + ' channels clean · fix the cap, load resumes at ' + (s.load_min_clean || 2) + ' clean and no channel lost' : s.low_conf ? (s.clean||0) + ' of ' + (s.n_model_ch || 5) + ' channels clean · noisy signal, treat as a rough trend · alarm off' : 'alarm after ' + HOLD + ' s above ' + ALARM;
       document.getElementById('basebar').style.display='none';
     } else {
