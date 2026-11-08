@@ -341,3 +341,10 @@ Rules for every change: it must be tested on recorded data with a split that is 
 - Live test so far (10:25 to 10:33, from the raw files): every electrode reads exactly +200 mV with no noise (OPEN) for whole sessions: the amplifier is not connecting to the cap. Not a software fault; same as 7 Nov. Added headset/live_check.py (OPEN / SATURATED / noise per electrode every 2 s; says NOT RECORDING when run_all is stopped and follows new sessions). A 100 mV saturation rule was tried and dropped: quiet channels in his recordings sit at a median 80 mV offset, so only the last 4 mV before the limit count as SATURATED.
 - CRITIQUE #53 alpha-4 DONE. A FAIL with noise under the gate already said "repeat once" (not "fix the contact"); it now also says the noise was low enough to test, so it is not a contact verdict, and that 3 of 36 lab people on a gel cap stay under +3 dB even with eyes closed. Checked by an Alpha check on the lab replay (FAIL as expected: no eye closure in that file; no crash).
 
+
+### Iteration 25 (8 Nov, about 10:45): live test, 4-electrode mode
+
+- Live session running (run_all ... 4ch), so no smoke or replay run this round; unit tests passed (12) at 5502c78.
+- What the live test showed: on this cap C3, C4, P3 and P4 never connected (OPEN for whole sessions, every second amplifier input); Fz, Cz, Pz and O1 connect when the amplifier is pressed, start at 600 to 6,000 uV and settle while he holds still (Fz 1,928 to 387 uV in 14 s). The gauge kept saying "C3 not connected", so the 5-channel model could never score.
+- Added a 4-electrode model without C3 (models/readiness_4ch.joblib, live recipe on Fz Cz Pz O1): lab leave-one-subject-out AUC 0.766 (5-channel 0.760), balanced accuracy 0.671. Started with `./run_all.sh "" paing 4ch`; headset/live_check.py --4ch matches. Checked on the lab replay (no crash).
+- Result at 10:42: baseline done, page LIVE, but HELD NOISY with 0 of 4 clean (O1 5,100 uV, Cz 384, Fz 323, Pz 215; hum 800 to 1,200 on Fz and Cz = poor skin contact). The hold is correct: nothing scored. Fatigue OFF (no clean baseline seconds). Next is physical: skin contact, then Rebaseline.
