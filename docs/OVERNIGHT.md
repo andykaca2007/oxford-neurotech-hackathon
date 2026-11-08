@@ -24,3 +24,13 @@ Rules for every change: it must be tested on recorded data with a split that is 
 - `tests/smoke.sh` moved to port 8799, no longer kills processes it did not start, skips the simulated bridge while a live headset session runs, and gained a replay step. ALL PASS. (Paing's 01:21 live run was still running on 8765 and was not touched.)
 - True numbers with the live generic model, correct labels: 01:03 run mental 8, physical 4, unlabelled rest 1; 01:15 run mental 10, recovery 23. The generic model does not separate his Zetamac from rest on the 01:15 run.
 - Next hypothesis: is there an alpha peak at Pz/O1 at all in his recordings (the only cheap proof that the cleaned signal contains brain).
+
+### Iteration 2, 01:55 to 02:05
+
+- Checks: smoke test ALL PASS; replays of all recordings rerun (see below).
+- Hypothesis tested: is there an alpha peak at Pz/O1 in his recordings (evidence that the cleaned signal contains brain)?
+  Method: per channel, only windows where that channel is live and under 200 uV after detrend, notch and 2 to 40 Hz; Welch PSD; fit a 1/f line on 3 to 7 and 15 to 30 Hz; report the mean height of 8 to 13 Hz above the line, and a control band 31 to 36 Hz.
+  - Lab cap reference (eegmat rest, 36 people, eyes closed): Pz +5.9 dB, O1 +7.4 dB, control band at O1 -5.1 dB.
+  - His 16 recordings pooled: Pz 0.0 dB (432 windows), O1 -0.3 dB (365), Cz -0.3, C3 -0.2; control band +0.6 to +2.0 dB, i.e. above the alpha band. Best single runs: 21:17 Pz +2.2 / Cz +2.4; 01:15 O1 +1.3.
+  - Reading: no detectable alpha anywhere tonight and a flat spectrum with high-frequency excess (muscle or electrode noise). He had his eyes open, which weakens alpha, so this does not prove there is no brain signal; it means nothing recorded so far proves there is one.
+- Decision: no code change from this. It explains why no model (generic or personal) separates Zetamac from rest on these recordings. Next iteration: add a live alpha check to the gauge and page (eyes-closed test with a pass/fail), so a session can prove brain signal in 40 s before any number is trusted.
