@@ -81,3 +81,12 @@ Rules for every change: it must be tested on recorded data with a split that is 
 - Mechanics: fake data completes and reports OFF (0.40); null replay reports OFF (0.69).
 - Protocol: Calibrate added as optional step 1b after a passing Alpha check.
 - Checks: smoke ALL PASS, 16 replays 0 failed.
+
+### Iteration 8, 03:55 to 04:10
+
+- Hypothesis: the 0.80 calibration bar is so strict that a real effect cannot pass it. Positive control: interleaved sessions built from the lab data, alternating each subject's real rest (20 s blocks from 30 s on) with their real mental arithmetic (20 s blocks), 3 pairs, the same leave-one-pair-out LDA on the live 5-channel features, baseline from the first 25 s of rest.
+  - 35 subjects (1 skipped, arithmetic recording under 60 s): median held-out AUC 0.95, 25th to 75th percentile 0.88 to 0.99; 91 percent reach 0.80.
+  - Against the null from iteration 7 (his non-alternating recordings: 0 of 81 reach 0.80), the bar separates real effects from chance well.
+  - Caveat: rest and arithmetic come from two separate recordings of one session, so recording-to-recording differences may add to the separation; treat 91 percent as optimistic.
+- Decision: no change. Bar stays at 0.80.
+- Checks: smoke ALL PASS, 16 replays 0 failed.
