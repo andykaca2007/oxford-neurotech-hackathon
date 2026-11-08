@@ -206,7 +206,7 @@ def main():
     # baseline steps (CRITIQUE fatigue-3: lab rest stays 45 to 55, his sessions step 0.2 to 0.4 log10 with no task).
     FAT_MIN_BASE, FAT_SHOW_S = 15, 1200
     fat_ok, t_mon0 = False, None
-    personal, calib_task = None, []
+    personal, calib_task, pers_anchor = None, [], None
     replay_marks = []
     if a.replay:
         mpath = a.replay_markers or re.sub(r"_raw.*\.csv$", "_gauge_markers.csv", a.replay)
@@ -473,7 +473,7 @@ def main():
                 cond["redo"] = False
                 base, chan_base, fat_ema, fatigue_pct, alarmed, above_since, ema = None, None, None, 0.0, False, None, None
                 base_feats.clear(); base_chan.clear(); base_fat.clear(); base_covs.clear(); amp_hist.clear(); asr_cal.clear(); p_recent.clear()
-                personal = None; calib_task.clear(); cal.update(active=False, t0=None, blocks={}, result=None, said=set())
+                personal = None; pers_anchor = None; calib_task.clear(); cal.update(active=False, t0=None, blocks={}, result=None, said=set())
                 fat_ok, t_mon0, fatigue_pct = False, None, float("nan"); fat_recent.clear()
                 if asr is not None:
                     asr.V = None
@@ -579,6 +579,8 @@ def main():
                 if cal["active"]:
                     if cal["t0"] is None:
                         cal["t0"] = t
+                        personal, ema, pers_anchor = None, None, None       # a new calibration starts from the generic model (CRITIQUE calib-2)
+                        p_recent.clear()
                         print(f"t={t:6.1f} CALIBRATION started: {CAL_BLOCKS} blocks of {CAL_BLOCK_S} s, rest and silent subtraction alternating", flush=True)
                     el = t - cal["t0"]
                     blk = int(el // CAL_BLOCK_S)
@@ -598,7 +600,7 @@ def main():
 
                         def mk():
                             return make_pipeline(StandardScaler(), LinearDiscriminantAnalysis(solver="lsqr", shrinkage="auto"))
-                        aucs = []
+                        aucs, oof_rest = [], []
                         pairs = CAL_BLOCKS // 2
                         for hp in range(pairs):                                # hold out one rest block and the task block after it
                             tr = [b for b in range(CAL_BLOCKS) if b // 2 != hp and b in cal["blocks"]]
@@ -607,13 +609,18 @@ def main():
                                 continue
                             Xtr = np.vstack([np.array(cal["blocks"][b]) for b in tr]); ytr = np.concatenate([[b % 2] * len(cal["blocks"][b]) for b in tr])
                             Xte = np.vstack([np.array(cal["blocks"][b]) for b in te]); yte = np.concatenate([[b % 2] * len(cal["blocks"][b]) for b in te])
-                            aucs.append(float(roc_auc_score(yte, mk().fit(Xtr, ytr).predict_proba(Xte)[:, 1])))
+                            m_fold = mk().fit(Xtr, ytr)
+                            aucs.append(float(roc_auc_score(yte, m_fold.predict_proba(Xte)[:, 1])))
+                            oof_rest.extend(m_fold.decision_function(Xte[yte == 0]).tolist())     # held-out rest scores: the rest anchor
                         auc = float(np.mean(aucs)) if aucs else float("nan")
                         ok = bool(aucs) and auc >= CAL_MIN_AUC
                         if ok:
                             Xall = np.vstack([np.array(v) for v in cal["blocks"].values()])
                             yall = np.concatenate([[b % 2] * len(v) for b, v in cal["blocks"].items()])
                             personal = mk().fit(Xall, yall)
+                            # rest anchor from the OUT-OF-FOLD rest scores, on the LDA decision value (log-odds), so rest reads
+                            # about 0 and the number is graded, not a saturated 0/1 vote (CRITIQUE calib-1)
+                            pers_anchor = (float(np.mean(oof_rest)), max(float(np.std(oof_rest)), 0.5))
                             ema = None
                             p_recent.clear()
                         cal["result"] = dict(ok=ok, auc=None if not aucs else round(auc, 2), folds=[round(v, 2) for v in aucs],
@@ -638,23 +645,32 @@ def main():
                         personal.fit(np.vstack([X0, X1]), [0] * len(X0) + [1] * len(X1))
                         ema = None
                         p_recent.clear()
-                        print(f"t={t:6.1f} PERSONAL MODEL trained on {len(X0)} s rest + {len(X1)} s mental; load now = 100 x its probability", flush=True)
+                        dr = personal.decision_function(X0)          # in-sample rest scores: optimistic; this path is off by default
+                        pers_anchor = (float(np.mean(dr)), max(float(np.std(dr)), 0.5))
+                        print(f"t={t:6.1f} PERSONAL MODEL (block design, in-sample anchor) trained on {len(X0)} s rest + {len(X1)} s mental", flush=True)
                         speak("Calibrated")
-                if personal is not None:
-                    p = float(personal.predict_proba(xf)[0, 1])
+                pers_hold = personal is not None and clean_n < len(IDX) and not a.fake
+                if pers_hold:
+                    # the personal LDA is linear: one noisy channel moves it a lot; hold until every model channel is clean
+                    state = f"HELD: personal model needs all {len(IDX)} channels clean ({clean_n} now)"
+                    p = float("nan")
+                elif personal is not None:
+                    p = float(personal.decision_function(xf)[0])
                 else:
                     p = float(clf.predict_proba(xf)[0, 1])
-                if riem is not None:
+                if riem is not None and personal is None:
                     pr = float(riem_clf.predict_proba(riem.features(riem.covs(X8[IDX]))[None, :])[0, 1])
                     p = 0.5 * (p + pr)
-                p_recent.append(p)
-                p_med = float(np.median(p_recent))      # median of the last 5 outputs: a one-second glitch cannot move the gauge
-                ema = (0.2 if personal is None else 0.1) if ema is None else ema   # start calm, let the evidence raise it
-                ema = ema + (p_med - ema) * (1.0 / a.smooth)
-                if personal is not None:
-                    load_pct = float(np.clip(100 * ema, 0, 100))      # personal model: its probability is already his own scale
-                else:
-                    load_pct = float(np.clip(a.gain * (ema - rest_mean) / rest_sd, 0, 100))   # 0 at his own rest; --gain points per spread above it
+                if not pers_hold:
+                    p_recent.append(p)
+                    p_med = float(np.median(p_recent))      # median of the last 5 outputs: a one-second glitch cannot move the gauge
+                    if ema is None:
+                        ema = 0.2 if personal is None else pers_anchor[0]   # start at rest
+                    ema = ema + (p_med - ema) * (1.0 / a.smooth)
+                    if personal is not None:
+                        load_pct = float(np.clip(a.gain * (ema - pers_anchor[0]) / pers_anchor[1], 0, 100))   # 0 at his out-of-fold rest
+                    else:
+                        load_pct = float(np.clip(a.gain * (ema - rest_mean) / rest_sd, 0, 100))   # 0 at his own rest; --gain points per spread above it
                 # fatigue: slow EMA (about 2 min) of the ratio drift, starting AT the baseline; +0.5 log10 (ratio x3) reads as 100
                 if fat_now is not None:
                     fat_recent.append(fat_now)

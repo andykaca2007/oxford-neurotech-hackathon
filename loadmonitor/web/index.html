@@ -385,7 +385,7 @@ async function tick(){
       else el.textContent = now; }
     { const c = s.calibration || {}, el = document.getElementById('m_calib');
       if (c.active) el.textContent = c.block === null ? 'starting' : 'block ' + c.block + ' of ' + c.blocks + (c.block % 2 ? ' · rest' : ' · subtract silently');
-      else if (c.result) el.textContent = c.result.text; }
+      else el.textContent = (s.personal ? 'personal model ON' : 'generic model') + (c.result ? ' · last calibration: ' + c.result.text : ' · not calibrated'); }
     const fz = (s.channels||[]).find(c=>c.name==='Fz'), pz = (s.channels||[]).find(c=>c.name==='Pz');
     document.getElementById('m_theta').innerHTML = (fz && s.baseline_done ? (fz.theta_db>0?'+':'')+fz.theta_db.toFixed(1)+'<small>dB</small>' : '—');
     document.getElementById('m_alpha').innerHTML = (pz && s.baseline_done ? (pz.alpha_db>0?'+':'')+pz.alpha_db.toFixed(1)+'<small>dB</small>' : '—');
