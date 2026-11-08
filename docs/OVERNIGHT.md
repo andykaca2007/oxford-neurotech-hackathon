@@ -429,3 +429,8 @@ Rules for every change: it must be tested on recorded data with a split that is 
 
 - CRITIQUE #66 gauge-5 DONE. The alarm's 20 s hold was wall time from the first second above the line and only the scored branch cleared it, so a held stretch (channel lost, or noisy before --show-noisy) counted toward the alarm and it could fire 1 to 2 scored seconds after scoring resumed. It now counts scored seconds above the line (above_n), reset to 0 by both held branches, by Rebaseline and by the keyboard reset. Lab demo: alarm at t 138 after 20 scored seconds above 50 (was t 139 by wall time), 36 alarm seconds; no other change. p_recent is not cleared on gaps (the critic's second suggestion); it is a 5-sample median and the held branches do not feed it, so it holds at most 5 stale values.
 - Gates: smoke ALL PASS, 16 replays 0 failed.
+
+### Critique iteration 38 (8 Nov, about 16:10)
+
+- CRITIQUE #67 gauge-6 DONE. Calibrate's clock, start and spoken prompts now run on wall time every second once the baseline exists, before the hold branches, and record each block's prompt time; the scored branch only collects a sample once t is CAL_SKIP_S past that block's prompt. A block that starts in a held stretch therefore gets its prompt on time and contributes no samples until the prompt has been heard. The page's Alpha check and Calibrate requests now refuse each other while the other is running (message printed). Checked on the lab replay: an Alpha check requested mid-calibration is refused, the calibration runs its 8 blocks and reports as before (AUC 0.46, model OFF).
+- Gates: smoke ALL PASS, 16 replays 0 failed.

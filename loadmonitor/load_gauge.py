@@ -419,11 +419,17 @@ def main():
             ac_n = int(reply.get("alpha_check", 0))
             if ac_n != cond["alpha_check"]:
                 cond["alpha_check"] = ac_n
-                ac.update(active=True, t0=None, open=[], closed=[], open8=[], closed8=[], noise=[], result=None, said=set())
+                if cal["active"]:
+                    print(f"t={t_now:6.1f} ALPHA CHECK refused: a calibration is running (CRITIQUE gauge-6)", flush=True)
+                else:
+                    ac.update(active=True, t0=None, open=[], closed=[], open8=[], closed8=[], noise=[], result=None, said=set())
             cal_n = int(reply.get("calibrate", 0))
             if cal_n != cond["calibrate"]:
                 cond["calibrate"] = cal_n
-                cal.update(active=True, t0=None, blocks={}, result=None, said=set())
+                if ac["active"]:
+                    print(f"t={t_now:6.1f} CALIBRATE refused: an Alpha check is running (CRITIQUE gauge-6)", flush=True)
+                else:
+                    cal.update(active=True, t0=None, blocks={}, result=None, said=set(), prompt_t={})
             if new != cond["now"]:
                 cond["now"] = new
                 print(f"t={t_now:6.1f} CONDITION {new}", flush=True)
@@ -624,6 +630,21 @@ def main():
                     asr.V = None
                 print(f"t={t:6.1f} REBASELINE requested from the page", flush=True)
                 speak("New baseline")
+            # Calibrate's clock and spoken prompts run on wall time whether or not this second is scored, so a block that
+            # starts in a held stretch still gets its prompt on time and its samples are gated on the prompt (CRITIQUE gauge-6)
+            if base is not None and cal["active"]:
+                if cal["t0"] is None:
+                    cal["t0"] = t
+                    personal, ema, pers_anchor = None, None, None       # a new calibration starts from the generic model (CRITIQUE calib-2)
+                    p_recent.clear()
+                    print(f"t={t:6.1f} CALIBRATION started: {CAL_BLOCKS} blocks of {CAL_BLOCK_S} s, rest and silent subtraction alternating", flush=True)
+                    speak("Calibration. When asked to count, start from four thousand and keep going.")
+                blk_now = int((t - cal["t0"]) // CAL_BLOCK_S)
+                if blk_now < CAL_BLOCKS and blk_now not in cal["said"]:
+                    cal["said"].add(blk_now); cal.setdefault("prompt_t", {})[blk_now] = t
+                    # prompts of equal spoken length for both classes (1.83 s and 1.89 s); the starting number is
+                    # given once at the start of the calibration, so the task prompt does not carry extra speech
+                    speak("Rest. Eyes on the point." if blk_now % 2 == 0 else "Count down in sevens, silently.")
             if base is None:
                 # do not start the baseline until the electrodes are really on the head: a channel pinned at the
                 # +/-200 mV rail (open input) or perfectly flat is dead. Need at least 6 of the model's channels live.
@@ -732,22 +753,13 @@ def main():
                 low_conf = bool(clean_n < a.load_min_clean and not a.fake)
                 state = f"LOW CONFIDENCE: {clean_n}/{len(IDX)} clean, alarm off" if low_conf else "monitoring"
                 xf = (f - base)[None, :]
-                if cal["active"]:
-                    if cal["t0"] is None:
-                        cal["t0"] = t
-                        personal, ema, pers_anchor = None, None, None       # a new calibration starts from the generic model (CRITIQUE calib-2)
-                        p_recent.clear()
-                        print(f"t={t:6.1f} CALIBRATION started: {CAL_BLOCKS} blocks of {CAL_BLOCK_S} s, rest and silent subtraction alternating", flush=True)
-                        speak("Calibration. When asked to count, start from four thousand and keep going.")
+                if cal["active"] and cal["t0"] is not None:
                     el = t - cal["t0"]
                     blk = int(el // CAL_BLOCK_S)
                     if blk < CAL_BLOCKS:
-                        if blk not in cal["said"]:
-                            cal["said"].add(blk)
-                            # prompts of equal spoken length for both classes (1.83 s and 1.89 s); the starting number is
-                            # given once at the start of the calibration, so the task prompt does not carry extra speech
-                            speak("Rest. Eyes on the point." if blk % 2 == 0 else "Count down in sevens, silently.")
-                        if el - blk * CAL_BLOCK_S >= CAL_SKIP_S and not low_conf:          # skip the first seconds: the 4 s window still holds the last block
+                        # collect only once the block's prompt has been spoken and the skip has passed since it
+                        pt = cal.get("prompt_t", {}).get(blk)
+                        if pt is not None and t - pt >= CAL_SKIP_S and not low_conf:
                             cal["blocks"].setdefault(blk, []).append(xf[0].copy())
                         state = f"CALIBRATING: block {blk + 1}/{CAL_BLOCKS} {'rest' if blk % 2 == 0 else 'subtract'}"
                     else:
