@@ -507,9 +507,8 @@ def main():
                         if e.key == ui["pygame"].K_ESCAPE:
                             raise KeyboardInterrupt
                         if e.key == ui["pygame"].K_b:
-                            base_feats, base, ema, alarmed, above_since, above_n = [], None, None, False, None, 0
+                            cond["redo"] = True             # same full reset as the page's Rebaseline (CRITIQUE gauge-8)
                             state = f"BASELINE: sit still, eyes open, {a.baseline:g} s"
-                            print("# re-baselining", flush=True)
             if len(buf) < win or t < next_eval:
                 if ui is not None and t >= next_eval - 0.9:
                     pass
@@ -661,7 +660,7 @@ def main():
                 fat_ok, t_mon0, fatigue_pct = False, None, float("nan"); fat_recent.clear()
                 if asr is not None:
                     asr.V = None
-                print(f"t={t:6.1f} REBASELINE requested from the page", flush=True)
+                print(f"t={t:6.1f} REBASELINE requested (page button or B key)", flush=True)
                 speak("New baseline")
             # Calibrate's clock and spoken prompts run on wall time whether or not this second is scored, so a block that
             # starts in a held stretch still gets its prompt on time and its samples are gated on the prompt (CRITIQUE gauge-6)

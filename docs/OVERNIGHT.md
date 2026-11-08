@@ -439,3 +439,10 @@ Rules for every change: it must be tested on recorded data with a split that is 
 
 - CRITIQUE #68 gauge-7 DONE. The gauge's clock starts 1.6 to 2.6 s after the bridge begins the raw file, so replayed condition markers fired early. Now, at the gauge's first LSL sample, src_lsl counts the rows the newest raw CSV already holds and the markers file gets a "# raw_offset_s=" header; replay shifts every marker by it. Files without the header (all of last night's) use --replay-offset, default 2.5 s. The Alpha check (alpha_open, alpha_closed, alpha_done) and Calibrate (calib_rest, calib_task, calib_done) now write phase rows to the markers file; replay logs them but does not treat them as conditions. Checked: the 01:03 replay shifts 291.4 to 294.0 and 413.6 to 417.0 (1 s grid); a lab replay with an Alpha check then Calibrate writes all phase rows in order. The header path needs a live bridge and has not been exercised; the smoke sim gauge runs without --log.
 - Gates: smoke ALL PASS, 16 replays 0 failed.
+
+### Critique iteration 40 (8 Nov, about 17:20)
+
+- Gates on 4f2f24b (deck commit): smoke ALL PASS, 16 replays 0 failed.
+- CRITIQUE #69 gauge-8 DONE. The pygame B key reset only base_feats, base, ema and the alarm, so a redo on that path refitted ASR on 60 windows (30 old) and kept base_chan, base_fat, the personal model and the cal state. It now sets cond["redo"] and shares the page's reset block; the half about fat_recent was already handled (line 661 clears it). New tests/test_rebaseline.py: lab replay at 40x against its own server on a free port, a page-style rebaseline posted at t 56 (inside rest): exactly one request seen, two baselines completed, no scored row until t 88, second-baseline rest median 0.0 (2 rows before arithmetic starts), arithmetic 120 to 150 s median 90.3. The B key itself cannot be pressed headless; the test exercises the one block both paths now use.
+- Gates on the fix: smoke ALL PASS, 16 replays (speed 40) 0 failed.
+- Deck: Team Avengers title, illustrated problem and solution slides, the 8 Nov demo video converted to H.264 (deck/demo.mp4, 26 MB) on slide 4, docs/TALK_3MIN.md has the every-slide 3:00 script.

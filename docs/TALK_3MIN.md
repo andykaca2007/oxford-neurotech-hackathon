@@ -55,6 +55,25 @@ gauge for it from a consumer brain headset. Here it is running.") -> 4 video (0:
 1:30 of silence) -> 5 filters (1:55) -> 8 ROC (2:20) -> 10 next (2:40). Skip slides 3, 6, 7 and 9 with the hash
 keys if time is short; they stay in for questions.
 
+## FINAL, every slide (8 Nov, 17:15): 82 s of talk around the 98 s video, about 190 words
+
+| Time | Slide | Say |
+|---|---|---|
+| 0:00 | 0 title | silent, 2 s |
+| 0:02 | 1 problem | "Surgeons, pilots and shift workers overload quietly, and the mistakes come after. The brain shows it within seconds, but no wearable reads it: dry electrodes drown thirty microvolts of brain in six thousand of noise." |
+| 0:14 | 2 solution | "So we built a gauge from a consumer headset. Eight dry electrodes, six filters, a model trained on thirty-six people, and a number that is zero at your own rest." |
+| 0:26 | 3 numbers | "Three numbers: six thousand microvolts in, thirty-four out, and a load that sits at zero at rest and climbs under arithmetic. Here it is running." |
+| 0:34 | 4 video | "A real recording from a public dataset, through our live system. Watch the number climb when they start calculating, and fall when they stop." Then play; silence 0:40 to 2:18. |
+| 2:18 | 5 filters | "That works because the raw signal, nearly all noise, is stripped layer by layer until what is left is the brain." |
+| 2:26 | 6 spectrum | "In frequency: the fifty hertz hum disappears, the brain bands stay." |
+| 2:32 | 7 how it works | "Every second, a four-second window goes through the chain, becomes twenty-nine features, and the model turns them into one number against your own rest." |
+| 2:41 | 8 ROC | "Tested on people it had never seen, it separates rest from hard thinking well for most of them." |
+| 2:49 | 9 training curve | "It scores higher on people it trained on. We only quote the held-out number." |
+| 2:54 | 10 next | "Next: better electrodes, more people, and the slow fatigue trend on the same page. We are Team Avengers." |
+| 3:00 | end | |
+
+If you run long, cut slide 9 first, then the first sentence of slide 7. Never cut the line before the video.
+
 ## FINAL script (8 Nov, 17:00): 82 s of talk around the 98 s video, about 140 words
 
 | Time | Slide | Say |
