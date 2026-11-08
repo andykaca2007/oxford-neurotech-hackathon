@@ -339,7 +339,16 @@ def main():
         ui = dict(pygame=pygame, screen=screen, font=font, huge=huge, small=small, hist=deque(maxlen=600))
 
     def speak(txt):
-        subprocess.Popen(["say", txt])
+        # macOS has `say`; on Windows use the built-in speech engine through PowerShell; never crash the gauge over speech
+        try:
+            if sys.platform == "darwin":
+                subprocess.Popen(["say", txt])
+            elif sys.platform == "win32":
+                subprocess.Popen(["powershell", "-NoProfile", "-Command",
+                                  "Add-Type -AssemblyName System.Speech; (New-Object System.Speech.Synthesis.SpeechSynthesizer).Speak('%s')" % txt.replace("'", "")],
+                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except Exception:
+            pass
 
     state = "BASELINE: sit still, eyes open, 30 s"
     hist = deque(maxlen=600)
