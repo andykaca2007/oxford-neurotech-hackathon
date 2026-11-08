@@ -43,40 +43,47 @@ def dead(w):
     return (w.std(1) < 1e-6) | np.any(np.abs(np.abs(w) - 200000) < 1, axis=1)
 
 
-def check(x, t0, chans, inject=None):
-    """x: (8, n) raw slots. Returns 'pass', 'fail', 'noisy' or None (no usable channel)."""
+def flank_cut(w, db=6.0):
+    """The adversary's attack: lower power below 7 Hz and above 15 Hz by db (amplitude 10^(-db/20)), no alpha added."""
+    F = np.fft.rfft(w, axis=1); f = np.fft.rfftfreq(w.shape[1], 1 / FS)
+    g = np.where((f < 7) | (f > 15), 10 ** (-db / 20), 1.0)
+    return np.fft.irfft(F * g, n=w.shape[1], axis=1)
+
+
+def check(x, t0, chans, inject=None, attack=False):
+    """Returns (new verdict, old verdict), each 'pass', 'fail', 'noisy', or None when no channel is usable."""
     slots = [MONTAGE.index(c) for c in chans]
-    o, c, noise = {k: [] for k in chans}, {k: [] for k in chans}, []
+    o, c, noise = [], [], []
     for s in range(4, 40):
         e = (t0 + s) * FS
         w = x[slots, e - 4 * FS:e].copy()
         if w.shape[1] < 4 * FS:
-            return None
-        if inject is not None and s >= 24:
-            for j, ch in enumerate(chans):
-                seg = inject[ch][(s - 4) * FS:s * FS]
-                w[j] = w[j] + seg
+            return None, None
+        if s >= 24:
+            if inject is not None:
+                for j, ch in enumerate(chans):
+                    w[j] = w[j] + inject[ch][(s - 4) * FS:s * FS]
+            if attack:
+                w = flank_cut(w - w.mean(1, keepdims=True))
         d = dead(w)
         live = [j for j in range(len(chans)) if not d[j]]
         if not live:
             continue
-        h = lg.alpha_height(w[live])
-        for jj, j in enumerate(live):
-            (o if 4 <= s < 20 else c if s >= 24 else {})[chans[j]].append(h[jj]) if (4 <= s < 20 or s >= 24) else None
+        h, b = lg.alpha_height(w[live], bands=True)
+        rec = {chans[j]: (h[jj], b[jj]) for jj, j in enumerate(live)}
         if 4 <= s < 20:
+            o.append(rec)
             xa = w[live] - w[live].mean(1, keepdims=True)
             noise.append(float(np.min(sosfiltfilt(lg.ALPHA_BAND_SOS, xa, axis=1)[:, FS // 2:-FS // 2].std(1))))
-    best = None
-    for ch in chans:
-        if len(o[ch]) >= 5 and len(c[ch]) >= 5:
-            dlt = np.median(c[ch]) - np.median(o[ch])
-            if best is None or dlt > best[0]:
-                best = (dlt, np.median(c[ch]))
+        elif s >= 24:
+            c.append(rec)
+    best = lg.alpha_rule(o, c, chans)
     if best is None:
-        return None
+        return None, None
     if not (np.median(noise) <= lg.ALPHA_NOISE_MAX_UV):
-        return "noisy"
-    return "pass" if best[0] >= 3.0 and best[1] >= 3.0 else "fail"
+        return "noisy", "noisy"
+    old_ok = (best["closed_db"] - best["open_db"]) >= 3.0 and best["closed_db"] >= 3.0     # the previous height rule
+    return ("pass" if best["ok"] else "fail"), ("pass" if old_ok else "fail")
 
 
 recs = []
@@ -93,21 +100,18 @@ for path in sorted(glob.glob("recordings/paing_2026110[78]_*raw*.csv")):
     if x.shape[1] >= 60 * FS:
         recs.append(x)
 
-for name, chans in SETS.items():
-    null, inj = [], []
+for name, chans in list(SETS.items())[:1]:
+    res = {"null": [], "injected real alpha": [], "flank-only attack (no alpha)": []}
     k = 0
     for x in recs:
         for t0 in range(0, x.shape[1] // FS - 40, 10):
-            r = check(x, t0, chans)
-            if r is not None:
-                null.append(r)
-            r2 = check(x, t0, chans, inject=donors[k % len(donors)])
+            for key, kw in (("null", {}), ("injected real alpha", dict(inject=donors[k % len(donors)])), ("flank-only attack (no alpha)", dict(attack=True))):
+                r = check(x, t0, chans, **kw)
+                if r[0] is not None:
+                    res[key].append(r)
             k += 1
-            if r2 is not None:
-                inj.append(r2)
-    null, inj = np.array(null), np.array(inj)
-    tested_null = null[null != "noisy"]
-    tested_inj = inj[inj != "noisy"]
-    print(f"{name}: positions {len(null)} (about {len(null) // 4} non-overlapping)")
-    print(f"   null (no eyes closing): PASS {np.mean(null == 'pass'):.1%} of all, {np.mean(tested_null == 'pass'):.1%} of testable; too noisy {np.mean(null == 'noisy'):.0%}")
-    print(f"   injected real lab alpha: PASS {np.mean(inj == 'pass'):.0%} of all, {np.mean(tested_inj == 'pass'):.0%} of testable; too noisy {np.mean(inj == 'noisy'):.0%}", flush=True)
+    print(f"{name}: share PASS among testable checks (not too noisy), new band-specific rule vs old height rule")
+    for key, v in res.items():
+        v = [r for r in v if r[0] != "noisy"]
+        new = np.mean([r[0] == "pass" for r in v]); old = np.mean([r[1] == "pass" for r in v])
+        print(f"   {key:30s} n {len(v):3d}   new {new:5.1%}   old {old:5.1%}", flush=True)

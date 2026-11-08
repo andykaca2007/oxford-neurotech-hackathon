@@ -46,7 +46,7 @@ ALPHA_NOISE_MAX_UV = 15.0
 POSTERIOR = ["Pz", "O1", "P3", "P4"]
 
 
-def alpha_height(x):
+def alpha_height(x, bands=False):
     """Alpha peak height in dB per channel: mean of 8 to 13 Hz above a 1/f line fitted on 3 to 7 and 15 to 30 Hz.
     About +6 dB at Pz/O1 for lab-cap EEG at rest (eegmat; eye state not stated by the dataset), about 0 for flat noise (overnight test, 8 Nov)."""
     from scipy.signal import iirnotch, tf2sos, welch
@@ -66,7 +66,40 @@ def alpha_height(x):
         lp = np.log10(row[1:] + 1e-20)
         k = np.polyfit(lf[fit[1:]], lp[fit[1:]], 1)
         out.append(float(10 * (lp - np.polyval(k, lf))[al[1:]].mean()))
+    if bands:
+        # absolute log10 power in the low flank, the alpha band and the high flank, for the band-specific rule
+        lo = np.log10(p[:, (f >= 3) & (f < 7)].mean(1) + 1e-20)
+        a8 = np.log10(p[:, al].mean(1) + 1e-20)
+        hi = np.log10(p[:, (f >= 15) & (f < 30)].mean(1) + 1e-20)
+        return np.array(out), np.stack([lo, a8, hi], axis=1)
     return np.array(out)
+
+
+def alpha_rule(open_ws, closed_ws, chans, min_rise=3.0, min_margin=3.0, min_sep=0.8):
+    """Band-specific eyes-closed alpha test (CRITIQUE alpha-adv1). open_ws / closed_ws: lists of {channel: (height, bands)}
+    per window, bands = log10 power (3-7 Hz, 8-13 Hz, 15-30 Hz). Per channel, closed-minus-open change in dB of each band;
+    PASS needs the alpha band to rise by min_rise AND by min_margin more than both flanks, so a drop in blink or muscle
+    power at eye closure (which lowers the fitted line) cannot pass on its own. Returns the best channel's numbers or None."""
+    best = None
+    for ch in chans:
+        o = [w[ch] for w in open_ws if ch in w]
+        c = [w[ch] for w in closed_ws if ch in w]
+        if len(o) < 5 or len(c) < 5:
+            continue
+        ob = np.median(np.array([b for _, b in o]), axis=0)
+        cb = np.median(np.array([b for _, b in c]), axis=0)
+        d = 10 * (cb - ob)                               # dB change: low flank, alpha, high flank
+        margin = d[1] - max(d[0], d[2])
+        oa = np.array([b[1] for _, b in o]); ca = np.array([b[1] for _, b in c])
+        sep = float(np.mean(ca > np.percentile(oa, 90)))   # share of closed windows above the open phase's 90th percentile
+        r = dict(ch=ch, rise=float(d[1]), d_low=float(d[0]), d_high=float(d[2]), margin=float(margin), sep=sep,
+                 open_db=float(np.median([h for h, _ in o])), closed_db=float(np.median([h for h, _ in c])))
+        # chosen on his recordings (tests/alpha_check_eval.py): chance 1.3 percent, real lab alpha 17 percent at his noise,
+        # flank-only attack 10 percent (old height rule: 1.3, 32 and 93 percent); not yet validated on new data
+        r["ok"] = r["rise"] >= min_rise and r["margin"] >= min_margin and sep >= min_sep
+        if best is None or (r["ok"], r["margin"]) > (best["ok"], best["margin"]):
+            best = r
+    return best
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'headset'))
 from montage import MONTAGE  # noqa: E402
 IDX = [MONTAGE.index(c) for c in CH]   # model channels -> stream slots, from headset/montage.py
@@ -402,7 +435,7 @@ def main():
             dead = dead | rail
             chan_now["dead"] = dead
             post = [MONTAGE.index(c) for c in POSTERIOR if c in MONTAGE and not dead[MONTAGE.index(c)]]
-            ah = alpha_height(X8[post]) if post else None
+            ah, abands = alpha_height(X8[post], bands=True) if post else (None, None)
             alpha_now = float(np.max(ah)) if post else None
             # the check's clock, prompts and verdict run whether or not a posterior channel is live, so a dead back
             # row gets an answer instead of a check that starts minutes later (CRITIQUE alpha-2)
@@ -414,22 +447,15 @@ def main():
                         print(f"t={t:6.1f} ALPHA CHECK started: 20 s eyes open, then 20 s eyes closed", flush=True)
                     el = t - ac["t0"]
                     if 4 <= el < 20 and post:
-                        ac["open"].append(dict(zip([MONTAGE[i] for i in post], ah)))
+                        ac["open"].append({MONTAGE[i]: (ah[j], abands[j]) for j, i in enumerate(post)})
                         xa = X8[post] - X8[post].mean(1, keepdims=True)
                         ac["noise"].append(float(np.min(sosfiltfilt(ALPHA_BAND_SOS, xa, axis=1)[:, FS // 2:-FS // 2].std(1))))   # quietest posterior channel
                     if el >= 20 and "close" not in ac["said"]:
                         ac["said"].add("close"); speak("Close your eyes.")
                     if 24 <= el < 40 and post:
-                        ac["closed"].append(dict(zip([MONTAGE[i] for i in post], ah)))
+                        ac["closed"].append({MONTAGE[i]: (ah[j], abands[j]) for j, i in enumerate(post)})
                     if el >= 40:
-                        best = None
-                        for ch in POSTERIOR:
-                            o = [d[ch] for d in ac["open"] if ch in d]
-                            c_ = [d[ch] for d in ac["closed"] if ch in d]
-                            if len(o) >= 5 and len(c_) >= 5:
-                                delta = float(np.median(c_) - np.median(o))
-                                if best is None or delta > best[1]:
-                                    best = (ch, delta, float(np.median(o)), float(np.median(c_)))
+                        best = alpha_rule(ac["open"], ac["closed"], POSTERIOR)
                         noise = float(np.median(ac["noise"])) if ac["noise"] else float("nan")
                         if best is None:
                             ac["result"] = dict(ok=False, untestable=True, text="NO LIVE BACK ELECTRODE: Pz, O1, P3 and P4 were not connected long enough to test; fix the back of the cap and retry")
@@ -438,14 +464,14 @@ def main():
                                                 text=f"TOO NOISY TO TEST: eyes-open alpha-band noise {noise:.0f} uV at the quietest posterior channel; "
                                                      f"lab alpha is about 7 uV, so the check needs under {ALPHA_NOISE_MAX_UV:.0f} uV. Improve Pz/O1 contact and retry")
                         else:
-                            # PASS rule: rise >= 3 dB AND eyes-closed peak >= +3 dB. tests/alpha_check_eval.py on his recordings:
-                            # chance passes 1.3 percent of testable checks, real lab alpha injected passes about 30 percent at his
-                            # noise; best of 4 channels and best of Pz/O1 give the same numbers (CRITIQUE stats-4)
-                            ok = best[1] >= 3.0 and best[3] >= 3.0
-                            ac["result"] = dict(ok=ok, ch=best[0], delta=round(best[1], 1), open_db=round(best[2], 1), closed_db=round(best[3], 1), noise_uv=round(noise, 1),
-                                                text=(f"PASS: alpha at {best[0]} {best[2]:+.1f} dB eyes open, {best[3]:+.1f} dB eyes closed (rise {best[1]:+.1f}; noise {noise:.0f} uV)" if ok else
-                                                      f"FAIL: alpha at {best[0]} {best[2]:+.1f} dB eyes open, {best[3]:+.1f} dB eyes closed (rise {best[1]:+.1f}; pass needs +3 and +3; noise {noise:.0f} uV). "
-                                                      f"At this noise a real brain passes only about half the time: repeat once before changing anything"))
+                            # band-specific rule (alpha_rule): alpha rises >= 3 dB AND >= 3 dB more than both flanks.
+                            # tests/alpha_check_eval.py measures chance, real alpha and the flank-only attack.
+                            ok = best["ok"]
+                            ac["result"] = dict(ok=ok, ch=best["ch"], rise=round(best["rise"], 1), margin=round(best["margin"], 1),
+                                                d_low=round(best["d_low"], 1), d_high=round(best["d_high"], 1), noise_uv=round(noise, 1),
+                                                text=(f"{'PASS' if ok else 'FAIL'}: at {best['ch']} eyes closed vs open, alpha 8 to 13 Hz {best['rise']:+.1f} dB, "
+                                                      f"3 to 7 Hz {best['d_low']:+.1f} dB, 15 to 30 Hz {best['d_high']:+.1f} dB closed windows above the open range {best['sep']:.0%} (pass needs alpha +3, 3 dB above both flanks, and 80%); noise {noise:.0f} uV"
+                                                      + ("" if ok else ". Repeat once before changing anything")))
                         ac["active"] = False
                         print(f"t={t:6.1f} ALPHA CHECK {ac['result']['text']}", flush=True)
                         speak("Open your eyes. " + ("Alpha rhythm found." if ac["result"]["ok"] else
