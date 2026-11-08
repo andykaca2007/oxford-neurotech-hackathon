@@ -138,7 +138,7 @@ CONTEXT = (
 def claude_debrief(s, mode="full"):
     """Returns (text, source); source names the model that actually wrote the text, or the template."""
     import anthropic
-    client = anthropic.Anthropic()
+    client = anthropic.Anthropic(timeout=15.0, max_retries=1)     # a stalled venue network fails in seconds, not the SDK's 30 min (CRITIQUE serverpage-7)
     if mode == "live":
         # the live line gets the evidence and replay flag too, not only the last minute (else it cannot say "unverified")
         live = dict(last_60s=s.get("last_60s", {}), evidence=s.get("evidence", {}), replay=s.get("replay", False))
@@ -157,9 +157,12 @@ def claude_debrief(s, mode="full"):
         output_config={"effort": "low"},
         messages=[{"role": "user", "content": prompt}],
     )
-    if resp.stop_reason == "refusal":
-        return (fallback_live(s) if mode == "live" else fallback_debrief(s)), "template (model refused)"
-    return "".join(b.text for b in resp.content if b.type == "text").strip(), model
+    text = "".join(b.text for b in resp.content if b.type == "text").strip()
+    if resp.stop_reason == "refusal" or resp.stop_reason != "end_turn" or not text:
+        # a refusal, a max_tokens cut or an empty answer is never shown as the model's words (CRITIQUE serverpage-7)
+        why = "refused" if resp.stop_reason == "refusal" else ("truncated" if resp.stop_reason == "max_tokens" else "empty")
+        return (fallback_live(s) if mode == "live" else fallback_debrief(s)), f"template (model {why})"
+    return text, model
 
 
 class H(BaseHTTPRequestHandler):

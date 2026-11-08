@@ -263,11 +263,15 @@ ans.addEventListener('keydown', e => {
   else { chal.errors++; chal.errT.push(lastT); curEl.style.color='var(--accent)'; setTimeout(()=>curEl.style.color='', 300); postEvent('error', {value:v, expected:chal.cur-7}); }
   document.getElementById('n_ans').textContent = chal.answers; document.getElementById('n_err').textContent = chal.errors;
 });
-let coachTimer = null;
+let coachTimer = null, coachBusy = false, coachT = -1, lastStateT = 0;
 async function coach() {
+  // one request at a time, and none once the gauge has stopped (s.t no longer advances); CRITIQUE serverpage-7
+  if (coachBusy || lastStateT === coachT) return;
+  coachBusy = true; coachT = lastStateT;
   try { const r = await (await fetch('/debrief', {method:'POST', headers:{'Content-Type':'application/json'}, body:'{"mode":"live"}'})).json();
         if (r.source !== 'none') document.getElementById('coach').textContent = '› ' + r.text.trim() + (r.source.startsWith('claude') ? '' : '  · rule-based summary'); }
   catch(e) {}
+  finally { coachBusy = false; }
 }
 setInterval(coach, 60000);
 document.getElementById('debrief').onclick = async () => {
@@ -355,6 +359,7 @@ async function tick(){
     const m=Math.floor(s.t/60), sec=Math.floor(s.t%60);
     document.getElementById('clock').textContent = `${m.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`;
     const lv = s.baseline_done ? s.load : 0;
+    lastStateT = s.t || 0;
     const alarmOn = !!s.alarm && !s.load_held && s.contact !== false;   // never red while the load is held or the cap is off: no current evidence (CRITIQUE serverpage-6)
     document.body.classList.toggle('alarm', alarmOn);
     document.body.classList.toggle('calm', s.baseline_done && !alarmOn && lv < ALARM - 30);
@@ -369,7 +374,7 @@ async function tick(){
     const val = document.getElementById('val'), label = document.getElementById('label'), sub = document.getElementById('sub');
     if (s.baseline_done) {
       const v = Math.max(0, Math.min(100, s.load));
-      val.textContent = Math.round(v); val.className = 'n' + (s.low_conf ? ' dim' : v >= ALARM-20 ? ' hot' : '');
+      val.textContent = Math.round(v); val.className = 'n' + (s.low_conf ? ' dim' : (alarmOn || v >= ALARM) ? ' hot' : '');   // hot only at or above the alarm line: rest on this cap reaches 36 (CRITIQUE serverpage-adv3)
       label.textContent = lost ? 'Contact lost' : s.load_held ? 'Held · noisy' : s.low_conf ? 'Low confidence' : alarmOn ? 'High load' : v >= ALARM ? 'Load rising' : v >= ALARM-30 ? 'Working' : 'Calm';
       sub.textContent = lost ? (s.state||'').replace('CONTACT LOST: ','') + ' · frozen until the cap is back' : s.load_held ? (s.clean||0) + ' of ' + (s.n_model_ch || 5) + ' channels clean · fix the cap, load resumes at ' + (s.load_min_clean || 2) + ' clean and no channel lost' : s.low_conf ? (s.clean||0) + ' of ' + (s.n_model_ch || 5) + ' channels clean · noisy signal, treat as a rough trend · alarm off' : 'alarm after ' + HOLD + ' s above ' + ALARM;
       document.getElementById('basebar').style.display='none';

@@ -689,6 +689,7 @@ def main():
                 base, chan_base, fat_ema, fatigue_pct, alarmed, above_since, ema = None, None, None, 0.0, False, None, None
                 above_n = 0
                 base_feats.clear(); base_chan.clear(); base_fat.clear(); base_covs.clear(); amp_hist.clear(); asr_cal.clear(); p_recent.clear()
+                ac.update(active=False, t0=None, open=[], closed=[], open8=[], closed8=[], noise=[], result=None, said=set())   # an Alpha check PASS does not outlive the cap position it was made in (CRITIQUE serverpage-adv2)
                 personal = None; pers_anchor = None; calib_task.clear(); cal.update(active=False, t0=None, blocks={}, result=None, said=set())
                 fat_ok, t_mon0, fatigue_pct = False, None, float("nan"); fat_recent.clear()
                 if asr is not None:
