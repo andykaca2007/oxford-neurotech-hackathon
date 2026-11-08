@@ -27,9 +27,9 @@ Ranking: severity as re-rated by the adversary, then grouped so that issues with
 | 17 | high | serverpage-1 | confirmed | Replay mode is not shown on the page: a recorded session reads as live | done (ae1fc8d) |
 | 18 | high | serverpage-2 | confirmed | The debrief's confidence gate passes on noise; alpha-check and calibration results are never sent to the LLM | done (416d029) |
 | 19 | medium | alpha-1 | confirmed | Pass rule was set from the null only; on real alpha at last night's noise it passes 1 check in 5 | done (2a743ce): noise gate and honest FAIL text; thresholds unchanged (no noise level reaches 80 percent sensitivity under any +3/+3 variant per the adversary) |
-| 20 | medium | calib-1 | confirmed | Once the personal model is on, rest no longer reads 0: nothing anchors it to rest, the output is close to on/off, and the alarm sits on the LDA boundary | open |
-| 21 | medium | calib-2 | confirmed | A failed second calibration leaves the old personal model running while the page says it is using the generic model | open |
-| 22 | medium | calib-adv1 | ADDED | After Rebaseline the page keeps showing 'personal model ON' while the generic model is in use | open |
+| 20 | medium | calib-1 | confirmed | Once the personal model is on, rest no longer reads 0: nothing anchors it to rest, the output is close to on/off, and the alarm sits on the LDA boundary | done (797f41a) |
+| 21 | medium | calib-2 | confirmed | A failed second calibration leaves the old personal model running while the page says it is using the generic model | done (797f41a) |
+| 22 | medium | calib-adv1 | ADDED | After Rebaseline the page keeps showing 'personal model ON' while the generic model is in use | done (797f41a) |
 | 23 | medium | calib-adv2 | ADDED | One fold corrupted by noise sinks a strong real effect: calibration windows mix channel sets, and the pass rule averages fold AUCs | open |
 | 24 | medium | claims-3 | confirmed | Page labels assert things the overnight analysis disproved, and show a different alarm line from the one that fires | open |
 | 25 | medium | claims-4 | confirmed | The Claude debrief context feeds the LLM an inflated task number and hides the facts that should limit its confidence | open |
@@ -54,7 +54,7 @@ Ranking: severity as re-rated by the adversary, then grouped so that issues with
 | 44 | medium | serverpage-3 | confirmed | CONTEXT prompt claims are stale after the overnight changes | open |
 | 45 | medium | serverpage-4 | confirmed | Hardcoded thresholds disagree with the launched gauge: debrief uses 70 while the alarm is 50; held subtitle says 'of 8' and '3 or more' | done (416d029) |
 | 46 | medium | serverpage-5 | confirmed | Debrief statistics count held and frozen seconds as measured load and are never reset on Rebaseline | open |
-| 47 | medium | serverpage-adv1 | ADDED | After Rebaseline the page still says 'personal model ON', and the page's own held message tells the user to press Rebaseline | open |
+| 47 | medium | serverpage-adv1 | ADDED | After Rebaseline the page still says 'personal model ON', and the page's own held message tells the user to press Rebaseline | done (797f41a) |
 | 48 | medium | stats-2 | confirmed | Calibration null: 81 overlapping positions from about 13 independent runs; the 0.80 bar was set on the same null that then 'validates' it | open |
 | 49 | medium | stats-4 | confirmed | Alpha check: false-pass rate depends on how many channels are live, and sensitivity (false FAIL) was never measured | open |
 | 50 | medium | stats-adv1 | ADDED | The positive control and the gain sweep come from alpha-rich (likely eyes-closed) lab data, but live Calibrate and the demo run eyes open, so the 91 percent does not transfer | open |

@@ -191,3 +191,10 @@ Rules for every change: it must be tested on recorded data with a split that is 
   - Thresholds unchanged: per the adversary no noise level reaches 80 percent sensitivity under the +3/+3 rule, so that needs a longer check or a different rule, not a gate.
 - claims-adv2 (same lines): the spoken result said "Brain signal confirmed"; now "Alpha rhythm found".
 - Checks: smoke ALL PASS; 16 replays 0 failed; commit gated.
+
+### Critique iteration 7, 07:40
+
+- CRITIQUE #20 calib-1: once a calibration passed, load was 100 x the LDA probability with no rest anchor; shrinkage-LDA probabilities are near 0 or 1, and the alarm at 50 sat on the decision boundary. Now the rest anchor is the mean and spread of the out-of-fold rest scores from the calibration itself, on the LDA decision value (log-odds), mapped with the same gain per spread as the generic model; and the personal model only scores when every model channel is clean (it is linear, one noisy channel moves it a lot), otherwise the load holds.
+  - Test, the critic's own setup: lab subjects, 3 interleaved rest/arithmetic pairs, personal model run over 82 s of held-out rest. 28 pass 0.80. Borderline passes (AUC 0.80 to 0.90, n 9): rest median 17.2 to 2.0, seconds at 50 or above 11 to 0 percent, people with a false alarm 2 to 0. All 28: median 7.3 to 4.8, false alarms 2 to 0.
+- CRITIQUE #21 calib-2, calib-adv1, serverpage-adv1: a failed second calibration left the first personal model running while the text said "keeping the generic model", and after Rebaseline the page kept showing the old result. Now a new calibration drops any personal model first, and the page row says "personal model ON" or "generic model" from the gauge's own flag, plus the last calibration result.
+- Checks: page JavaScript parses; smoke ALL PASS; 16 replays 0 failed; commit gated.
