@@ -147,3 +147,11 @@ Rules for every change: it must be tested on recorded data with a split that is 
 ### Iteration 27, 05:47: checks only. No new recordings. Smoke ALL PASS, 16 replays 0 failed. No code change.
 
 ### Iteration 28, 05:58: checks only. No new recordings. Smoke ALL PASS, 16 replays 0 failed. No code change.
+
+### Critique round, 06:41: 20 agents, then the first fix
+
+- 10 critics (one area each) and 10 adversaries (each tried to refute one critic, re-reading code and re-running checks): 66 critic findings, 60 confirmed, 6 refuted; 24 more added by adversaries. Ranked list with full evidence in docs/CRITIQUE.md.
+- Fixed the top cluster, one root cause behind CRITIQUE fatigue-1, dsp-1, dsp-2, dsp-3, fatigue-adv1, gauge-1, gauge-adv1, model-adv1, gauge-adv2: dead or partly railed channels were detected from the window mean (never fired after mean removal), turned into minus the reference (a plausible fake trace that the model scored: losing Fz moved p by +0.29, about 70 to 86 load points), and allowed into the baseline and the ASR fit.
+  - Now: rails detected per sample on the raw window; dead channels zeroed after referencing; the load is held (CHANNEL LOST) whenever any model channel is dead; baseline and ASR fit skip such windows; --strict compares with the model's 5 channels (it could never pass before); a channel zeroed by ASR is not counted clean; ASR has a reference floor.
+  - Evidence: lab features unchanged (max difference 0.0, so no retrain); scored seconds with a dead model channel in the window: 154 windows before, 1 of 1826 after (window-edge alignment); 571 seconds now held. Four recordings never get 30 clean baseline seconds and are now held throughout instead of scored on invented channels; replay_all counts that as correct.
+  - Checks: smoke ALL PASS, 16 replays 0 failed.

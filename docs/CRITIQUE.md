@@ -8,18 +8,18 @@ Ranking: severity as re-rated by the adversary, then grouped so that issues with
 
 | # | severity | id | source | title | status |
 |---|---|---|---|---|---|
-| 1 | critical | fatigue-1 | confirmed | Flat or railed baseline makes ASR zero every later window; zeros pass the clean gate and drive fatigue to 0 'Recovering' instead of 'Held' | open |
+| 1 | critical | fatigue-1 | confirmed | Flat or railed baseline makes ASR zero every later window; zeros pass the clean gate and drive fatigue to 0 'Recovering' instead of 'Held' | done (0c25f19) |
 | 2 | high | alpha-adv1 | ADDED | Alpha check passes with NO alpha when eye closure changes the 1/f fit bands (muscle relax or blinks stop) | open |
 | 3 | high | claims-1 | confirmed | Headline pitch numbers belong to a model that does not run live, and 'shows it live' has no evidence on a real head | open |
 | 4 | high | claims-2 | confirmed | Replay fallback shows 'live' on the page; the claimed REPLAY label does not exist | open |
-| 5 | high | dsp-1 | confirmed | A dead model channel is turned into a copy of the negated reference and still scored, adding about +0.29 to p | open |
-| 6 | high | dsp-2 | confirmed | Partially railed windows are never detected, and the rail test in clean_window is dead code | open |
-| 7 | high | dsp-3 | confirmed | ASR and the baseline mean are fitted on windows with rail steps, which inflates the ASR threshold up to 22x | open |
+| 5 | high | dsp-1 | confirmed | A dead model channel is turned into a copy of the negated reference and still scored, adding about +0.29 to p | done (0c25f19) |
+| 6 | high | dsp-2 | confirmed | Partially railed windows are never detected, and the rail test in clean_window is dead code | done (0c25f19) |
+| 7 | high | dsp-3 | confirmed | ASR and the baseline mean are fitted on windows with rail steps, which inflates the ASR threshold up to 22x | done (0c25f19) |
 | 8 | high | fatigue-2 | confirmed | Too few clean baseline windows: falls back to the lab mean or a 1 to 4 window median with a hard-coded sd of 0.1, giving false 'Tiring' and 'Recovering' | open |
 | 9 | high | fatigue-3 | confirmed | In a 3-minute demo the index cannot show fatigue: it stays flat on clean EEG and moves with artefact or baseline steps on the dry cap | open |
-| 10 | high | fatigue-adv1 | ADDED | The contact gate that would block a flat baseline can never pass with the 5-channel model, and run_all.sh never turns it on | open |
-| 11 | high | gauge-1 | confirmed | The baseline accepts dead or rail windows, and --strict, the only gate that would stop that, can never pass with the 5-channel model | open |
-| 12 | high | gauge-adv1 | ADDED | ASR fitted on a dead baseline deletes every later window, and the zeroed channels count as clean | open |
+| 10 | high | fatigue-adv1 | ADDED | The contact gate that would block a flat baseline can never pass with the 5-channel model, and run_all.sh never turns it on | done (0c25f19) |
+| 11 | high | gauge-1 | confirmed | The baseline accepts dead or rail windows, and --strict, the only gate that would stop that, can never pass with the 5-channel model | done (0c25f19) |
+| 12 | high | gauge-adv1 | ADDED | ASR fitted on a dead baseline deletes every later window, and the zeroed channels count as clean | done (0c25f19) |
 | 13 | high | ops-1 | confirmed | Headset data stop freezes the whole demo silently; page keeps saying live | open |
 | 14 | high | ops-2 | confirmed | Ctrl-C cannot stop a stalled run, and the stale gauge attaches to the next session's stream and page | open |
 | 15 | high | ops-4 | confirmed | The replay fallback needs author-only steps, is not labelled on the page, and shows a flat gauge | open |
@@ -44,9 +44,9 @@ Ranking: severity as re-rated by the adversary, then grouped so that issues with
 | 34 | medium | fatigue-adv2 | ADDED | replay_all.py marks the zeroed sessions 'ok', and OVERNIGHT.md tells him nothing is blocking | open |
 | 35 | medium | gauge-2 | confirmed | Head-map dB vs baseline reads +100 to +200 dB for any channel that was dead during part of the baseline | open |
 | 36 | medium | gauge-3 | confirmed | Fatigue falls back to the lab-cap mean as its zero, then shows 'Tiring' or 'Recovering' driven by the cap offset | open |
-| 37 | medium | gauge-adv2 | ADDED | A model channel that rails after the baseline still feeds the model and moves the load by up to 14 points | open |
+| 37 | medium | gauge-adv2 | ADDED | A model channel that rails after the baseline still feeds the model and moves the load by up to 14 points | done (0c25f19) |
 | 38 | medium | model-3 | confirmed | Live 5-channel model cannot be rebuilt from committed code; the documented rebuild commands overwrite it with a different model | open |
-| 39 | medium | model-adv1 | ADDED | A dead or railed model channel is not removed: after the common reference it becomes a copy of the negated reference and is scored as if it were real EEG | open |
+| 39 | medium | model-adv1 | ADDED | A dead or railed model channel is not removed: after the common reference it becomes a copy of the negated reference and is scored as if it were real EEG | done (0c25f19) |
 | 40 | medium | ops-3 | confirmed | The 'whichever amplifier answers' task still forces U8-2025.10.14, and the serial flip broke 1 in 5 launches | open |
 | 41 | medium | ops-5 | confirmed | Manual VS Code tasks run different alarm settings and unpaired file names from run_all.sh | open |
 | 42 | medium | ops-adv2 | ADDED | Page label and debrief still use alarm 70 while the live alarm is 50 | open |
