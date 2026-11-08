@@ -29,6 +29,10 @@ def summary():
     with LOCK:
         loads = list(LOADLOG)
         events = list(EVENTS)
+        thr = float(STATE.get("alarm_at") or 70)
+        ac = (STATE.get("alpha_check") or {}).get("result")
+        cal = (STATE.get("calibration") or {}).get("result")
+        personal = bool(STATE.get("personal"))
     if not loads:
         return None
     ts = [r[0] for r in loads]
@@ -38,7 +42,7 @@ def summary():
     conds = [r[4] for r in loads]
     peak = max(ls)
     t_peak = ts[ls.index(peak)]
-    above = sum(1 for l in ls if l >= 70)
+    above = sum(1 for l in ls if l >= thr)
     errors = [e for e in events if e.get("kind") == "error"]
     answers = [e for e in events if e.get("kind") in ("answer", "error")]
     def load_at(t):
@@ -53,14 +57,17 @@ def summary():
     recent_ans = [e for e in events if e.get("kind") in ("answer", "error") and e.get("t", 0) >= ts[-1] - 60]
     quality = dict(mean_clean_channels=round(sum(cleans) / len(cleans), 1), share_seconds_3plus_clean=round(sum(1 for c in cleans if c >= 3) / len(cleans), 2))
     err_loads = [load_at(e["t"]) for e in errors]
-    high_err = sum(1 for l in err_loads if l >= 70)
+    high_err = sum(1 for l in err_loads if l >= thr)
     starts = [e["t"] for e in events if e.get("kind") == "challenge_start"]
     ends = [e["t"] for e in events if e.get("kind") == "challenge_end"]
-    return dict(replay=STATE.get("replay") or False, duration_s=round(ts[-1] - ts[0]), peak=round(peak), t_peak=round(t_peak),
+    # what the EEG has been shown to contain: only a passed Alpha check is evidence of brain signal; the clean count
+    # is amplitude only and is high on recordings that fail the alpha check (CRITIQUE serverpage-2)
+    evidence = dict(alpha_check=ac, brain_signal_shown=bool(ac and ac.get("ok")), calibration=cal, personal_model_on=personal)
+    return dict(evidence=evidence, alarm_threshold=thr, replay=STATE.get("replay") or False, duration_s=round(ts[-1] - ts[0]), peak=round(peak), t_peak=round(t_peak),
                 signal_quality=quality, fatigue_start=(round(fats[0]) if fats[0] == fats[0] else None), fatigue_now=(round(fats[-1]) if fats[-1] == fats[-1] else None), load_by_condition=per_cond,   # fatigue None = not shown yet or no baseline
                 last_60s=dict(mean_load=round(sum(l for _, l, _ in last) / max(1, len(last))), max_load=round(max([l for _, l, _ in last] or [0])),
                               mean_clean=round(sum(c for _, _, c in last) / max(1, len(last)), 1), answers=len(recent_ans), errors=len(recent_err), condition=conds[-1]),
-                seconds_above_70=above, mean_load=round(sum(ls) / len(ls)),
+                seconds_above_alarm=above, mean_load=round(sum(ls) / len(ls)),
                 answers=len(answers), errors=len(errors), errors_during_high_load=high_err,
                 challenge_start=round(starts[0]) if starts else None,
                 challenge_end=round(ends[-1]) if ends else None,
@@ -68,18 +75,28 @@ def summary():
                 mean_load_during_challenge=round(sum(l for t, l in zip(ts, ls) if starts and t >= starts[0] and (not ends or t <= ends[-1])) / max(1, sum(1 for t in ts if starts and t >= starts[0] and (not ends or t <= ends[-1])))) if starts else None)
 
 
+UNVERIFIED = "Unverified: the Alpha check has not passed, so these load numbers are not shown to come from brain signal."
+
+
 def fallback_live(s):
     l = s.get("last_60s", {})
-    q = "signal clean" if l.get("mean_clean", 0) >= 3 else "signal noisy, trust the answers more than the EEG"
+    if not s.get("evidence", {}).get("brain_signal_shown"):
+        q = "EEG not yet shown to contain brain signal (run the Alpha check); trust the answers more than the EEG"
+    else:
+        q = "signal clean" if l.get("mean_clean", 0) >= 3 else "signal noisy, trust the answers more than the EEG"
     pace = f"{l.get('answers', 0)} answers, {l.get('errors', 0)} wrong" if l.get("answers") else "no challenge running"
     return f"Last minute: load mean {l.get('mean_load', 0)}, peak {l.get('max_load', 0)}; {pace}; {q}."
 
 
 def fallback_debrief(s):
-    lines = [f"Load peaked at {s['peak']} at {s['t_peak'] // 60}:{s['t_peak'] % 60:02d}, and stayed above 70 for {s['seconds_above_70']} s of a {s['duration_s']} s session."]
+    thr = int(s.get("alarm_threshold", 70))
+    lines = [] if s.get("evidence", {}).get("brain_signal_shown") else [UNVERIFIED]
+    if s.get("replay"):
+        lines.insert(0, f"This is a REPLAY of a recorded session ({s['replay']}), not a live person.")
+    lines.append(f"Load peaked at {s['peak']} at {s['t_peak'] // 60}:{s['t_peak'] % 60:02d}, and stayed at or above {thr} for {s['seconds_above_alarm']} s of a {s['duration_s']} s session.")
     if s["challenge_start"] is not None:
-        lines.append(f"During the challenge the mean load was {s['mean_load_during_challenge']} against {s['mean_load_before_challenge']} before it; {s['errors']} of {s['answers']} answers were wrong, {s['errors_during_high_load']} of them while load was above 70.")
-    lines.append("Recommendation: a short break when the gauge holds above 70; re-check the baseline after rest.")
+        lines.append(f"During the challenge the mean load was {s['mean_load_during_challenge']} against {s['mean_load_before_challenge']} before it; {s['errors']} of {s['answers']} answers were wrong, {s['errors_during_high_load']} of them while load was at or above {thr}.")
+    lines.append(f"Recommendation: a short break when the gauge holds above {thr}; re-check the baseline after rest.")
     return "\n".join(lines)
 
 
@@ -90,7 +107,10 @@ CONTEXT = (
     "to separate task from rest on this dry cap). If 'replay' names a file, this is a RECORDED session replayed, not a "
     "live person: say so in the first words. 'fatigue' is a published "
     "(theta+alpha)/beta ratio, 50 = the person's own start, moving only slowly; it is not a trained model. "
-    "'signal_quality' counts electrodes whose cleaned signal is under 100 microvolts: with fewer than 3 clean channels the "
+    "'evidence.brain_signal_shown' is true only if the eyes-closed Alpha check passed; if it is false or missing, say first "
+    "that the EEG has not been shown to contain brain signal and the load numbers are unverified. "
+    "'signal_quality' counts electrodes whose cleaned signal is under 100 microvolts; that is amplitude only, not proof of "
+    "EEG (it is high on recordings that fail the Alpha check). With fewer than 3 clean channels the "
     "EEG numbers are unreliable and the challenge answers and errors are the better evidence. Never make medical claims, never "
     "call anyone impaired or unfit, and say plainly when the signal was too noisy to conclude anything."
 )
