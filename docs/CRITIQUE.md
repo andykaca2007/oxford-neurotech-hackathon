@@ -45,7 +45,7 @@ Ranking: severity as re-rated by the adversary, then grouped so that issues with
 | 35 | medium | gauge-2 | confirmed | Head-map dB vs baseline reads +100 to +200 dB for any channel that was dead during part of the baseline | done (4332925) |
 | 36 | medium | gauge-3 | confirmed | Fatigue falls back to the lab-cap mean as its zero, then shows 'Tiring' or 'Recovering' driven by the cap offset | done (9deb14d, 0c25f19): the lab-mean fallback and invented sd were removed with fatigue-2, and the dead-baseline ASR collapse with the dead-channel fix |
 | 37 | medium | gauge-adv2 | ADDED | A model channel that rails after the baseline still feeds the model and moves the load by up to 14 points | done (0c25f19) |
-| 38 | medium | model-3 | confirmed | Live 5-channel model cannot be rebuilt from committed code; the documented rebuild commands overwrite it with a different model | open |
+| 38 | medium | model-3 | confirmed | Live 5-channel model cannot be rebuilt from committed code; the documented rebuild commands overwrite it with a different model | done (02b14a1) |
 | 39 | medium | model-adv1 | ADDED | A dead or railed model channel is not removed: after the common reference it becomes a copy of the negated reference and is scored as if it were real EEG | done (0c25f19) |
 | 40 | medium | ops-3 | confirmed | The 'whichever amplifier answers' task still forces U8-2025.10.14, and the serial flip broke 1 in 5 launches | open |
 | 41 | medium | ops-5 | confirmed | Manual VS Code tasks run different alarm settings and unpaired file names from run_all.sh | open |
