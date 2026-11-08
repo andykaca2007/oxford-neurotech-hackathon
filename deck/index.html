@@ -63,7 +63,12 @@
   .step small { display:block; position:absolute; left:0; right:0; top:110%; font-size:.78vw; color:var(--dim); font-weight:300; line-height:1.35; }
   .step::after { content:""; position:absolute; right:-1.1vw; top:50%; width:.9vw; height:1px; background:var(--dim); }
   .step:last-child::after { display:none; }
-  .note { position:absolute; left:0; right:0; bottom:12vh; font-size:1.1vw; } .note + .note { bottom:8vh; color:var(--dim); }
+  .note { position:absolute; left:0; right:0; bottom:9vh; font-size:1.1vw; } .note + .note { bottom:5vh; color:var(--dim); }
+  .minis { display:grid; grid-template-columns:repeat(7, 1fr); gap:1.2vw; margin-top:9vh; height:30vh; }
+  .minis > div { display:flex; flex-direction:column; min-height:0; opacity:0; transform:translateY(10px); transition:opacity .5s ease, transform .5s ease; }
+  .slide.on .minis > div { opacity:1; transform:none; }
+  .minis .cap { font-size:.78vw; margin-top:.5vw; text-align:center; }
+  .minis svg { flex:1; min-height:0; }
   @media (max-width: 900px) { .two, .grid3 { grid-template-columns:1fr; } h1 { font-size:5vw; } .sub { font-size:3vw; top:20vh; } }
 </style>
 </head>
@@ -129,6 +134,7 @@
       <div class="step">Personal scale<small>0 = your own rest, alarm at 50</small></div>
       <div class="step">Page<small>load, why it moved, head map</small></div>
     </div>
+    <div class="minis" id="minis"></div>
     <div class="note">If any model electrode is open the number is held; if one is noisy the number is shown grey with the alarm off.</div>
     <div class="note">A bad signal is reported as bad, never scored.</div>
   </div>
@@ -235,7 +241,7 @@ function stageStep() { const rows = [...document.querySelectorAll("#stages .r")]
 // ---- slide 3: spectrum ----
 function s3() {
   const svg = document.getElementById("spec"); svg.innerHTML = ""; const [W, H] = sizeOf(svg); const pad = { l: 60, r: 120, t: 30, b: 40 };
-  const sx = f => pad.l + f / 110 * (W - pad.l - pad.r), sy = p => H - pad.b - (Math.log10(p) + 4) / (Math.log10(5e7) + 4) * (H - pad.t - pad.b);
+  const sx = f => pad.l + f / 110 * (W - pad.l - pad.r), sy = p => H - pad.b - Math.max(0, Math.min(1, (Math.log10(p) + 4) / (Math.log10(5e7) + 4))) * (H - pad.t - pad.b);
   [[4, 8, "theta"], [8, 13, "alpha"], [13, 30, "beta"]].forEach(([a, b, nm]) => { el("rect", { x: sx(a), y: pad.t, width: sx(b) - sx(a), height: H - pad.t - pad.b, fill: C.band }, svg); txt(svg, (sx(a) + sx(b)) / 2, pad.t + 16, nm, { "text-anchor": "middle", "font-size": 12 }); });
   [1e-4, 1, 1e4].forEach(v => { el("line", { x1: pad.l, y1: sy(v), x2: W - pad.r, y2: sy(v), stroke: C.grid }, svg); txt(svg, pad.l - 8, sy(v) + 4, v >= 1 ? v.toLocaleString() : "0.0001", { "text-anchor": "end", "font-size": 12 }); });
   const cols = [[C.grey, 1.1, "raw"], [C.dim, 1.1, "notched"], [C.ink, 1.8, "band-passed"], [C.acc, 2.4, "full chain"]];
@@ -245,6 +251,28 @@ function s3() {
   el("line", { x1: pad.l, y1: H - pad.b, x2: W - pad.r, y2: H - pad.b, stroke: C.dim }, svg);
   [0, 50, 100].forEach(f => txt(svg, sx(f), H - pad.b + 18, f === 100 ? "100 Hz" : f, { "text-anchor": "middle", "font-size": 12 }));
   txt(svg, pad.l, pad.t - 10, "µV² per Hz", { "font-size": 12 });
+}
+
+// ---- slide 4: a small real figure under each pipeline stage ----
+function s4() {
+  const box = document.getElementById("minis"); box.innerHTML = "";
+  const raw = D.stages[0], cln = D.stages[D.stages.length - 1], t = raw.y.map((_, i) => i / D.fs), L = D.load;
+  const mk = (cap, delay) => { const d = document.createElement("div"); d.style.transitionDelay = delay + "s"; const svg = el("svg", {}); d.appendChild(svg); const c = document.createElement("div"); c.className = "cap"; c.textContent = cap; d.appendChild(c); box.appendChild(d); return svg; };
+  const wave = (svg, y, col, lw) => { const [W, H] = sizeOf(svg); const a = Math.max(...y.map(Math.abs)); const p = el("path", { d: linePath(t, y, v => v / 4 * W, v => H / 2 - v / a * (H / 2 - 4)), fill: "none", stroke: col, "stroke-width": lw }, svg); return p; };
+  const panels = [
+    ["8 traces at 250 Hz", svg => { const [W, H] = sizeOf(svg); for (let k = 0; k < 8; k++) { const sl = raw.y.slice(k * 60, k * 60 + 120); const a = Math.max(...sl.map(Math.abs)) || 1; el("path", { d: linePath(sl.map((_, i) => i), sl, v => v / 119 * W, v => (k + .5) * H / 8 - v / a * H / 20), fill: "none", stroke: C.dim, "stroke-width": .8 }, svg); } }],
+    ["3 of 8 clean here", svg => { const [W, H] = sizeOf(svg); const names = ["Fz", "C3", "Cz", "C4", "Pz", "P3", "O1", "P4"], pos = [[.5, .12], [.25, .42], [.5, .42], [.75, .42], [.5, .7], [.28, .68], [.42, .92], [.72, .68]], ok = [1, 0, 1, 0, 1, 0, 0, 0];
+      el("ellipse", { cx: W / 2, cy: H * .52, rx: W * .36, ry: H * .45, fill: "none", stroke: C.grid }, svg);
+      pos.forEach(([x, y], k) => { el("circle", { cx: x * W, cy: y * H, r: Math.min(W, H) * .07, fill: ok[k] ? C.acc : "none", stroke: ok[k] ? C.acc : C.grey, "stroke-dasharray": ok[k] ? "" : "2 2" }, svg); }); }],
+    ["6,183 to 34 µV", svg => { wave(svg, raw.y, C.dim, .8); const [W, H] = sizeOf(svg); const a = Math.max(...cln.y.map(Math.abs)); el("path", { d: linePath(t, cln.y, v => v / 4 * W, v => H / 2 - v / a * (H / 2 - 4)), fill: "none", stroke: C.acc, "stroke-width": 1.2 }, svg); }],
+    ["theta, alpha, beta shares", svg => { const [W, H] = sizeOf(svg); const sp = D.spectra[D.spectra.length - 1]; const band = (lo, hi) => sp.f.reduce((acc, f, i) => f >= lo && f < hi ? acc + sp.p[i] : acc, 0); const v = [band(4, 8), band(8, 13), band(13, 30)], tot = v[0] + v[1] + v[2];
+      ["θ", "α", "β"].forEach((nm, k) => { const h = v[k] / tot * (H - 22), x = W * (.12 + k * .3); el("rect", { x, y: H - 18 - h, width: W * .2, height: h, fill: k === 1 ? C.acc : C.grey }, svg); txt(svg, x + W * .1, H - 4, nm, { "text-anchor": "middle", "font-size": 12 }); }); }],
+    ["rest vs arithmetic", svg => { const [W, H] = sizeOf(svg); const s = D.roc; const sx = v => 4 + v * (W - 8), sy = v => H - 4 - v * (H - 8); el("line", { x1: sx(0), y1: sy(0), x2: sx(1), y2: sy(1), stroke: C.grey, "stroke-dasharray": "3 3" }, svg); el("path", { d: linePath(s.fpr, s.tpr, sx, sy), fill: "none", stroke: C.acc, "stroke-width": 2 }, svg); }],
+    ["0 = your own rest", svg => { const [W, H] = sizeOf(svg); const sx = v => (v - 34) / 176 * W, sy = v => H - 4 - v / 100 * (H - 8); el("line", { x1: 0, y1: sy(50), x2: W, y2: sy(50), stroke: C.grey, "stroke-dasharray": "3 3" }, svg); el("path", { d: linePath(L.t, L.load, sx, sy), fill: "none", stroke: C.ink, "stroke-width": 1.6 }, svg); }],
+    ["load, why, head map", svg => { const [W, H] = sizeOf(svg); el("rect", { x: 1, y: 1, width: W - 2, height: H - 2, fill: "none", stroke: C.grey }, svg); el("rect", { x: 6, y: 6, width: W * .45, height: H * .5, fill: "none", stroke: C.grid }, svg); txt(svg, 6 + W * .225, 6 + H * .34, Math.round(Math.max(...L.load)), { fill: C.acc, "font-size": Math.round(H * .3), "text-anchor": "middle", "font-weight": 500 });
+      el("ellipse", { cx: W * .75, cy: H * .3, rx: W * .16, ry: H * .22, fill: "none", stroke: C.grid }, svg); const sx = v => 6 + (v - 34) / 176 * (W - 12), sy = v => H - 6 - v / 100 * (H * .3); el("path", { d: linePath(L.t, L.load, sx, sy), fill: "none", stroke: C.dim, "stroke-width": 1 }, svg); }],
+  ];
+  panels.forEach(([cap, fn], i) => { const svg = mk(cap, 0.5 + i * 0.12); requestAnimationFrame(() => fn(svg)); });
 }
 
 // ---- slide 5: ROC ----
@@ -279,7 +307,7 @@ function s6() {
 // ---- deck ----
 const slides = [...document.querySelectorAll(".slide")]; let cur = -1;
 const pips = document.getElementById("pips"); slides.forEach(() => pips.appendChild(document.createElement("i")));
-const draw = { 0: s0, 2: () => s2(true), 3: s3, 5: s5, 6: s6 };
+const draw = { 0: s0, 2: () => s2(true), 3: s3, 4: s4, 5: s5, 6: s6 };
 function show(i) {
   i = Math.max(0, Math.min(slides.length - 1, i)); if (i === cur) return;
   slides.forEach((s, k) => s.classList.toggle("on", k === i)); [...pips.children].forEach((p, k) => p.classList.toggle("on", k <= i));
