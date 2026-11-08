@@ -145,11 +145,16 @@ def src_replay(path, speed):
             time.sleep(0.2 / speed)
 
 
-def src_lsl():
+def src_lsl(name="Unicorn"):
     from pylsl import StreamInlet, resolve_byprop
-    s = resolve_byprop("name", "Unicorn", timeout=10)
+    import socket
+    s = resolve_byprop("name", name, timeout=10)
     if not s:
-        sys.exit("no LSL stream named Unicorn: start unicorn_gpype.py first")
+        sys.exit(f"no LSL stream named {name}: start unicorn_gpype.py first")
+    # prefer a stream from this laptop: other teams' Unicorn bridges on the same Wi-Fi publish the same default name
+    # (CRITIQUE ops-adv1; run_all.sh also gives each session its own name)
+    mine = [x for x in s if x.hostname() == socket.gethostname()]
+    s = mine or s
     inlet = StreamInlet(s[0])
     t0 = None
     while True:
@@ -178,6 +183,7 @@ def main():
     ap.add_argument("--gain", type=float, default=40.0, help="load points per spread of the model output above the wearer's rest (36-subject lab sweep, 5-channel model, alarm 50 held 20 s: gain 40 gives rest 0, task median 31, 0.1 percent of rest seconds in alarm)")
     ap.add_argument("--strict", action="store_true", help="contact gate + settle check before the baseline, and freeze on contact loss (off: the plain behaviour)")
     ap.add_argument("--speed", type=float, default=1.0, help="replay speed")
+    ap.add_argument("--stream", default="Unicorn", help="LSL stream name to read (run_all.sh gives each session its own)")
     ap.add_argument("--stall-after", type=float, default=None, help="test only, with --fake: stop sending data after this many seconds")
     ap.add_argument("--replay-markers", default=None, help="markers CSV (t,condition) to replay; default: the matching _gauge_markers.csv")
     ap.add_argument("--calib-s", type=int, default=0, help="seconds of mental to train a personal model; OFF by default: on 8 Nov replay it learned session drift, not effort (recovery read 77)")
@@ -379,7 +385,7 @@ def main():
     print(f"# {state}", flush=True)
     try:
         last_t, nodata_since, nodata_said = 0.0, None, False
-        for t, x in (src_fake(stall_after=a.stall_after) if a.fake else src_replay(a.replay, a.speed) if a.replay else src_lsl()):
+        for t, x in (src_fake(stall_after=a.stall_after) if a.fake else src_replay(a.replay, a.speed) if a.replay else src_lsl(a.stream)):
             if t is None:
                 # no sample for 1 s from the headset stream
                 nodata_since = nodata_since or time.time()

@@ -26,6 +26,7 @@ fi
 mkdir -p logs recordings
 STAMP=$(date +%Y%m%d_%H%M%S)
 SESSION="recordings/${WHO}_${STAMP}"
+STREAM="Unicorn_${STAMP}"             # this session's own LSL stream name: no other laptop's or session's stream is picked
 echo "session files: ${SESSION}_raw.csv (8-ch EEG at 250 Hz) and ${SESSION}_gauge.csv (load per second)"
 PIDS=()
 cleanup() { trap - EXIT; echo; echo "stopping"; for p in "${PIDS[@]}"; do kill "$p" 2>/dev/null; done; pkill -f loadmonitor/load_gauge.py 2>/dev/null; exit 0; }
@@ -47,7 +48,7 @@ if [ "$SERIAL" != "fake" ] && [ "$SERIAL" != "replay" ]; then
   # 2. headset bridge (its scope window must stay open; minimise it)
   pkill -f unicorn_gpype.py 2>/dev/null
   start_bridge() {
-    $PY headset/unicorn_gpype.py ${SERIAL:+--serial "$SERIAL"} --csv "${SESSION}_raw.csv" > logs/bridge_$STAMP.log 2>&1 &
+    $PY headset/unicorn_gpype.py ${SERIAL:+--serial "$SERIAL"} --stream "$STREAM" --csv "${SESSION}_raw.csv" > logs/bridge_$STAMP.log 2>&1 &
     BRIDGE_PID=$!
     PIDS+=($BRIDGE_PID)
     echo "connecting to ${SERIAL:-whichever amplifier answers} ..."
@@ -55,7 +56,7 @@ if [ "$SERIAL" != "fake" ] && [ "$SERIAL" != "replay" ]; then
   start_bridge
   SWITCHED=0
   for i in $(seq 1 60); do
-    if $PY -c "from pylsl import resolve_byprop; import sys; sys.exit(0 if resolve_byprop('name','Unicorn',timeout=1) else 1)" 2>/dev/null; then
+    if $PY -c "from pylsl import resolve_byprop; import sys; sys.exit(0 if resolve_byprop('name','$STREAM',timeout=1) else 1)" 2>/dev/null; then
       echo "headset streaming${SERIAL:+ from $SERIAL}"; break
     fi
     if ! kill -0 "$BRIDGE_PID" 2>/dev/null; then
@@ -83,6 +84,6 @@ elif [ "$SERIAL" = "replay" ]; then
   $PY loadmonitor/load_gauge.py --replay "$REPLAY_FILE" --speed 1 --web --no-ui --alarm 50 --hold 20 --smooth 12 --log "${SESSION}_gauge.csv"
 else
   # alarm at 50 held 20 s, 12 s smoothing: on this cap Zetamac reaches about 50 and rest wobbles 0 to 36
-  $PY loadmonitor/load_gauge.py --lsl --web --no-ui --alarm 50 --hold 20 --smooth 12 --log "${SESSION}_gauge.csv"
+  $PY loadmonitor/load_gauge.py --lsl --stream "$STREAM" --web --no-ui --alarm 50 --hold 20 --smooth 12 --log "${SESSION}_gauge.csv"
 fi
 cleanup
