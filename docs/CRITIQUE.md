@@ -31,8 +31,8 @@ Ranking: severity as re-rated by the adversary, then grouped so that issues with
 | 21 | medium | calib-2 | confirmed | A failed second calibration leaves the old personal model running while the page says it is using the generic model | done (797f41a) |
 | 22 | medium | calib-adv1 | ADDED | After Rebaseline the page keeps showing 'personal model ON' while the generic model is in use | done (797f41a) |
 | 23 | medium | calib-adv2 | ADDED | One fold corrupted by noise sinks a strong real effect: calibration windows mix channel sets, and the pass rule averages fold AUCs | open |
-| 24 | medium | claims-3 | confirmed | Page labels assert things the overnight analysis disproved, and show a different alarm line from the one that fires | open |
-| 25 | medium | claims-4 | confirmed | The Claude debrief context feeds the LLM an inflated task number and hides the facts that should limit its confidence | open |
+| 24 | medium | claims-3 | confirmed | Page labels assert things the overnight analysis disproved, and show a different alarm line from the one that fires | done (ee26e5b) |
+| 25 | medium | claims-4 | confirmed | The Claude debrief context feeds the LLM an inflated task number and hides the facts that should limit its confidence | done (ee26e5b) |
 | 26 | medium | claims-5 | confirmed | '0 false alarms over 16 recordings' is tested on the same data it was tuned on, and comes with 0 true alarms | open |
 | 27 | medium | claims-7 | confirmed | The protocol's 'decided before the data' claim no longer holds, and its report and claim lines contradict its own amendments | open |
 | 28 | medium | claims-8 | confirmed | The README pitches a different product and contradicts how the load model actually works | open |
@@ -40,7 +40,7 @@ Ranking: severity as re-rated by the adversary, then grouped so that issues with
 | 30 | medium | dsp-4 | confirmed | On his data the burst mask is mostly triggered by 4 s window-edge transients and zeroes 30 percent of the window edges | open |
 | 31 | medium | dsp-adv1 | ADDED | The channel quality gate is measured after the burst mask and ASR, so it passes the artefacts that move the model most | open |
 | 32 | medium | dsp-adv2 | ADDED | Noisy model channels are still fed to the classifier; the clean count only decides whether to hold | open |
-| 33 | medium | fatigue-4 | confirmed | Page calls the drift 'fatigue', 'Tiring' and 'Recovering' and colours it red, though its downward moves come from muscle and from the arithmetic task itself | open |
+| 33 | medium | fatigue-4 | confirmed | Page calls the drift 'fatigue', 'Tiring' and 'Recovering' and colours it red, though its downward moves come from muscle and from the arithmetic task itself | done (ee26e5b) |
 | 34 | medium | fatigue-adv2 | ADDED | replay_all.py marks the zeroed sessions 'ok', and OVERNIGHT.md tells him nothing is blocking | open |
 | 35 | medium | gauge-2 | confirmed | Head-map dB vs baseline reads +100 to +200 dB for any channel that was dead during part of the baseline | open |
 | 36 | medium | gauge-3 | confirmed | Fatigue falls back to the lab-cap mean as its zero, then shows 'Tiring' or 'Recovering' driven by the cap offset | open |
@@ -84,14 +84,14 @@ Ranking: severity as re-rated by the adversary, then grouped so that issues with
 | 74 | low | ops-8 | confirmed | Smoke test stays green through these failures; its sim stream shares the real stream's identity (plausible, not run) | open |
 | 75 | low | serverpage-6 | confirmed | Alarm and 'take a break' stay on while the load is held or contact is lost | open |
 | 76 | low | serverpage-7 | confirmed | LLM call can block for many minutes, wrong model label, live refusal returns the full debrief, truncation unchecked | open |
-| 77 | low | serverpage-8 | confirmed | Fatigue labels 'Tiring' and 'Recovering' claim tiredness, which the overnight work says the ratio does not measure | open |
+| 77 | low | serverpage-8 | confirmed | Fatigue labels 'Tiring' and 'Recovering' claim tiredness, which the overnight work says the ratio does not measure | done (ee26e5b) |
 | 78 | low | serverpage-adv2 | ADDED | An Alpha check PASS stays on the page after Rebaseline and after the cap is moved | open |
 | 79 | low | serverpage-adv3 | ADDED | The hero number turns alarm-coloured at 30, inside the range this cap shows at rest | open |
 | 80 | low | stats-3 | confirmed | Every lab number (91 percent positive control, AUC 0.76, gain sweep) has rest and task from different files; the summary drops the caveat | open |
 | 81 | low | stats-5 | confirmed | 'Held-out AUC 0.76' is the winner of a 96-configuration search on the same 36 subjects; '5 channels lose nothing' has no spread or paired test | open |
 | 82 | low | stats-6 | confirmed | Gain sweep: 'six times the false alarms' rests on about one or two alarm episodes | open |
 | 83 | low | stats-adv2 | ADDED | Alpha pass rule can FAIL a channel that meets both criteria, because it only checks the closed peak on the channel with the largest rise | open |
-| 84 | low | stats-adv3 | ADDED | Stale numbers in the --gain help text contradict the iteration 9 sweep | open |
+| 84 | low | stats-adv3 | ADDED | Stale numbers in the --gain help text contradict the iteration 9 sweep | done (ee26e5b) |
 
 ## Details
 
