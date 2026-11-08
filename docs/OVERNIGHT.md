@@ -109,3 +109,5 @@ Rules for every change: it must be tested on recorded data with a split that is 
 5. Then the demo task is **silent** counting down in sevens with eyes on one point, not Zetamac. Lab numbers for the live mapping: rest reads 0, arithmetic median 31, about 4 in 10 people trigger the alarm.
 6. Fatigue is a published ratio, not a trained model, and on this cap it follows muscle artefact (rho -0.43); present it as "slow trend this session", never as a measurement of tiredness.
 7. Fallback if the cap will not pass: `--replay` streams a recorded session through the full live pipeline and page, labelled REPLAY.
+
+### Iteration 10, 02:58: checks only. No new recordings (latest 01:21, 32 s; that live run is still open in his Terminal, untouched). Smoke ALL PASS, 16 replays 0 failed. No code change.
